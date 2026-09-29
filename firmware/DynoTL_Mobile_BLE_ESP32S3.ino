@@ -5,7 +5,6 @@
 
 #include <Arduino.h>
 #include "driver/pcnt.h"
-#include "esp_mac.h"
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
@@ -46,56 +45,6 @@ static inline float clampf(float x, float lo, float hi) {
   if (x < lo) return lo;
   if (x > hi) return hi;
   return x;
-}
-
-
-// ============================================================================
-// DYNOTL BLE IDENTITY
-// Give DynoTL a different, stable locally-administered MAC derived from the
-// factory MAC. This avoids iOS/CoreBluetooth reusing the old Blink peripheral
-// identity/name for the same physical ESP32-S3.
-// ============================================================================
-static uint8_t dynoFactoryMac[6] = {0};
-static uint8_t dynoLocalBaseMac[6] = {0};
-
-bool dynoSetDedicatedBleIdentity() {
-  esp_err_t e1 = esp_efuse_mac_get_default(dynoFactoryMac);
-  if (e1 != ESP_OK) {
-    Serial.printf("[BLE-ID] factory MAC read failed: %d\n", (int)e1);
-    return false;
-  }
-
-  // Espressif helper creates a locally-administered MAC from the factory MAC
-  // while preserving per-board uniqueness.
-  esp_err_t e2 = esp_derive_local_mac(dynoLocalBaseMac, dynoFactoryMac);
-  if (e2 != ESP_OK) {
-    Serial.printf("[BLE-ID] local MAC derive failed: %d\n", (int)e2);
-    return false;
-  }
-
-  // Extra DynoTL-specific separation from any other locally-derived interface.
-  // Keep bit0=0 (unicast) and bit1=1 (locally administered).
-  dynoLocalBaseMac[0] = (uint8_t)((dynoLocalBaseMac[0] | 0x02) & 0xFE);
-  dynoLocalBaseMac[5] ^= 0xD7;
-
-  esp_err_t e3 = esp_base_mac_addr_set(dynoLocalBaseMac);
-  if (e3 != ESP_OK) {
-    Serial.printf("[BLE-ID] custom base MAC set failed: %d\n", (int)e3);
-    return false;
-  }
-
-  Serial.printf(
-      "[BLE-ID] Factory MAC : %02X:%02X:%02X:%02X:%02X:%02X\n",
-      dynoFactoryMac[0], dynoFactoryMac[1], dynoFactoryMac[2],
-      dynoFactoryMac[3], dynoFactoryMac[4], dynoFactoryMac[5]
-  );
-  Serial.printf(
-      "[BLE-ID] DynoTL MAC  : %02X:%02X:%02X:%02X:%02X:%02X\n",
-      dynoLocalBaseMac[0], dynoLocalBaseMac[1], dynoLocalBaseMac[2],
-      dynoLocalBaseMac[3], dynoLocalBaseMac[4], dynoLocalBaseMac[5]
-  );
-
-  return true;
 }
 
 // ============================================================================
@@ -225,7 +174,6 @@ void dynoBleBegin() {
   Serial.println("========================================");
   Serial.println("[DynoTL] ESP32-S3 BLE advertising STARTED");
   Serial.printf("[DynoTL] Name    : %s\n", DEVICE_NAME);
-  Serial.printf("[DynoTL] BLE MAC : %s\n", BLEDevice::getAddress().toString().c_str());
   Serial.printf("[DynoTL] Service : %s\n", SERVICE_UUID);
   Serial.println("[DynoTL] BLE mode: same structure as Blink-Redleo");
   Serial.println("========================================");
@@ -530,10 +478,6 @@ void setup() {
   Serial.println("========================================");
   Serial.flush();
   delay(200);
-
-  // Must run BEFORE BLEDevice::init(), otherwise Bluetooth keeps the old
-  // controller identity derived from the factory/base MAC.
-  dynoSetDedicatedBleIdentity();
 
   dynoBleBegin();
 
