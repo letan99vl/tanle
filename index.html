@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#050607">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Dyno TL Mobile</title>
+<style>
+:root{--bg:#040506;--panel:#0b0d10;--line:#252a30;--red:#ff3038;--orange:#ff9f1c;--green:#37d45a;--blue:#3488ff;--text:#f3f5f7;--muted:#89939d;--nav:40px;--ctl:44px}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;background:var(--bg);color:var(--text);font-family:Arial,sans-serif;overflow:hidden;touch-action:manipulation}
+button,input,select{font:inherit}button{color:var(--text)}
+#app{width:100%;height:100%;background:var(--bg);display:grid;grid-template-rows:var(--nav) 1fr}
+@media(orientation:portrait){body{position:fixed;left:0;top:0;width:100vh;height:100vw;transform-origin:top left;transform:rotate(90deg) translateY(-100%)}}
+header{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:6px;padding:4px 6px;border-bottom:1px solid #191d21;background:#080a0c}
+.brand{font-size:12px;font-weight:900;letter-spacing:.8px;white-space:nowrap}.brand b{color:var(--red)}
+nav{display:flex;justify-content:center;gap:3px;min-width:0}nav button{height:31px;min-width:68px;padding:0 8px;border:1px solid #242930;border-radius:7px;background:#0d1013;font-size:10px;font-weight:800;white-space:nowrap}
+nav button.on{border-color:#8d252b;background:#251013;color:#fff}
+.headright{display:flex;align-items:center;gap:4px}.pill{height:28px;display:flex;align-items:center;padding:0 8px;border:1px solid #2b3036;border-radius:999px;color:var(--muted);font-size:9px;white-space:nowrap}.pill.ok{color:#86ef9e;border-color:#255f33}
+.mini{height:30px;padding:0 9px;border:1px solid #383f47;border-radius:7px;background:#111419;font-size:10px;font-weight:800}.mini.red{border-color:#7b272c;color:#ff7279}
+main{display:none;min-height:0;overflow:hidden}.page.on{display:block;height:100%}
+#live{padding:6px 8px calc(var(--ctl) + 8px)}
+.livegrid{height:100%;display:grid;grid-template-columns:1fr minmax(170px,.55fr) 1fr;gap:7px;min-height:0}
+.gauge,.centerbox,.chartbox,.card{border:1px solid var(--line);background:linear-gradient(180deg,#0b0d10,#060709);border-radius:12px;min-height:0;position:relative;overflow:hidden}
+.gauge{display:flex;flex-direction:column;align-items:center;justify-content:center}.gauge h3{margin:0 0 6px;font-size:14px;color:#9ca6b0}.big{font-size:clamp(54px,11vh,112px);line-height:.9;font-weight:900;text-shadow:0 0 18px #ff303844}.unit{margin-top:8px;color:#8390a0;font-size:15px}.scale{position:absolute;left:8%;right:8%;bottom:10%;height:7px;border-radius:99px;background:#171b20;overflow:hidden}.scale i{display:block;height:100%;width:0;background:linear-gradient(90deg,#772025,var(--red));transition:width .08s linear}
+.centerbox{display:grid;grid-template-rows:1fr 1fr 1fr}.kpi{display:flex;flex-direction:column;align-items:center;justify-content:center;border-bottom:1px solid #191d21}.kpi:last-child{border:0}.kpi label{font-size:11px;color:#8d98a4;font-weight:800}.kpi strong{font-size:clamp(29px,6vh,58px);line-height:1;margin-top:3px}.kpi.hp strong{color:var(--red)}.kpi.tq strong{color:var(--orange)}.kpi.afr strong{color:#fff}
+.controls{position:fixed;left:50%;bottom:4px;transform:translateX(-50%);width:min(620px,calc(100% - 12px));height:var(--ctl);padding:4px;display:flex;gap:4px;border:1px solid #272d33;border-radius:12px;background:#090b0dee;backdrop-filter:blur(10px);z-index:20}
+.controls button{flex:1;min-width:0;border:1px solid #313840;border-radius:8px;background:#111419;font-size:10px;font-weight:900}.controls .go{border-color:#7d2a30;background:#251013}.controls .stop{color:#ff6c73;border-color:#6d282d}.controls .auto.on{color:#ffc56b;border-color:#80521c;background:#22170a}
+.chartpage{padding:6px}.chartbox{height:100%;display:grid;grid-template-rows:34px 1fr;padding:4px 6px 6px}.charthead{display:flex;align-items:center;justify-content:space-between;gap:6px;color:#9aa4ae;font-size:10px;font-weight:900;letter-spacing:.5px}.charthead .vals{font-size:9px;color:#c4cad0;font-weight:700}.chartwrap{min-height:0;position:relative}canvas{width:100%!important;height:100%!important;display:block}
+#test201,#settings{overflow:auto;padding:6px}.twocol{display:grid;grid-template-columns:1fr 1fr;gap:6px}.card{padding:10px}.card h2{font-size:13px;margin:0 0 8px}.metricgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.metric{border:1px solid #252a30;border-radius:9px;background:#080a0c;padding:8px}.metric span{display:block;color:#84909a;font-size:9px}.metric b{display:block;font-size:20px;margin-top:4px}
+.row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:6px 0}.row label{font-size:10px;color:#b5bdc5}.row input,.row select{height:30px;border:1px solid #303840;border-radius:6px;background:#0b0e11;color:#fff;padding:0 7px;max-width:110px}.row button{height:32px;border:1px solid #343b43;border-radius:7px;background:#101419;padding:0 10px;font-size:10px;font-weight:800}
+.settingsgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.settingsgrid .card{overflow:auto}.settingsgrid h3{font-size:11px;margin:0 0 7px;color:#ff555c}.setline{display:grid;grid-template-columns:1fr 88px;gap:7px;align-items:center;margin:6px 0;font-size:10px;color:#aab4bd}.setline input,.setline select{width:100%;height:29px;border:1px solid #303840;border-radius:6px;background:#0b0e11;color:#fff;padding:0 6px}
+.note{font-size:9px;color:#77828c;line-height:1.4}.good{color:#7de195}.bad{color:#ff7078}
+@media(max-height:430px){:root{--nav:36px;--ctl:40px}nav button{height:28px;min-width:61px;font-size:9px}.brand{font-size:10px}.pill{height:26px}.mini{height:28px}.big{font-size:clamp(44px,10vh,82px)}.gauge h3{font-size:11px}.unit{font-size:12px}.kpi strong{font-size:clamp(24px,5.5vh,44px)}.controls button{font-size:9px}.settingsgrid{grid-template-columns:repeat(3,1fr)}}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+ <div class="brand">DYNO <b>TL</b> MOBILE</div>
+ <nav>
+  <button data-page="live" class="on">LIVE</button>
+  <button data-page="power">HP/TOR</button>
+  <button data-page="rpm">RPM/AFR</button>
+  <button data-page="test201">201m</button>
+  <button data-page="settings">SET</button>
+ </nav>
+ <div class="headright"><span id="bleStatus" class="pill">BLE OFF</span><button id="bleTop" class="mini">BLE</button></div>
+</header>
+
+<main id="live" class="page on">
+ <div class="livegrid">
+  <section class="gauge"><h3>ENGINE RPM</h3><div id="liveRpm" class="big">0</div><div class="unit">rpm</div><div class="scale"><i id="rpmBar"></i></div></section>
+  <section class="centerbox">
+   <div class="kpi afr"><label>AFR</label><strong id="liveAfr">--</strong></div>
+   <div class="kpi hp"><label>HP</label><strong id="liveHp">0.0</strong></div>
+   <div class="kpi tq"><label>TORQUE</label><strong id="liveTq">0.0</strong></div>
+  </section>
+  <section class="gauge"><h3>SPEED</h3><div id="liveSpeed" class="big">0</div><div class="unit">km/h</div><div class="scale"><i id="speedBar"></i></div></section>
+ </div>
+ <div class="controls">
+  <button id="ctlBle" class="go">BLE</button><button id="ctlAuto" class="auto">AUTO</button><button id="ctlRun" class="go">RUN</button><button id="ctlStop" class="stop">STOP</button><button id="ctlSim">SIM</button>
+ </div>
+</main>
+
+<main id="power" class="page chartpage">
+ <section class="chartbox"><div class="charthead"><span>HP / TORQUE VS RPM</span><span id="powerVals" class="vals">HP 0.0 · TQ 0.0</span></div><div class="chartwrap"><canvas id="powerCanvas"></canvas></div></section>
+</main>
+
+<main id="rpm" class="page chartpage">
+ <section class="chartbox"><div class="charthead"><span>ENGINE RPM / ROLLER RPM / SPEED / AFR</span><span id="rpmVals" class="vals">RPM 0 · SPEED 0 · AFR --</span></div><div class="chartwrap"><canvas id="rpmCanvas"></canvas></div></section>
+</main>
+
+<main id="test201" class="page">
+ <div class="twocol">
+  <section class="card"><h2>201 m RUN</h2><div class="row"><button id="run201">RUN 201m</button><button id="reset201">RESET</button><span id="state201" class="note">Waiting</span></div>
+   <div class="metricgrid"><div class="metric"><span>DISTANCE</span><b id="dist201">0.0 m</b></div><div class="metric"><span>TIME</span><b id="time201">--</b></div><div class="metric"><span>SPEED</span><b id="speed201">0.0</b></div><div class="metric"><span>RPM</span><b id="rpm201">0</b></div></div>
+  </section>
+  <section class="card"><h2>RESULT</h2><div class="metricgrid"><div class="metric"><span>201 m</span><b id="result201">--</b></div><div class="metric"><span>MAX SPEED</span><b id="maxSpeed201">0.0</b></div><div class="metric"><span>MAX RPM</span><b id="maxRpm201">0</b></div><div class="metric"><span>AFR END</span><b id="afrEnd201">--</b></div></div><p class="note">Timer starts when calculated vehicle speed reaches 1 km/h.</p></section>
+ </div>
+</main>
+
+<main id="settings" class="page">
+ <div class="settingsgrid">
+  <section class="card"><h3>DYNO</h3>
+   <label class="setline"><span>Roller diameter (mm)</span><input id="rollerD" type="number" value="240"></label>
+   <label class="setline"><span>Roller inertia J</span><input id="rollerJ" type="number" step=".01" value="1.73"></label>
+   <label class="setline"><span>Max RPM display</span><input id="maxRpm" type="number" value="16000"></label>
+   <label class="setline"><span>Max speed display</span><input id="maxSpeed" type="number" value="160"></label>
+  </section>
+  <section class="card"><h3>AFR</h3>
+   <label class="setline"><span>Volt min</span><input id="afrVMin" type="number" step=".01" value="0"></label>
+   <label class="setline"><span>AFR min</span><input id="afrMin" type="number" step=".1" value="10"></label>
+   <label class="setline"><span>Volt max</span><input id="afrVMax" type="number" step=".01" value="3.15"></label>
+   <label class="setline"><span>AFR max</span><input id="afrMax" type="number" step=".1" value="20"></label>
+  </section>
+  <section class="card"><h3>AUTO RUN</h3>
+   <label class="setline"><span>Auto start</span><input id="autoStart" type="checkbox"></label>
+   <label class="setline"><span>Min speed km/h</span><input id="autoSpeed" type="number" value="10"></label>
+   <label class="setline"><span>Min HP</span><input id="autoHp" type="number" step=".1" value="1"></label>
+   <label class="setline"><span>Min alpha rad/s²</span><input id="autoAlpha" type="number" value="10"></label>
+  </section>
+ </div>
+</main>
+</div>
+
+<script>
+(function(){
+'use strict';
+var S={connected:false,recording:false,sim:false,auto:false,device:null,server:null,live:null,cmd:null,status:null,lineBuf:'',lastT:0,omegaF:0,ow:[],tw:[],rpm:0,rrpm:0,speed:0,afr:0,hp:0,tq:0,alpha:0,hpMax:0,tqMax:0,runPower:[],runRpm:[],liveRpmPts:[],lastSampleT:0,simT:0,run201:false,wait201:false,done201:false,d201:0,t2010:0,t201last:0,maxS201:0,maxR201:0};
+var BLE={service:'d7a10001-7c35-4a6d-9f0e-2ea3117f1000',live:'d7a10002-7c35-4a6d-9f0e-2ea3117f1000',cmd:'d7a10003-7c35-4a6d-9f0e-2ea3117f1000',status:'d7a10005-7c35-4a6d-9f0e-2ea3117f1000'};
+var $=function(id){return document.getElementById(id)},dec=new TextDecoder(),enc=new TextEncoder();
+var cfgIds=['rollerD','rollerJ','maxRpm','maxSpeed','afrVMin','afrMin','afrVMax','afrMax','autoSpeed','autoHp','autoAlpha'];
+function n(id,d){var v=parseFloat($(id).value);return isFinite(v)?v:d}
+function afrFromV(v){var v0=n('afrVMin',0),v1=n('afrVMax',3.15),a0=n('afrMin',10),a1=n('afrMax',20);if(v1===v0)return a0;return a0+(v-v0)*(a1-a0)/(v1-v0)}
+function setBle(on,msg){S.connected=on;$('bleStatus').textContent=msg||(on?'BLE OK':'BLE OFF');$('bleStatus').classList.toggle('ok',on);$('ctlBle').textContent=on?'OFF':'BLE';$('bleTop').textContent=on?'OFF':'BLE'}
+async function connectBle(){if(S.connected){disconnectBle();return}if(!navigator.bluetooth){alert('Web Bluetooth unavailable. On iPhone open this HTTPS page in Bluefy or another Web Bluetooth compatible browser.');return}try{$('bleStatus').textContent='SCANNING';S.device=await navigator.bluetooth.requestDevice({filters:[{namePrefix:'DYNOTL-MOBILE'}],optionalServices:[BLE.service]});S.device.addEventListener('gattserverdisconnected',function(){setBle(false,'BLE LOST')});S.server=await S.device.gatt.connect();var sv=await S.server.getPrimaryService(BLE.service);S.live=await sv.getCharacteristic(BLE.live);S.cmd=await sv.getCharacteristic(BLE.cmd);S.status=await sv.getCharacteristic(BLE.status);await S.live.startNotifications();S.live.addEventListener('characteristicvaluechanged',onLive);await S.status.startNotifications();S.status.addEventListener('characteristicvaluechanged',onStatus);setBle(true,S.device.name||'BLE OK');writeCmd('PING')}catch(e){if(!e||e.name!=='NotFoundError')alert('BLE error: '+(e&&e.message||e));setBle(false)}}
+function disconnectBle(){try{if(S.device&&S.device.gatt.connected)S.device.gatt.disconnect()}catch(e){}setBle(false)}
+async function writeCmd(t){if(!S.cmd)return;var b=enc.encode(t);if(S.cmd.writeValueWithoutResponse)await S.cmd.writeValueWithoutResponse(b);else await S.cmd.writeValue(b)}
+function onStatus(e){try{var d=e.target.value;$('bleStatus').textContent=dec.decode(new Uint8Array(d.buffer,d.byteOffset,d.byteLength)).trim()||'BLE OK'}catch(x){}}
+function onLive(e){var d=e.target.value,txt=dec.decode(new Uint8Array(d.buffer,d.byteOffset,d.byteLength));S.lineBuf+=txt;var i;while((i=S.lineBuf.indexOf('\n'))>=0){var line=S.lineBuf.slice(0,i).replace(/\r/g,'').trim();S.lineBuf=S.lineBuf.slice(i+1);handleLine(line)}}
+function handleLine(line){if(!line||line.charAt(0)!=='D')return;var p=line.split(',');if(p.length<5)return;sample(+p[1],+p[2],+p[3],+p[4])}
+function sample(t,rr,r,v){if(!isFinite(t)||!isFinite(rr)||!isFinite(r)||!isFinite(v))return;var D=n('rollerD',240)/1000,J=n('rollerJ',1.73),speed=rr*Math.PI*D/60*3.6,afr=afrFromV(v),omega=rr*2*Math.PI/60;if(!S.lastT||rr<=0){S.omegaF=omega;S.ow=[omega];S.tw=[t];S.alpha=0}else{S.omegaF=S.omegaF+0.15*(omega-S.omegaF);S.ow.push(S.omegaF);S.tw.push(t);while(S.ow.length>11){S.ow.shift();S.tw.shift()}if(S.ow.length>=11){var dt=(S.tw[10]-S.tw[0])/1000,dw=S.ow[10]-S.ow[0];S.alpha=dt>0?dw/dt:0}else S.alpha=0}var torqueJ=S.alpha>0?J*S.alpha:0,hp=S.alpha>0?(torqueJ*S.omegaF/745.7):0,tq=hp>0&&r>0?(hp*5252/r*1.3558):0;if(!isFinite(hp)||hp<0)hp=0;if(!isFinite(tq)||tq<0)tq=0;S.lastT=t;S.rpm=r;S.rrpm=rr;S.speed=speed;S.afr=afr;S.hp=hp;S.tq=tq;updateLive();if(!S.recording&&S.auto&&speed>=n('autoSpeed',10)&&(hp>=n('autoHp',1)||Math.abs(S.alpha)>=n('autoAlpha',10)))startRun();if(S.recording){S.hpMax=Math.max(S.hpMax,hp);S.tqMax=Math.max(S.tqMax,tq);S.runPower.push([r||rr,hp,tq]);S.runRpm.push([t/1000,r,rr,speed,afr]);if(S.runPower.length>1200)S.runPower.shift();if(S.runRpm.length>1200)S.runRpm.shift();drawAll()}S.liveRpmPts.push([t/1000,r,rr,speed,afr]);if(S.liveRpmPts.length>400)S.liveRpmPts.shift();update201(t,speed,r,afr);drawAll()}
+function updateLive(){$('liveRpm').textContent=Math.round(S.rpm);$('liveSpeed').textContent=S.speed.toFixed(0);$('liveAfr').textContent=isFinite(S.afr)?S.afr.toFixed(1):'--';$('liveHp').textContent=S.hp.toFixed(1);$('liveTq').textContent=S.tq.toFixed(1);$('rpmBar').style.width=Math.min(100,S.rpm/n('maxRpm',16000)*100)+'%';$('speedBar').style.width=Math.min(100,S.speed/n('maxSpeed',160)*100)+'%';$('powerVals').textContent='HP '+S.hp.toFixed(1)+' · TQ '+S.tq.toFixed(1);$('rpmVals').textContent='RPM '+Math.round(S.rpm)+' · SPEED '+S.speed.toFixed(0)+' · AFR '+S.afr.toFixed(1)}
+function startRun(){S.recording=true;S.hpMax=S.tqMax=0;S.runPower=[];S.runRpm=[];$('ctlRun').textContent='RUNNING';$('ctlRun').classList.add('red');drawAll()}
+function stopRun(){S.recording=false;$('ctlRun').textContent='RUN';drawAll()}
+function toggleAuto(){S.auto=!S.auto;$('autoStart').checked=S.auto;$('ctlAuto').classList.toggle('on',S.auto);save()}
+function toggleSim(){S.sim=!S.sim;$('ctlSim').textContent=S.sim?'SIM OFF':'SIM';if(S.sim)simLoop()}
+function simLoop(){if(!S.sim)return;S.simT+=50;var x=(S.simT%9000)/9000,rr=450+3200*Math.sin(Math.PI*x),rpm=1500+10500*Math.sin(Math.PI*x),v=1.7+.45*Math.sin(x*18);sample(S.simT,Math.max(0,rr),Math.max(0,rpm),v);setTimeout(simLoop,50)}
+function update201(t,speed,rpm,afr){if(S.wait201&&speed>=1){S.wait201=false;S.run201=true;S.t2010=S.t201last=t;S.d201=0;$('state201').textContent='RUNNING'}if(!S.run201)return;var dt=(t-S.t201last)/1000;if(dt>0&&dt<1)S.d201+=speed/3.6*dt;S.t201last=t;S.maxS201=Math.max(S.maxS201,speed);S.maxR201=Math.max(S.maxR201,rpm);$('dist201').textContent=S.d201.toFixed(1)+' m';$('time201').textContent=((t-S.t2010)/1000).toFixed(3)+' s';$('speed201').textContent=speed.toFixed(1);$('rpm201').textContent=Math.round(rpm);if(S.d201>=201){S.run201=false;S.done201=true;var tt=(t-S.t2010)/1000;$('state201').textContent='DONE';$('result201').textContent=tt.toFixed(3)+' s';$('maxSpeed201').textContent=S.maxS201.toFixed(1);$('maxRpm201').textContent=Math.round(S.maxR201);$('afrEnd201').textContent=afr.toFixed(1)}}
+function reset201(){S.run201=S.wait201=S.done201=false;S.d201=0;S.maxS201=S.maxR201=0;$('state201').textContent='Waiting';$('dist201').textContent='0.0 m';$('time201').textContent='--';$('speed201').textContent='0.0';$('rpm201').textContent='0';$('result201').textContent='--';$('maxSpeed201').textContent='0.0';$('maxRpm201').textContent='0';$('afrEnd201').textContent='--'}
+function setupCanvas(c){var dpr=Math.min(devicePixelRatio||1,2),r=c.getBoundingClientRect(),w=Math.max(20,r.width),h=Math.max(20,r.height);if(c.width!==Math.round(w*dpr)||c.height!==Math.round(h*dpr)){c.width=Math.round(w*dpr);c.height=Math.round(h*dpr)}var x=c.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);return{x:x,w:w,h:h}}
+function grid(g){var x=g.x,w=g.w,h=g.h;x.clearRect(0,0,w,h);x.strokeStyle='#171b20';x.lineWidth=1;for(var i=0;i<=10;i++){x.beginPath();x.moveTo(i*w/10,0);x.lineTo(i*w/10,h);x.stroke()}for(var j=0;j<=5;j++){x.beginPath();x.moveTo(0,j*h/5);x.lineTo(w,j*h/5);x.stroke()}}
+function line(g,data,xi,yi,minX,maxX,minY,maxY,color){if(data.length<2)return;var x=g.x,w=g.w,h=g.h;x.strokeStyle=color;x.lineWidth=1.8;x.beginPath();for(var i=0;i<data.length;i++){var px=(data[i][xi]-minX)/(maxX-minX||1)*w,py=h-(data[i][yi]-minY)/(maxY-minY||1)*h;if(i===0)x.moveTo(px,py);else x.lineTo(px,py)}x.stroke()}
+function drawPower(){var c=$('powerCanvas'),g=setupCanvas(c);grid(g);var d=S.runPower.length?S.runPower:[];if(!d.length)return;var minX=d[0][0],maxX=d[d.length-1][0],maxHP=Math.max(1,S.hpMax*1.12),maxT=Math.max(1,S.tqMax*1.12);line(g,d,0,1,minX,maxX,0,maxHP,'#ff3038');line(g,d,0,2,minX,maxX,0,maxT,'#ff9f1c')}
+function drawRpm(){var c=$('rpmCanvas'),g=setupCanvas(c);grid(g);var d=S.recording&&S.runRpm.length?S.runRpm:S.liveRpmPts;if(!d.length)return;var minX=d[0][0],maxX=d[d.length-1][0],maxR=Math.max(1000,n('maxRpm',16000)),maxRR=Math.max(200,Math.max.apply(null,d.map(function(a){return a[2]}))*1.1),maxS=Math.max(50,n('maxSpeed',160));line(g,d,0,1,minX,maxX,0,maxR,'#ff4c52');line(g,d,0,2,minX,maxX,0,maxRR,'#37d45a');line(g,d,0,3,minX,maxX,0,maxS,'#b8bcc2');line(g,d,0,4,minX,maxX,8,22,'#3488ff')}
+function drawAll(){drawPower();drawRpm()}
+function save(){var o={};cfgIds.forEach(function(id){o[id]=$(id).value});o.auto=$('autoStart').checked;localStorage.setItem('dynotl_mobile_v1',JSON.stringify(o))}
+function load(){try{var o=JSON.parse(localStorage.getItem('dynotl_mobile_v1')||'{}');cfgIds.forEach(function(id){if(o[id]!=null)$(id).value=o[id]});S.auto=!!o.auto;$('autoStart').checked=S.auto;$('ctlAuto').classList.toggle('on',S.auto)}catch(e){}}
+document.querySelectorAll('nav button').forEach(function(b){b.onclick=function(){document.querySelectorAll('nav button').forEach(function(x){x.classList.remove('on')});document.querySelectorAll('.page').forEach(function(x){x.classList.remove('on')});b.classList.add('on');$(b.dataset.page).classList.add('on');setTimeout(drawAll,30)}})
+$('bleTop').onclick=connectBle;$('ctlBle').onclick=connectBle;$('ctlRun').onclick=startRun;$('ctlStop').onclick=stopRun;$('ctlAuto').onclick=toggleAuto;$('ctlSim').onclick=toggleSim;$('run201').onclick=function(){reset201();S.wait201=true;$('state201').textContent='Waiting ≥ 1 km/h'};$('reset201').onclick=reset201;$('autoStart').onchange=function(){S.auto=this.checked;$('ctlAuto').classList.toggle('on',S.auto);save()}
+cfgIds.forEach(function(id){$(id).addEventListener('change',save);$(id).addEventListener('input',save)});window.addEventListener('resize',drawAll);document.addEventListener('visibilitychange',function(){if(!document.hidden)drawAll()});load();reset201();setBle(false);try{if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(function(){})}catch(e){};setTimeout(drawAll,100);
+})();
+</script>
+</body></html>
