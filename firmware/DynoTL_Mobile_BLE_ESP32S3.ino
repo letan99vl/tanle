@@ -48,14 +48,43 @@ class CmdCB:public BLECharacteristicCallbacks{
 void dynoBleBegin(){
   BLEDevice::init(DEVICE_NAME);
   BLEDevice::setMTU(185);
+  BLEDevice::setPower(ESP_PWR_LVL_P9, ESP_BLE_PWR_TYPE_ADV);
+  BLEDevice::setPower(ESP_PWR_LVL_P9, ESP_BLE_PWR_TYPE_DEFAULT);
+
   BLEServer *srv=BLEDevice::createServer();srv->setCallbacks(new ServerCB());
   BLEService *svc=srv->createService(SERVICE_UUID);
   liveChar=svc->createCharacteristic(LIVE_UUID,BLECharacteristic::PROPERTY_NOTIFY|BLECharacteristic::PROPERTY_READ);liveChar->addDescriptor(new BLE2902());
   commandChar=svc->createCharacteristic(COMMAND_UUID,BLECharacteristic::PROPERTY_WRITE|BLECharacteristic::PROPERTY_WRITE_NR);commandChar->setCallbacks(new CmdCB());
   statusChar=svc->createCharacteristic(STATUS_UUID,BLECharacteristic::PROPERTY_NOTIFY|BLECharacteristic::PROPERTY_READ);statusChar->addDescriptor(new BLE2902());
   svc->start();
-  BLEAdvertising *adv=BLEDevice::getAdvertising();adv->addServiceUUID(SERVICE_UUID);adv->setScanResponse(true);BLEDevice::startAdvertising();
-  Serial.println("[DynoTL] BLE DYNOTL-MOBILE ready");
+
+  // ESP32-S3: keep the 128-bit service UUID in the primary advertisement.
+  // Put the longer device name in scan response so both fit legacy BLE payloads.
+  BLEAdvertising *adv = BLEDevice::getAdvertising();
+  adv->reset();
+
+  BLEAdvertisementData advData;
+  advData.setFlags(0x06);
+  advData.setCompleteServices(BLEUUID(SERVICE_UUID));
+  adv->setAdvertisementData(advData);
+
+  BLEAdvertisementData scanData;
+  scanData.setName(DEVICE_NAME);
+  scanData.addTxPower();
+  adv->setScanResponseData(scanData);
+
+  adv->setMinPreferred(0x06);
+  adv->setMaxPreferred(0x12);
+
+  BLEDevice::startAdvertising();
+
+  Serial.println();
+  Serial.println("========================================");
+  Serial.println("[DynoTL] ESP32-S3 BLE advertising STARTED");
+  Serial.printf("[DynoTL] Name    : %s\n", DEVICE_NAME);
+  Serial.printf("[DynoTL] Address : %s\n", BLEDevice::getAddress().toString().c_str());
+  Serial.printf("[DynoTL] Service : %s\n", SERVICE_UUID);
+  Serial.println("========================================");
 }
 void setup(){
   Serial.begin(115200);
