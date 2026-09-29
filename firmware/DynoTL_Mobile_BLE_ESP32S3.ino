@@ -225,6 +225,7 @@ void dynoBleBegin() {
   Serial.println("========================================");
   Serial.println("[DynoTL] ESP32-S3 BLE advertising STARTED");
   Serial.printf("[DynoTL] Name    : %s\n", DEVICE_NAME);
+  Serial.printf("[DynoTL] BLE MAC : %s\n", BLEDevice::getAddress().toString().c_str());
   Serial.printf("[DynoTL] Service : %s\n", SERVICE_UUID);
   Serial.println("[DynoTL] BLE mode: same structure as Blink-Redleo");
   Serial.println("========================================");
