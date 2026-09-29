@@ -170,6 +170,37 @@ main{display:none;min-height:0;overflow:hidden}.page.on{display:block;height:100
 .compare-run-chip input{accent-color:var(--run)!important}
 .compare-run-chip.checked{border-color:var(--run)!important;box-shadow:inset 2px 0 0 var(--run);background:#101214!important}
 </style>
+<style id="pc-calc-settings-mobile-v4">
+.smoothbar{display:flex;align-items:center;gap:2px;margin-left:3px}
+.smoothbar button{height:18px;min-width:36px;padding:0 5px;border:1px solid #2c3238;border-radius:4px;background:#0c0f12;color:#747f89;font:800 6px Arial,sans-serif;letter-spacing:.3px}
+.smoothbar button.on{color:#fff;border-color:#8f252b;background:#321114}
+#settings{overflow-x:hidden!important;overflow-y:auto!important;padding:6px 6px 52px!important;-webkit-overflow-scrolling:touch}
+#settings .settingsgrid{width:100%;min-width:0;grid-template-columns:repeat(3,minmax(0,1fr));align-items:start}
+#settings .card{min-width:0;overflow:visible!important}
+#settings .setline{grid-template-columns:minmax(0,1fr) minmax(68px,84px);min-width:0}
+#settings .setline span{min-width:0;overflow-wrap:anywhere}
+#settings .setline input,#settings .setline select{min-width:0;max-width:100%;box-sizing:border-box}
+.settings-actions{position:sticky;left:0;right:0;bottom:0;z-index:8;display:flex;align-items:center;justify-content:center;gap:8px;min-height:42px;margin-top:6px;padding:5px 8px;border:1px solid #292f35;border-radius:9px;background:#080b0eef;backdrop-filter:blur(8px)}
+#btnSaveSettings{height:31px;min-width:132px;border:1px solid #8f252b;border-radius:7px;background:#321114;color:#fff;font:900 9px Arial,sans-serif;letter-spacing:.7px}
+#btnSaveSettings:active{transform:translateY(1px)}
+#settingsSaveStatus{font:800 8px Arial,sans-serif;color:#6f7a84;letter-spacing:.5px;white-space:nowrap}
+#settingsSaveStatus.saving{color:#ffd166}
+#settingsSaveStatus.saved{color:#6ee7a8}
+#settingsSaveStatus.error{color:#ff6d75}
+@media(max-width:760px){
+ #settings .settingsgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:560px){
+ #settings .settingsgrid{grid-template-columns:1fr}
+}
+@media(max-height:430px){
+ .smoothbar button{height:16px;min-width:31px;font-size:5px;padding:0 3px}
+ #settings{padding-bottom:45px!important}
+ .settings-actions{min-height:36px;padding:3px 6px}
+ #btnSaveSettings{height:27px;min-width:112px;font-size:8px}
+ #settingsSaveStatus{font-size:7px}
+}
+</style>
 </head>
 <body>
 <div id="app">
@@ -205,7 +236,7 @@ main{display:none;min-height:0;overflow:hidden}.page.on{display:block;height:100
    <span>HP / TORQUE VS RPM</span>
    <div class="chart-runbar"><span>SAVED RUN</span><select id="powerRunSelect"></select><span id="powerVals" class="vals">NO SAVED RUN</span></div>
   </div>
-  <div class="mobile-chart-legend"><span class="lg hp">HP</span><span class="lg tq">TORQUE</span><span class="axis-note">X: RPM</span></div>
+  <div class="mobile-chart-legend power-legend"><span class="lg hp">HP</span><span class="lg tq">TORQUE</span><div class="smoothbar" aria-label="Chart smoothing"><button type="button" data-smooth="0">RAW</button><button type="button" data-smooth="1" class="on">LIGHT</button><button type="button" data-smooth="2">MED</button></div><span class="axis-note">X: RPM</span></div>
   <div class="chartwrap"><canvas id="powerCanvas"></canvas></div>
  </section>
 </main>
@@ -265,17 +296,20 @@ main{display:none;min-height:0;overflow:hidden}.page.on{display:block;height:100
    <label class="setline"><span>Min alpha rad/s²</span><input id="autoAlpha" type="number" value="10"></label>
   </section>
  </div>
+ <div class="settings-actions"><button id="btnSaveSettings" type="button">SAVE SETTINGS</button><span id="settingsSaveStatus">AUTO-SAVE ON</span></div>
 </main>
 </div>
 
 <script>
 (function(){
 'use strict';
-var S={connected:false,recording:false,sim:false,auto:false,device:null,server:null,live:null,cmd:null,status:null,lineBuf:'',lastT:0,omegaF:0,ow:[],tw:[],rpm:0,rrpm:0,speed:0,afr:0,hp:0,tq:0,alpha:0,hpMax:0,tqMax:0,runPower:[],runRpm:[],liveRpmPts:[],lastSampleT:0,simT:0,run201:false,wait201:false,done201:false,d201:0,t2010:0,t201last:0,maxS201:0,maxR201:0};
+var S={connected:false,recording:false,sim:false,auto:false,device:null,server:null,live:null,cmd:null,status:null,lineBuf:'',lastT:0,omegaF:0,ow:[],tw:[],rpm:0,rrpm:0,speed:0,afr:0,hp:0,tq:0,alpha:0,hpMax:0,tqMax:0,runPower:[],runRpm:[],liveRpmPts:[],lastSampleT:0,simT:0,run201:false,wait201:false,done201:false,d201:0,t2010:0,t201last:0,maxS201:0,maxR201:0,rollerCalcPrimed:false,rollerStartupSamplesRemaining:0,rollerGuardLastDistinctRpm:0,rollerGuardLastDistinctMs:0,lastPlotRpm:0,smoothingLevel:1};
 var BLE={service:'d7a10001-7c35-4a6d-9f0e-2ea3117f1000',live:'d7a10002-7c35-4a6d-9f0e-2ea3117f1000',cmd:'d7a10003-7c35-4a6d-9f0e-2ea3117f1000',status:'d7a10005-7c35-4a6d-9f0e-2ea3117f1000'};
 var $=function(id){return document.getElementById(id)},dec=new TextDecoder(),enc=new TextEncoder();
 var cfgIds=['rollerD','rollerJ','maxRpm','maxSpeed','afrVMin','afrMin','afrVMax','afrMax','autoSpeed','autoHp','autoAlpha'];
 var runHistory=[],selectedRunIndex=-1,RUN_HISTORY_KEY='dynotl_mobile_runs_v2',RUN_COUNTER_KEY='dynotl_mobile_run_counter_v2';
+var OMEGA_EMA_K=0.15,ALPHA_WINDOW_N=10,ROLLER_STARTUP_SKIP_SAMPLES=4;
+var ROLLER_DISTINCT_EPS_RPM=0.5,ROLLER_JUMP_MIN_RPM=250.0,ROLLER_JUMP_RATIO=0.55,ROLLER_JUMP_MAX_DT_MS=300.0,ROLLER_JUMP_COOLDOWN_SAMPLES=2;
 function n(id,d){var v=parseFloat($(id).value);return isFinite(v)?v:d}
 function afrFromV(v){var v0=n('afrVMin',0),v1=n('afrVMax',3.15),a0=n('afrMin',10),a1=n('afrMax',20);if(v1===v0)return a0;return a0+(v-v0)*(a1-a0)/(v1-v0)}
 function setBle(on,msg){S.connected=on;$('bleStatus').textContent=msg||(on?'BLE OK':'BLE OFF');$('bleStatus').classList.toggle('ok',on);$('ctlBle').textContent=on?'OFF':'BLE';$('bleTop').textContent=on?'OFF':'BLE'}
@@ -288,9 +322,87 @@ async function writeCmd(t){if(!S.cmd)return;var b=enc.encode(t);if(S.cmd.writeVa
 function onStatus(e){try{var d=e.target.value;$('bleStatus').textContent=dec.decode(new Uint8Array(d.buffer,d.byteOffset,d.byteLength)).trim()||'BLE OK'}catch(x){}}
 function onLive(e){var d=e.target.value,txt=dec.decode(new Uint8Array(d.buffer,d.byteOffset,d.byteLength));S.lineBuf+=txt;var i;while((i=S.lineBuf.indexOf('\n'))>=0){var line=S.lineBuf.slice(0,i).replace(/\r/g,'').trim();S.lineBuf=S.lineBuf.slice(i+1);handleLine(line)}}
 function handleLine(line){if(!line||line.charAt(0)!=='D')return;var p=line.split(',');if(p.length<5)return;sample(+p[1],+p[2],+p[3],+p[4])}
-function sample(t,rr,r,v){if(!isFinite(t)||!isFinite(rr)||!isFinite(r)||!isFinite(v))return;var D=n('rollerD',240)/1000,J=n('rollerJ',1.73),speed=rr*Math.PI*D/60*3.6,afr=afrFromV(v),omega=rr*2*Math.PI/60;if(!S.lastT||rr<=0){S.omegaF=omega;S.ow=[omega];S.tw=[t];S.alpha=0}else{S.omegaF=S.omegaF+0.15*(omega-S.omegaF);S.ow.push(S.omegaF);S.tw.push(t);while(S.ow.length>11){S.ow.shift();S.tw.shift()}if(S.ow.length>=11){var dt=(S.tw[10]-S.tw[0])/1000,dw=S.ow[10]-S.ow[0];S.alpha=dt>0?dw/dt:0}else S.alpha=0}var torqueJ=S.alpha>0?J*S.alpha:0,hp=S.alpha>0?(torqueJ*S.omegaF/745.7):0,tq=hp>0&&r>0?(hp*5252/r*1.3558):0;if(!isFinite(hp)||hp<0)hp=0;if(!isFinite(tq)||tq<0)tq=0;S.lastT=t;S.rpm=r;S.rrpm=rr;S.speed=speed;S.afr=afr;S.hp=hp;S.tq=tq;updateLive();if(!S.recording&&S.auto&&speed>=n('autoSpeed',10)&&(hp>=n('autoHp',1)||Math.abs(S.alpha)>=n('autoAlpha',10)))startRun();if(S.recording){S.hpMax=Math.max(S.hpMax,hp);S.tqMax=Math.max(S.tqMax,tq);S.runPower.push([r||rr,hp,tq]);S.runRpm.push([t/1000,r,rr,speed,afr]);if(S.runPower.length>1200)S.runPower.shift();if(S.runRpm.length>1200)S.runRpm.shift();drawAll()}S.liveRpmPts.push([t/1000,r,rr,speed,afr]);if(S.liveRpmPts.length>400)S.liveRpmPts.shift();update201(t,speed,r,afr);drawAll()}
+function sample(t,rr,r,v){
+ if(!isFinite(t)||!isFinite(rr)||!isFinite(r)||!isFinite(v))return;
+ var D=n('rollerD',240)/1000,J=n('rollerJ',1.73);
+ var speed=rr*Math.PI*D/60*3.6,afr=afrFromV(v),omega=rr*2*Math.PI/60;
+ var rollerForceBaselineReset=false,hpTorqueSampleValid=false;
+
+ // PC Dyno jump guard: a sudden implausible positive roller-RPM jump resets
+ // the alpha baseline without blocking the UI or sensor stream.
+ if(!isFinite(rr)||rr<=0){
+   S.rollerGuardLastDistinctRpm=0;S.rollerGuardLastDistinctMs=0;
+ }else if(!(S.rollerGuardLastDistinctRpm>0)){
+   S.rollerGuardLastDistinctRpm=rr;S.rollerGuardLastDistinctMs=t;
+ }else if(Math.abs(rr-S.rollerGuardLastDistinctRpm)>=ROLLER_DISTINCT_EPS_RPM){
+   var guardPrev=S.rollerGuardLastDistinctRpm,guardDelta=rr-guardPrev,guardDt=t-S.rollerGuardLastDistinctMs;
+   var guardLimit=Math.max(ROLLER_JUMP_MIN_RPM,Math.abs(guardPrev)*ROLLER_JUMP_RATIO);
+   if(guardDelta>0&&guardDelta>=guardLimit&&guardDt>0&&guardDt<=ROLLER_JUMP_MAX_DT_MS)rollerForceBaselineReset=true;
+   S.rollerGuardLastDistinctRpm=rr;S.rollerGuardLastDistinctMs=t;
+ }
+
+ // PC Dyno startup guard + omega EMA + 10-sample alpha window.
+ var rollerCalcReady=true;
+ if(!isFinite(rr)||rr<=0){
+   S.rollerCalcPrimed=false;S.rollerStartupSamplesRemaining=0;S.omegaF=0;S.ow=[];S.tw=[];S.alpha=0;rollerCalcReady=false;
+ }else if(!S.rollerCalcPrimed||rollerForceBaselineReset){
+   S.rollerCalcPrimed=true;
+   S.rollerStartupSamplesRemaining=rollerForceBaselineReset?ROLLER_JUMP_COOLDOWN_SAMPLES:ROLLER_STARTUP_SKIP_SAMPLES;
+   S.omegaF=omega;S.ow=[S.omegaF];S.tw=[t];S.alpha=0;rollerCalcReady=false;
+ }else{
+   if(!isFinite(S.omegaF)||S.omegaF<=0)S.omegaF=omega;
+   else S.omegaF=S.omegaF+OMEGA_EMA_K*(omega-S.omegaF);
+   S.ow.push(S.omegaF);S.tw.push(t);
+   if(S.rollerStartupSamplesRemaining>0){S.rollerStartupSamplesRemaining--;rollerCalcReady=false}
+ }
+
+ var maxLen=ALPHA_WINDOW_N+1;
+ while(S.ow.length>maxLen)S.ow.shift();
+ while(S.tw.length>maxLen)S.tw.shift();
+
+ var torqueJ=0,hp=0,tq=0,alpha=0;
+ if(rollerCalcReady&&S.ow.length>=maxLen){
+   var dt=(S.tw[S.tw.length-1]-S.tw[0])/1000.0;
+   if(isFinite(dt)&&dt>0){
+     alpha=(S.ow[S.ow.length-1]-S.ow[0])/dt;
+     hpTorqueSampleValid=isFinite(alpha)&&alpha>0;
+     if(!hpTorqueSampleValid)alpha=0;
+     torqueJ=hpTorqueSampleValid?(J*alpha):0;
+     var powerW=hpTorqueSampleValid?(torqueJ*S.omegaF):0;
+     hp=powerW/745.7;
+     if(!isFinite(hp)||hp<0)hp=0;
+   }
+ }
+
+ // Same default torque mode as the PC app: HP/RPM -> Nm.
+ if(hp>0&&r>0)tq=(hp*5252.0/r)*1.3558;
+ if(!isFinite(tq)||tq<0)tq=0;
+
+ S.lastT=t;S.alpha=alpha;S.rpm=r;S.rrpm=rr;S.speed=speed;S.afr=afr;S.hp=hp;S.tq=tq;
+ updateLive();
+
+ if(!S.recording&&S.auto&&speed>=n('autoSpeed',10)&&(hpTorqueSampleValid&&(hp>=n('autoHp',1)||Math.abs(alpha)>=n('autoAlpha',10))))startRun();
+
+ if(S.recording){
+   if(hpTorqueSampleValid){
+     S.hpMax=Math.max(S.hpMax,hp);S.tqMax=Math.max(S.tqMax,tq);
+     var plotX=(r>0)?r:rr;
+     if(plotX>=S.lastPlotRpm){
+       S.runPower.push([plotX,hp,tq]);
+       if(S.runPower.length>1200)S.runPower.shift();
+       S.lastPlotRpm=plotX;
+     }
+   }
+   S.runRpm.push([t/1000,r,rr,speed,afr]);
+   if(S.runRpm.length>1200)S.runRpm.shift();
+   drawAll();
+ }
+ S.liveRpmPts.push([t/1000,r,rr,speed,afr]);
+ if(S.liveRpmPts.length>400)S.liveRpmPts.shift();
+ update201(t,speed,r,afr);drawAll()
+}
 function updateLive(){$('liveRpm').textContent=Math.round(S.rpm);$('liveSpeed').textContent=S.speed.toFixed(0);$('liveAfr').textContent=isFinite(S.afr)?S.afr.toFixed(1):'--';$('liveHp').textContent=S.hp.toFixed(1);$('liveTq').textContent=S.tq.toFixed(1);$('rpmBar').style.width=Math.min(100,S.rpm/n('maxRpm',16000)*100)+'%';$('speedBar').style.width=Math.min(100,S.speed/n('maxSpeed',160)*100)+'%'}
-function startRun(){if(S.recording)return;S.recording=true;S.hpMax=S.tqMax=0;S.runPower=[];S.runRpm=[];S.runStartedWall=Date.now();$('ctlRun').textContent='RUNNING';$('ctlRun').classList.add('red');drawAll()}
+function startRun(){if(S.recording)return;S.recording=true;S.hpMax=S.tqMax=0;S.runPower=[];S.runRpm=[];S.lastPlotRpm=0;S.omegaF=0;S.ow=[];S.tw=[];S.rollerCalcPrimed=false;S.rollerStartupSamplesRemaining=0;S.runStartedWall=Date.now();$('ctlRun').textContent='RUNNING';$('ctlRun').classList.add('red');drawAll()}
 function stopRun(){if(!S.recording)return;S.recording=false;$('ctlRun').textContent='RUN';$('ctlRun').classList.remove('red');saveCurrentRun();drawAll()}
 function toggleAuto(){S.auto=!S.auto;$('autoStart').checked=S.auto;$('ctlAuto').classList.toggle('on',S.auto);save()}
 function toggleSim(){S.sim=!S.sim;$('ctlSim').textContent=S.sim?'SIM OFF':'SIM';if(S.sim)simLoop()}
@@ -349,9 +461,45 @@ function plotSeries(g,P,data,getX,getY,xMin,xMax,yMin,yMax,color,width){
 function chartEmpty(g,msg){g.x.fillStyle='#66717c';g.x.textAlign='center';g.x.font='700 10px Arial';g.x.fillText(msg,g.w/2,g.h/2)}
 function getSelectedRun(){return selectedRunIndex>=0&&runHistory[selectedRunIndex]?runHistory[selectedRunIndex]:null}
 function drawLegend(g,items){var x=g.x,px=62;x.font='700 8px Arial';x.textAlign='left';items.forEach(function(it){x.strokeStyle=it[1];x.lineWidth=2;x.beginPath();x.moveTo(px,12);x.lineTo(px+14,12);x.stroke();x.fillStyle='#c3c8ce';x.fillText(it[0],px+18,12);px+=18+x.measureText(it[0]).width+24})}
+function getSmoothingWindow(level){return level===1?3:(level===2?7:1)}
+function smoothCenteredPower(data,windowSize){
+ if(!data||!data.length||windowSize<=1)return(data||[]).map(function(a){return a.slice()});
+ if(windowSize%2===0)windowSize++;var half=Math.floor(windowSize/2),out=[];
+ for(var i=0;i<data.length;i++){var a=Math.max(0,i-half),b=Math.min(data.length-1,i+half),sh=0,st=0,nc=0;
+   for(var j=a;j<=b;j++){sh+=+data[j][1]||0;st+=+data[j][2]||0;nc++}
+   out.push([data[i][0],sh/nc,st/nc])
+ }return out
+}
+function smoothTrailingPairs(data,windowSize){
+ if(!data||!data.length||windowSize<=1)return(data||[]).map(function(a){return a.slice()});
+ var out=[],q=[],sum=0;for(var i=0;i<data.length;i++){var y=+data[i][1]||0;q.push(y);sum+=y;if(q.length>windowSize)sum-=q.shift();out.push([data[i][0],sum/q.length])}return out
+}
+function trimPowerAtHalfHp(data){
+ if(!data||data.length<3)return(data||[]).map(function(a){return a.slice()});
+ var maxHp=-Infinity,maxIdx=-1;
+ for(var i=0;i<data.length;i++){var y=+data[i][1];if(isFinite(y)&&y>maxHp){maxHp=y;maxIdx=i}}
+ if(!(maxHp>0)||maxIdx<0||maxIdx>=data.length-1)return data.map(function(a){return a.slice()});
+ var threshold=maxHp*0.50;
+ for(var k=maxIdx+1;k<data.length;k++){
+   var cy=+data[k][1];if(!isFinite(cy)||cy>threshold)continue;
+   var nextBelow=(k===data.length-1)||(isFinite(+data[k+1][1])&&+data[k+1][1]<=threshold);if(!nextBelow)continue;
+   var prev=data[k-1],cur=data[k],py=+prev[1],px=+prev[0],cx=+cur[0],ratio=1;
+   if(isFinite(py)&&py>threshold&&cy<py){ratio=(py-threshold)/(py-cy);ratio=Math.max(0,Math.min(1,ratio))}
+   var xCut=isFinite(px)&&isFinite(cx)?px+(cx-px)*ratio:cx;
+   var tqPrev=+prev[2],tqCur=+cur[2],tqCut=isFinite(tqPrev)&&isFinite(tqCur)?tqPrev+(tqCur-tqPrev)*ratio:(isFinite(tqCur)?tqCur:0);
+   var out=data.slice(0,k).map(function(a){return a.slice()});out.push([xCut,threshold,tqCut]);return out
+ }return data.map(function(a){return a.slice()})
+}
+function buildPowerDisplayData(raw){
+ var d=trimPowerAtHalfHp(raw||[]),cut=!!(raw&&d.length&&d.length<raw.length);
+ if(S.smoothingLevel>0){var threshold=d.length?d[d.length-1][1]:0;d=smoothCenteredPower(d,getSmoothingWindow(S.smoothingLevel));if(cut&&d.length)d[d.length-1][1]=threshold}
+ return d
+}
+function syncSmoothingButtons(){document.querySelectorAll('[data-smooth]').forEach(function(b){b.classList.toggle('on',parseInt(b.dataset.smooth,10)===S.smoothingLevel)})}
+function setSmoothingLevel(level,persist){level=parseInt(level,10);if(level!==0&&level!==1&&level!==2)level=1;S.smoothingLevel=level;syncSmoothingButtons();drawAll();if(persist!==false)save()}
 function drawPower(){
- var c=$('powerCanvas'),g=setupCanvas(c),run=getSelectedRun(),d=S.recording?S.runPower:(run?run.power:[]);
- var maxHp=0,maxTq=0;if(d&&d.length)d.forEach(function(a){maxHp=Math.max(maxHp,+a[1]||0);maxTq=Math.max(maxTq,+a[2]||0)});
+ var c=$('powerCanvas'),g=setupCanvas(c),run=getSelectedRun(),raw=S.recording?S.runPower:(run?run.power:[]),d=buildPowerDisplayData(raw);
+ var maxHp=0,maxTq=0;if(raw&&raw.length)raw.forEach(function(a){maxHp=Math.max(maxHp,+a[1]||0);maxTq=Math.max(maxTq,+a[2]||0)});
  var xMin=d&&d.length?Math.min.apply(null,d.map(function(a){return+a[0]})):0,xMax=d&&d.length?Math.max.apply(null,d.map(function(a){return+a[0]})):1;if(xMax<=xMin)xMax=xMin+1;
  var hpY=niceMax(maxHp*1.1),tqY=niceMax(maxTq*1.1),P=chartFrame(g,{xMin:xMin,xMax:xMax,xLabel:'ENGINE RPM / ROLLER RPM',yMax:hpY,yLabel:'HP',yColor:'#ff3038',right:{max:tqY,label:'TORQUE (Nm)',shortLabel:'Nm',color:'#ff9f1c'}});
  if(!d||d.length<2){chartEmpty(g,'NO SAVED RUN DATA');return}
@@ -370,8 +518,8 @@ function drawRpm(){
 }
 function getCompareIndices(){var out=[];document.querySelectorAll('#compareRunList input:checked').forEach(function(e){out.push(+e.value)});return out.slice(0,5)}
 function compareSeriesFor(run,metric){
- if(!run)return[];if(metric==='hp')return(run.power||[]).map(function(a){return[+a[0],+a[1]]});
- if(metric==='tq')return(run.power||[]).map(function(a){return[+a[0],+a[2]]});
+ if(!run)return[];if(metric==='hp'){var a=(run.power||[]).map(function(v){return[+v[0],+v[1]]});return S.smoothingLevel>0?smoothTrailingPairs(a,getSmoothingWindow(S.smoothingLevel)):a}
+ if(metric==='tq'){var b=(run.power||[]).map(function(v){return[+v[0],+v[2]]});return S.smoothingLevel>0?smoothTrailingPairs(b,getSmoothingWindow(S.smoothingLevel)):b}
  if(metric==='speed')return(run.rpm||[]).map(function(a){return[+a[1]||+a[2],+a[3]]});
  return(run.rpm||[]).map(function(a){return[+a[1]||+a[2],+a[4]]})
 }
@@ -413,10 +561,11 @@ function bindRunHistoryUI(){
  ['powerRunSelect','rpmRunSelect'].forEach(function(id){var s=$(id);if(!s)return;s.addEventListener('change',function(){var v=parseInt(this.value,10);if(!isFinite(v)||!runHistory[v])return;selectedRunIndex=v;renderRunSelectors();drawAll()})});
  if($('compareMetric'))$('compareMetric').addEventListener('change',drawCompare)
 }
-function save(){var o={};cfgIds.forEach(function(id){o[id]=$(id).value});o.auto=$('autoStart').checked;localStorage.setItem('dynotl_mobile_v1',JSON.stringify(o))}
-function load(){try{var o=JSON.parse(localStorage.getItem('dynotl_mobile_v1')||'{}');cfgIds.forEach(function(id){if(o[id]!=null)$(id).value=o[id]});S.auto=!!o.auto;$('autoStart').checked=S.auto;$('ctlAuto').classList.toggle('on',S.auto)}catch(e){}}
+function setSaveStatus(text,cls){var e=$('settingsSaveStatus');if(!e)return;e.textContent=text;e.className=cls||''}
+function save(showStatus){try{if(showStatus)setSaveStatus('SAVING...','saving');var o={};cfgIds.forEach(function(id){o[id]=$(id).value});o.auto=$('autoStart').checked;o.smoothingLevel=S.smoothingLevel;localStorage.setItem('dynotl_mobile_v1',JSON.stringify(o));if(showStatus){setSaveStatus('SAVED','saved');setTimeout(function(){setSaveStatus('AUTO-SAVE ON','')},1400)}return true}catch(e){if(showStatus)setSaveStatus('SAVE ERROR','error');return false}}
+function load(){try{var o=JSON.parse(localStorage.getItem('dynotl_mobile_v1')||'{}');cfgIds.forEach(function(id){if(o[id]!=null)$(id).value=o[id]});S.auto=!!o.auto;S.smoothingLevel=(o.smoothingLevel===0||o.smoothingLevel===1||o.smoothingLevel===2)?o.smoothingLevel:1;$('autoStart').checked=S.auto;$('ctlAuto').classList.toggle('on',S.auto);syncSmoothingButtons()}catch(e){}}
 document.querySelectorAll('nav button').forEach(function(b){b.onclick=function(){document.querySelectorAll('nav button').forEach(function(x){x.classList.remove('on')});document.querySelectorAll('.page').forEach(function(x){x.classList.remove('on')});b.classList.add('on');$(b.dataset.page).classList.add('on');setTimeout(drawAll,30)}})
-$('bleTop').onclick=connectBle;$('ctlBle').onclick=connectBle;$('ctlRun').onclick=startRun;$('ctlStop').onclick=stopRun;$('ctlAuto').onclick=toggleAuto;$('ctlSim').onclick=toggleSim;$('run201').onclick=function(){reset201();S.wait201=true;$('state201').textContent='Waiting ≥ 1 km/h'};$('reset201').onclick=reset201;$('autoStart').onchange=function(){S.auto=this.checked;$('ctlAuto').classList.toggle('on',S.auto);save()}
+$('bleTop').onclick=connectBle;$('ctlBle').onclick=connectBle;$('ctlRun').onclick=startRun;$('ctlStop').onclick=stopRun;$('ctlAuto').onclick=toggleAuto;$('ctlSim').onclick=toggleSim;if($('btnSaveSettings'))$('btnSaveSettings').onclick=function(){save(true)};document.querySelectorAll('[data-smooth]').forEach(function(b){b.onclick=function(){setSmoothingLevel(this.dataset.smooth,true)}});$('run201').onclick=function(){reset201();S.wait201=true;$('state201').textContent='Waiting ≥ 1 km/h'};$('reset201').onclick=reset201;$('autoStart').onchange=function(){S.auto=this.checked;$('ctlAuto').classList.toggle('on',S.auto);save()}
 cfgIds.forEach(function(id){$(id).addEventListener('change',save);$(id).addEventListener('input',save)});window.addEventListener('resize',drawAll);document.addEventListener('visibilitychange',function(){if(!document.hidden)drawAll()});load();restoreRunHistory();renderRunHistoryUI();bindRunHistoryUI();reset201();setBle(false);try{if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(function(){})}catch(e){};setTimeout(drawAll,100);
 })();
 </script>
