@@ -47,6 +47,7 @@ jobs:
           base64 -d android/dynotl-android-source.b64 > android-source.zip
           unzip -q android-source.zip -d android-work
           base64 -d android-work/app/dynotl-mobile.jks.b64 > android-work/app/dynotl-mobile.jks
+          sed -i 's/@Override protected void onWindowFocusChanged/@Override public void onWindowFocusChanged/' android-work/app/src/main/java/vn/dynotl/mobile/MainActivity.java
 
       - name: Build release APK
         working-directory: android-work
