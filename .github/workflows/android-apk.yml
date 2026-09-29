@@ -48,7 +48,14 @@ jobs:
           unzip -q android-source.zip -d android-work
           base64 -d android-work/app/dynotl-mobile.jks.b64 > android-work/app/dynotl-mobile.jks
           sed -i 's/@Override protected void onWindowFocusChanged/@Override public void onWindowFocusChanged/' android-work/app/src/main/java/vn/dynotl/mobile/MainActivity.java
-          sed -i '/setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);/d' android-work/app/src/main/java/vn/dynotl/mobile/MainActivity.java
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("android-work/app/src/main/java/vn/dynotl/mobile/MainActivity.java")
+          s = p.read_text()
+          needle = "        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);\n"
+          s = s.replace(needle, "", 1)
+          p.write_text(s)
+          PY
           sed -i 's/android:screenOrientation="sensorLandscape"/android:screenOrientation="unspecified"/' android-work/app/src/main/AndroidManifest.xml
 
       - name: Build release APK
