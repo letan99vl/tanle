@@ -36,6 +36,52 @@ main{display:none;min-height:0;overflow:hidden}.page.on{display:block;height:100
 .note{font-size:9px;color:#77828c;line-height:1.4}.good{color:#7de195}.bad{color:#ff7078}
 @media(max-height:430px){:root{--nav:36px;--ctl:40px}nav button{height:28px;min-width:61px;font-size:9px}.brand{font-size:10px}.pill{height:26px}.mini{height:28px}.big{font-size:clamp(44px,10vh,82px)}.gauge h3{font-size:11px}.unit{font-size:12px}.kpi strong{font-size:clamp(24px,5.5vh,44px)}.controls button{font-size:9px}.settingsgrid{grid-template-columns:repeat(3,1fr)}}
 </style>
+
+<style id="pc-live-restore">
+#live{padding:5px 7px calc(var(--ctl) + 4px)!important;background:#030304;overflow:hidden}
+.pc-live-shell{height:100%;display:grid;grid-template-rows:28px 1fr;gap:5px;min-height:0}
+.pc-live-head{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;min-width:0}
+.pc-live-label{display:flex;flex-direction:column;line-height:1.02;color:#aeb6c0}
+.pc-live-label b{font-size:9px;letter-spacing:1.1px}.pc-live-label span{font-size:6px;letter-spacing:1.2px;color:#626b75}
+.pc-live-name{min-width:220px;height:25px;display:grid;place-items:center;padding:0 34px;clip-path:polygon(4% 0,96% 0,100% 32%,92% 100%,8% 100%,0 32%);background:linear-gradient(180deg,#2a090b,#0d0708 52%,#190708);border:1px solid #641016;color:#e9edf1;font-size:11px;font-weight:900;letter-spacing:1px;text-shadow:0 0 10px #ff303844}
+.pc-live-state{justify-self:end;display:flex;align-items:center;gap:6px;height:23px;padding:0 9px;border:1px solid #34262a;border-radius:4px;background:#0a0b0d;font-size:8px;font-weight:800;color:#9ca5af}
+.pc-live-state i{width:6px;height:6px;border-radius:50%;background:#ff343a;box-shadow:0 0 8px #ff343a}
+.pc-live-grid{grid-template-columns:minmax(0,1fr) minmax(118px,.50fr) minmax(0,1fr)!important;gap:7px!important;min-height:0}
+.pc-gauge{position:relative!important;display:block!important;overflow:hidden;background:linear-gradient(145deg,#101113 0,#050506 58%,#020203 100%)!important;border:1px solid #26282b!important;border-radius:0!important;clip-path:polygon(5% 0,95% 0,100% 7%,100% 93%,95% 100%,5% 100%,0 93%,0 7%);isolation:isolate}
+.pc-gauge:before,.pc-gauge:after{content:"";position:absolute;inset:0;pointer-events:none}
+.pc-gauge:before{background:
+linear-gradient(135deg,#f32a30 0 1px,transparent 1px) top left/54px 54px no-repeat,
+linear-gradient(225deg,#f32a30 0 1px,transparent 1px) top right/54px 54px no-repeat,
+linear-gradient(45deg,#7d0f13 0 1px,transparent 1px) bottom left/54px 54px no-repeat,
+linear-gradient(315deg,#7d0f13 0 1px,transparent 1px) bottom right/54px 54px no-repeat;opacity:.9}
+.pc-gauge:after{inset:11% 13%;clip-path:polygon(18% 0,82% 0,100% 24%,100% 76%,82% 100%,18% 100%,0 76%,0 24%);border:1px solid #661014;background:rgba(0,0,0,.32);z-index:2}
+.pc-top-accent{position:absolute;left:18%;right:18%;top:7%;height:3px;background:linear-gradient(90deg,transparent,#741317 16%,#e3292f 48%,#741317 84%,transparent);clip-path:polygon(0 100%,15% 0,38% 0,43% 100%,57% 100%,62% 0,85% 0,100% 100%);z-index:6}
+.pc-arc{position:absolute;left:10%;right:10%;top:11%;aspect-ratio:1/1;border-radius:50%;background:repeating-conic-gradient(from 230deg,#1f2226 0deg 7deg,transparent 7deg 10deg);z-index:3;opacity:.98}
+.pc-arc:before{content:"";position:absolute;inset:4%;border-radius:50%;border:1px solid #741014}
+.pc-arc-mask{position:absolute;inset:18%;border-radius:50%;background:#050506}
+.pc-arc:after{content:"";position:absolute;left:-6%;right:-6%;bottom:-4%;height:44%;background:#050506}
+.pc-core{position:absolute;left:25%;right:25%;top:38%;bottom:18%;z-index:7;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.pc-core:before{content:"";position:absolute;inset:-10% -18%;clip-path:polygon(18% 0,82% 0,100% 22%,100% 78%,82% 100%,18% 100%,0 78%,0 22%);border:1px solid #7a1116;background:#050506;z-index:-1}
+.pc-core h3{margin:0 0 3px!important;font-size:clamp(11px,2.1vh,20px)!important;color:#8c97a6!important;font-weight:800}
+.pc-core .big{font-family:Impact,Arial Black,Arial,sans-serif;font-size:clamp(42px,12vh,98px)!important;line-height:.82!important;color:#fff;letter-spacing:1px;text-shadow:0 0 2px #fff,0 0 10px #ff2b3040}
+.pc-core .unit{margin-top:6px!important;color:#758093!important;font-size:clamp(10px,2vh,18px)!important;font-weight:800}
+.pc-ticks{position:absolute;inset:0;z-index:8;color:#f1f4f7;font-size:clamp(8px,1.8vh,15px);font-weight:700;pointer-events:none}
+.pc-ticks span{position:absolute;transform:translate(-50%,-50%)}
+.pc-ticks .p0{left:7%;top:77%}.pc-ticks .p1{left:11%;top:54%}.pc-ticks .p2{left:18%;top:33%}.pc-ticks .p3{left:31%;top:17%}.pc-ticks .p4{left:50%;top:10%}.pc-ticks .p5{left:69%;top:17%}.pc-ticks .p6{left:82%;top:33%}.pc-ticks .p7{left:89%;top:54%}.pc-ticks .p8{left:93%;top:77%}
+.pc-gauge .scale{left:25%!important;right:25%!important;bottom:7%!important;height:3px!important;background:#151719!important;z-index:9}
+.pc-gauge .scale i{background:linear-gradient(90deg,#5e0c10,#ff3038)!important;box-shadow:0 0 8px #ff303855}
+.pc-center-stack{display:grid!important;grid-template-rows:repeat(3,1fr)!important;gap:6px!important;background:none!important;border:none!important;border-radius:0!important;overflow:visible!important}
+.pc-kpi{position:relative;border:1px solid #25282c!important;background:linear-gradient(145deg,#0d0f11,#050506)!important;clip-path:polygon(8% 0,92% 0,100% 13%,100% 87%,92% 100%,8% 100%,0 87%,0 13%);min-height:0}
+.pc-kpi:before{content:"";position:absolute;left:5%;right:5%;top:7%;height:1px;background:linear-gradient(90deg,#ff2e35,transparent 36%,transparent 64%,#631116)}
+.pc-kpi label{font-size:clamp(8px,1.8vh,14px)!important;letter-spacing:.6px;color:#8793a2!important}
+.pc-kpi strong{font-family:Impact,Arial Black,Arial,sans-serif;font-size:clamp(26px,7.4vh,64px)!important;line-height:.9!important}
+.pc-kpi small{font-size:8px;color:#748090;margin-top:2px}
+.pc-kpi.hp strong{color:#ff3038!important;text-shadow:0 0 12px #ff303866}.pc-kpi.tq strong{color:#ff9f1c!important;text-shadow:0 0 12px #ff9f1c55}
+.pc-controls{height:35px!important;width:min(430px,calc(100% - 16px))!important;padding:3px!important;gap:3px!important;border-radius:9px!important;background:#080a0ce8!important}
+.pc-controls button{font-size:8px!important;letter-spacing:.5px!important;min-height:0!important;padding:0 6px!important;border-radius:6px!important}
+@media(max-height:420px){#live{padding-top:3px!important}.pc-live-shell{grid-template-rows:23px 1fr;gap:3px}.pc-live-name{height:21px;min-width:190px;font-size:9px}.pc-live-label b{font-size:8px}.pc-live-state{height:20px}.pc-center-stack{gap:4px!important}.pc-controls{height:32px!important}.pc-gauge .scale{bottom:5%!important}}
+</style>
+
 </head>
 <body>
 <div id="app">
@@ -52,18 +98,51 @@ main{display:none;min-height:0;overflow:hidden}.page.on{display:block;height:100
 </header>
 
 <main id="live" class="page on">
- <div class="livegrid">
-  <section class="gauge"><h3>ENGINE RPM</h3><div id="liveRpm" class="big">0</div><div class="unit">rpm</div><div class="scale"><i id="rpmBar"></i></div></section>
-  <section class="centerbox">
-   <div class="kpi afr"><label>AFR</label><strong id="liveAfr">--</strong></div>
-   <div class="kpi hp"><label>HP</label><strong id="liveHp">0.0</strong></div>
-   <div class="kpi tq"><label>TORQUE</label><strong id="liveTq">0.0</strong></div>
-  </section>
-  <section class="gauge"><h3>SPEED</h3><div id="liveSpeed" class="big">0</div><div class="unit">km/h</div><div class="scale"><i id="speedBar"></i></div></section>
- </div>
- <div class="controls">
-  <button id="ctlBle" class="go">BLE</button><button id="ctlAuto" class="auto">AUTO</button><button id="ctlRun" class="go">RUN</button><button id="ctlStop" class="stop">STOP</button><button id="ctlSim">SIM</button>
- </div>
+ <section class="pc-live-shell">
+  <div class="pc-live-head">
+   <div class="pc-live-label"><b>DYNO LIVE MONITOR</b><span>REAL-TIME PERFORMANCE</span></div>
+   <div class="pc-live-name">DYNO TL MOBILE</div>
+   <div class="pc-live-state"><i></i><span>LIVE DATA</span></div>
+  </div>
+
+  <div class="livegrid pc-live-grid">
+   <section class="gauge pc-gauge pc-rpm">
+    <div class="pc-cut-frame"></div>
+    <div class="pc-top-accent"></div>
+    <div class="pc-arc"><div class="pc-arc-mask"></div></div>
+    <div class="pc-ticks">
+      <span class="p0">0</span><span class="p1">2</span><span class="p2">4</span><span class="p3">6</span><span class="p4">8</span><span class="p5">10</span><span class="p6">12</span><span class="p7">14</span><span class="p8">16</span>
+    </div>
+    <div class="pc-core"><h3>RPM</h3><div id="liveRpm" class="big">0</div><div class="unit">[rpm]</div></div>
+    <div class="scale"><i id="rpmBar"></i></div>
+   </section>
+
+   <section class="centerbox pc-center-stack">
+    <div class="kpi afr pc-kpi"><label>AFR</label><strong id="liveAfr">--</strong></div>
+    <div class="kpi hp pc-kpi"><label>HP</label><strong id="liveHp">0.0</strong><small>[HP]</small></div>
+    <div class="kpi tq pc-kpi"><label>TORQUE</label><strong id="liveTq">0.0</strong><small>[Nm]</small></div>
+   </section>
+
+   <section class="gauge pc-gauge pc-speed">
+    <div class="pc-cut-frame"></div>
+    <div class="pc-top-accent"></div>
+    <div class="pc-arc"><div class="pc-arc-mask"></div></div>
+    <div class="pc-ticks">
+      <span class="p0">0</span><span class="p1">20</span><span class="p2">40</span><span class="p3">60</span><span class="p4">80</span><span class="p5">100</span><span class="p6">120</span><span class="p7">140</span><span class="p8">160</span>
+    </div>
+    <div class="pc-core"><h3>SPEED</h3><div id="liveSpeed" class="big">0</div><div class="unit">[km/h]</div></div>
+    <div class="scale"><i id="speedBar"></i></div>
+   </section>
+  </div>
+
+  <div class="controls pc-controls">
+   <button id="ctlBle" class="go">BLE</button>
+   <button id="ctlAuto" class="auto">AUTO</button>
+   <button id="ctlRun" class="go">RUN</button>
+   <button id="ctlStop" class="stop">STOP</button>
+   <button id="ctlSim">SIM</button>
+  </div>
+ </section>
 </main>
 
 <main id="power" class="page chartpage">
