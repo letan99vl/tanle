@@ -9,7 +9,7 @@ Mobile-first dyno dashboard for ESP32-S3 using Bluetooth Low Energy (BLE).
 - Web Bluetooth follows the same browser/GATT approach used in Blink-Redleo.
 
 ## BLE
-Device name: `DYNOTL-MOBILE`
+Device name: `DynoTL Mobile Hardware`
 
 Service: `d7a10001-7c35-4a6d-9f0e-2ea3117f1000`
 
