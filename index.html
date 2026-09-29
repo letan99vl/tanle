@@ -161,6 +161,15 @@ main{display:none;min-height:0;overflow:hidden}.page.on{display:block;height:100
  .compare-run-chip{height:22px!important;font-size:6px!important}
 }
 </style>
+<style id="compare-run-colors-v3">
+.compare-run-chip{--run:#ff4d57}
+.compare-run-chip:nth-child(2){--run:#40c4ff}
+.compare-run-chip:nth-child(3){--run:#ffd740}
+.compare-run-chip:nth-child(4){--run:#69f0ae}
+.compare-run-chip:nth-child(5){--run:#b388ff}
+.compare-run-chip input{accent-color:var(--run)!important}
+.compare-run-chip.checked{border-color:var(--run)!important;box-shadow:inset 2px 0 0 var(--run);background:#101214!important}
+</style>
 </head>
 <body>
 <div id="app">
