@@ -56,13 +56,14 @@ static const char *LIVE_UUID    = "d7a10002-7c35-4a6d-9f0e-2ea3117f1000";
 static const char *COMMAND_UUID = "d7a10003-7c35-4a6d-9f0e-2ea3117f1000";
 static const char *STATUS_UUID  = "d7a10005-7c35-4a6d-9f0e-2ea3117f1000";
 
+BLEServer *bleServer = nullptr;
 BLECharacteristic *liveChar = nullptr;
 BLECharacteristic *commandChar = nullptr;
 BLECharacteristic *statusChar = nullptr;
-volatile bool bleConnected = false;
+volatile bool deviceConnected = false;
 
 static void bleNotifyChunks(BLECharacteristic *ch, const char *s) {
-  if (!bleConnected || ch == nullptr || s == nullptr) return;
+  if (!deviceConnected || ch == nullptr || s == nullptr) return;
 
   size_t len = strlen(s);
   for (size_t off = 0; off < len; off += 18) {
@@ -81,7 +82,7 @@ void dynoPublishSample(
     float engineRPM,
     float afrVoltage
 ) {
-  if (!bleConnected || liveChar == nullptr) return;
+  if (!deviceConnected || liveChar == nullptr) return;
 
   char line[112];
   snprintf(
@@ -97,16 +98,16 @@ void dynoPublishSample(
 }
 
 class DynoBleServerCallbacks : public BLEServerCallbacks {
-  void onConnect(BLEServer *server) override {
-    bleConnected = true;
-    Serial.println("[DynoTL] BLE connected");
+  void onConnect(BLEServer *) override {
+    deviceConnected = true;
+    Serial.println("[DynoTL] BLE client connected");
   }
 
-  void onDisconnect(BLEServer *server) override {
-    bleConnected = false;
-    Serial.println("[DynoTL] BLE disconnected - advertising restarted");
-    delay(50);
-    BLEDevice::startAdvertising();
+  void onDisconnect(BLEServer *s) override {
+    deviceConnected = false;
+    delay(120);
+    s->getAdvertising()->start();
+    Serial.println("[DynoTL] BLE advertising restarted");
   }
 };
 
@@ -125,52 +126,48 @@ class DynoBleCommandCallbacks : public BLECharacteristicCallbacks {
 
 void dynoBleBegin() {
   BLEDevice::init(DEVICE_NAME);
-  BLEDevice::setMTU(185);
-  BLEDevice::setPower(ESP_PWR_LVL_P9);
 
-  BLEServer *server = BLEDevice::createServer();
-  server->setCallbacks(new DynoBleServerCallbacks());
+  bleServer = BLEDevice::createServer();
+  bleServer->setCallbacks(new DynoBleServerCallbacks());
 
-  BLEService *service = server->createService(SERVICE_UUID);
+  BLEService *svc = bleServer->createService(SERVICE_UUID);
 
-  liveChar = service->createCharacteristic(
+  liveChar = svc->createCharacteristic(
       LIVE_UUID,
-      BLECharacteristic::PROPERTY_NOTIFY |
-      BLECharacteristic::PROPERTY_READ
+      BLECharacteristic::PROPERTY_READ |
+      BLECharacteristic::PROPERTY_NOTIFY
   );
   liveChar->addDescriptor(new BLE2902());
 
-  commandChar = service->createCharacteristic(
+  commandChar = svc->createCharacteristic(
       COMMAND_UUID,
       BLECharacteristic::PROPERTY_WRITE |
       BLECharacteristic::PROPERTY_WRITE_NR
   );
   commandChar->setCallbacks(new DynoBleCommandCallbacks());
 
-  statusChar = service->createCharacteristic(
+  statusChar = svc->createCharacteristic(
       STATUS_UUID,
-      BLECharacteristic::PROPERTY_NOTIFY |
-      BLECharacteristic::PROPERTY_READ
+      BLECharacteristic::PROPERTY_READ |
+      BLECharacteristic::PROPERTY_NOTIFY
   );
   statusChar->addDescriptor(new BLE2902());
 
-  service->start();
+  svc->start();
 
-  BLEAdvertising *advertising = BLEDevice::getAdvertising();
-  advertising->addServiceUUID(SERVICE_UUID);
-  advertising->setScanResponse(true);
-  advertising->setMinPreferred(0x06);
-  advertising->setMaxPreferred(0x12);
+  // Same advertising structure as the working Blink-Redleo ESP32-S3 project.
+  BLEAdvertising *adv = BLEDevice::getAdvertising();
+  adv->addServiceUUID(SERVICE_UUID);
+  adv->setScanResponse(true);
+  adv->setMinPreferred(0x06);
+  adv->setMinPreferred(0x12);
   BLEDevice::startAdvertising();
 
   Serial.println("========================================");
   Serial.println("[DynoTL] ESP32-S3 BLE advertising STARTED");
   Serial.printf("[DynoTL] Name    : %s\n", DEVICE_NAME);
-  Serial.printf(
-      "[DynoTL] Address : %s\n",
-      BLEDevice::getAddress().toString().c_str()
-  );
   Serial.printf("[DynoTL] Service : %s\n", SERVICE_UUID);
+  Serial.println("[DynoTL] BLE mode: same structure as Blink-Redleo");
   Serial.println("========================================");
 }
 
