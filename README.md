@@ -29,3 +29,5 @@ The provided ESP32-S3 sketch is the BLE transport layer. Merge your existing sen
 
 ## iPhone
 Safari does not expose Web Bluetooth. Use Bluefy or another Web Bluetooth-capable iOS browser.
+
+Pages deploy trigger: 2026-09-29
