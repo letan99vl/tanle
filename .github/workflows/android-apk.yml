@@ -32,7 +32,6 @@ jobs:
             SDKMANAGER="$(find "$ANDROID_HOME" -type f -name sdkmanager | head -n 1)"
           fi
           test -n "$SDKMANAGER"
-          echo "SDKMANAGER=$SDKMANAGER"
           yes | "$SDKMANAGER" --licenses >/dev/null || true
           "$SDKMANAGER" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
@@ -41,185 +40,26 @@ jobs:
         with:
           gradle-version: "8.10.2"
 
-      - name: Restore Android source
+      - name: Restore and patch Android source
         run: |
           mkdir -p android-work
           base64 -d android/dynotl-android-source.b64 > android-source.zip
           unzip -q android-source.zip -d android-work
           base64 -d android-work/app/dynotl-mobile.jks.b64 > android-work/app/dynotl-mobile.jks
-          python3 - <<'PY'
-          from pathlib import Path
-
-          p = Path("android-work/app/src/main/java/vn/dynotl/mobile/MainActivity.java")
-          s = p.read_text()
-
-          s = s.replace("import android.content.pm.PackageManager;\n", "import android.content.pm.PackageManager;\nimport android.graphics.Color;\n")
-          s = s.replace("import android.webkit.JavascriptInterface;\n", "import android.webkit.JavascriptInterface;\nimport android.webkit.RenderProcessGoneDetail;\n")
-          s = s.replace("import android.widget.Toast;\n", "import android.widget.Toast;\nimport android.widget.TextView;\nimport android.widget.ScrollView;\n")
-          s = s.replace("import java.io.InputStreamReader;\n", "import java.io.InputStreamReader;\nimport java.io.StringWriter;\nimport java.io.PrintWriter;\n")
-
-          start = s.index('    @Override\n    @SuppressLint({"SetJavaScriptEnabled", "JavascriptInterface"})\n    protected void onCreate(Bundle savedInstanceState) {')
-          end = s.index('    private void injectNativeBridge()', start)
-          new_oncreate = '''    @Override
-    @SuppressLint({"SetJavaScriptEnabled", "JavascriptInterface"})
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        prefs = getSharedPreferences("dynotl", MODE_PRIVATE);
-        installCrashRecorder();
-
-        showStatusScreen("DynoTL Mobile\\nStarting...");
-        getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-
-        main.postDelayed(() -> {
-            try {
-                startWebView();
-            } catch (Throwable t) {
-                showFatal("STARTUP", t);
-            }
-        }, 250);
-    }
-
-    @SuppressLint({"SetJavaScriptEnabled", "JavascriptInterface"})
-    private void startWebView() {
-        WebView w = new WebView(this);
-        webView = w;
-        WebSettings s = w.getSettings();
-        s.setJavaScriptEnabled(true);
-        s.setDomStorageEnabled(true);
-        s.setMediaPlaybackRequiresUserGesture(false);
-        s.setCacheMode(WebSettings.LOAD_DEFAULT);
-        try { s.setUserAgentString(s.getUserAgentString() + " DYNOTL-MOBILE-ANDROID/1.1-SAFE"); } catch (Throwable ignored) { }
-
-        w.addJavascriptInterface(new BleJsBridge(), "AndroidBLE");
-        w.setWebViewClient(new WebViewClient() {
-            @Override
-            public void onPageFinished(WebView view, String url) {
-                try {
-                    injectNativeBridge();
-                    safeEnterImmersive();
-                } catch (Throwable t) {
-                    showFatal("PAGE FINISH", t);
-                }
-            }
-
-            @Override
-            public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
-                String why = "WebView renderer stopped";
-                if (detail != null) why += detail.didCrash() ? " (crash)" : " (killed by system)";
-                try {
-                    view.removeJavascriptInterface("AndroidBLE");
-                    view.destroy();
-                } catch (Throwable ignored) { }
-                webView = null;
-                showFatalText("WEBVIEW RENDERER", why + "\\n\\nAndroid WebView/Chrome may need updating.");
-                return true;
-            }
-        });
-        setContentView(w);
-        w.loadUrl(START_URL);
-    }
-
-    private void showStatusScreen(String text) {
-        TextView tv = new TextView(this);
-        tv.setText(text);
-        tv.setTextColor(Color.WHITE);
-        tv.setBackgroundColor(Color.rgb(8, 10, 12));
-        tv.setTextSize(18f);
-        tv.setPadding(32, 32, 32, 32);
-        setContentView(tv);
-    }
-
-    private void showFatal(String stage, Throwable t) {
-        showFatalText(stage, stackTrace(t));
-    }
-
-    private void showFatalText(String stage, String detail) {
-        try {
-            TextView tv = new TextView(this);
-            tv.setText("DynoTL Mobile diagnostic\\n\\nStage: " + stage + "\\n\\n" + detail);
-            tv.setTextColor(Color.WHITE);
-            tv.setBackgroundColor(Color.rgb(24, 6, 8));
-            tv.setTextSize(14f);
-            tv.setTextIsSelectable(true);
-            tv.setPadding(24, 24, 24, 24);
-            ScrollView sv = new ScrollView(this);
-            sv.addView(tv);
-            setContentView(sv);
-        } catch (Throwable ignored) { }
-    }
-
-    private String stackTrace(Throwable t) {
-        try {
-            StringWriter sw = new StringWriter();
-            t.printStackTrace(new PrintWriter(sw));
-            return sw.toString();
-        } catch (Throwable e) {
-            return String.valueOf(t);
-        }
-    }
-
-    private void installCrashRecorder() {
-        final Thread.UncaughtExceptionHandler old = Thread.getDefaultUncaughtExceptionHandler();
-        Thread.setDefaultUncaughtExceptionHandler((thread, error) -> {
-            try {
-                getSharedPreferences("dynotl", MODE_PRIVATE).edit()
-                        .putString("lastCrash", stackTrace(error)).commit();
-            } catch (Throwable ignored) { }
-            if (old != null) old.uncaughtException(thread, error);
-        });
-    }
-
-'''
-          s = s[:start] + new_oncreate + s[end:]
-
-          hook = "    @Override protected void onWindowFocusChanged(boolean hasFocus) {"
-          helper = '''    private void safeEnterImmersive() {
-                  try { enterImmersive(); } catch (Throwable ignored) { }
-              }
-
-          '''.replace("              ","")
-          s = s.replace(hook, helper + "    @Override public void onWindowFocusChanged(boolean hasFocus) {")
-          s = s.replace("        if (hasFocus) enterImmersive();", "        if (hasFocus) safeEnterImmersive();")
-
-          marker = "    private boolean hasBlePermissions() {"
-          bt_helper = '''    private void initBluetoothAdapter() {
-                  if (bluetoothAdapter != null) return;
-                  try {
-                      BluetoothManager bm = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
-                      bluetoothAdapter = bm != null ? bm.getAdapter() : null;
-                  } catch (Throwable t) {
-                      bluetoothAdapter = null;
-                  }
-              }
-
-          '''.replace("              ","")
-          s = s.replace(marker, bt_helper + marker)
-          s = s.replace("    private void ensurePermissionsThenConnect(boolean auto) {\n        if (bluetoothAdapter == null) {",
-                        "    private void ensurePermissionsThenConnect(boolean auto) {\n        initBluetoothAdapter();\n        if (bluetoothAdapter == null) {")
-          s = s.replace("        enterImmersive();\n        main.postDelayed(this::tryAutoReconnect, 700);",
-                        "        safeEnterImmersive();\n        main.postDelayed(this::tryAutoReconnect, 700);")
-
-          p.write_text(s)
-
-          m = Path("android-work/app/src/main/AndroidManifest.xml")
-          ms = m.read_text()
-          ms = ms.replace('android:screenOrientation="sensorLandscape"', 'android:screenOrientation="unspecified"')
-          ms = ms.replace('android:theme="@android:style/Theme.Material.NoActionBar">',
-                          'android:theme="@android:style/Theme.Material.NoActionBar"\n        android:hardwareAccelerated="true">')
-          m.write_text(ms)
-          PY
+          echo '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' | base64 -d | gzip -d > /tmp/patch_safe.py
+          python3 /tmp/patch_safe.py
 
       - name: Build release APK
         working-directory: android-work
         run: gradle --no-daemon :app:assembleRelease
 
       - name: Rename APK
-        run: cp android-work/app/build/outputs/apk/release/app-release.apk DynoTL-Mobile.apk
+        run: cp android-work/app/build/outputs/apk/release/app-release.apk DynoTL-Mobile-Safe.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: DynoTL-Mobile-APK
-          path: DynoTL-Mobile.apk
+          name: DynoTL-Mobile-Safe-APK
+          path: DynoTL-Mobile-Safe.apk
           if-no-files-found: error
           retention-days: 30
