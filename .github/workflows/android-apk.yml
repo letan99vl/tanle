@@ -7,6 +7,7 @@ on:
     paths:
       - "android/dynotl-android-source.b64"
       - "android/safe_patch.py.gz.b64"
+      - "android/immediate_chooser_patch.py.gz.b64"
       - ".github/workflows/android-apk.yml"
 
 permissions:
@@ -49,6 +50,8 @@ jobs:
           base64 -d android-work/app/dynotl-mobile.jks.b64 > android-work/app/dynotl-mobile.jks
           base64 -d android/safe_patch.py.gz.b64 | gzip -d > /tmp/patch_safe.py
           python3 /tmp/patch_safe.py
+          base64 -d android/immediate_chooser_patch.py.gz.b64 | gzip -d > /tmp/patch_immediate.py
+          python3 /tmp/patch_immediate.py
 
       - name: Build release APK
         working-directory: android-work
