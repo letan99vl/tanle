@@ -125,12 +125,17 @@ class DynoBleCommandCallbacks : public BLECharacteristicCallbacks {
 };
 
 void dynoBleBegin() {
+  Serial.println("[BLE] 1/6 init device...");
+  Serial.flush();
   BLEDevice::init(DEVICE_NAME);
+  Serial.println("[BLE] 2/6 device init OK");
 
   bleServer = BLEDevice::createServer();
+  Serial.println("[BLE] 3/6 server OK");
   bleServer->setCallbacks(new DynoBleServerCallbacks());
 
   BLEService *svc = bleServer->createService(SERVICE_UUID);
+  Serial.println("[BLE] 4/6 service OK");
 
   liveChar = svc->createCharacteristic(
       LIVE_UUID,
@@ -154,6 +159,7 @@ void dynoBleBegin() {
   statusChar->addDescriptor(new BLE2902());
 
   svc->start();
+  Serial.println("[BLE] 5/6 characteristics + service started");
 
   // Same advertising structure as the working Blink-Redleo ESP32-S3 project.
   BLEAdvertising *adv = BLEDevice::getAdvertising();
@@ -162,6 +168,8 @@ void dynoBleBegin() {
   adv->setMinPreferred(0x06);
   adv->setMinPreferred(0x12);
   BLEDevice::startAdvertising();
+  Serial.println("[BLE] 6/6 advertising started");
+  Serial.flush();
 
   Serial.println("========================================");
   Serial.println("[DynoTL] ESP32-S3 BLE advertising STARTED");
@@ -460,7 +468,16 @@ void setup() {
   pinMode(AFR_PIN, INPUT);
 
   Serial.begin(115200);
-  delay(300);
+  delay(1200);
+
+  Serial.println();
+  Serial.println("========================================");
+  Serial.println("[BOOT] DynoTL Mobile Hardware");
+  Serial.println("[BOOT] ESP32-S3 firmware started");
+  Serial.println("[BOOT] GPIO18=Wheel Hall | GPIO16=Engine RPM | GPIO4=AFR");
+  Serial.println("========================================");
+  Serial.flush();
+  delay(200);
 
   dynoBleBegin();
 
