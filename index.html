@@ -310,6 +310,17 @@ var cfgIds=['rollerD','rollerJ','maxRpm','maxSpeed','afrVMin','afrMin','afrVMax'
 var runHistory=[],selectedRunIndex=-1,RUN_HISTORY_KEY='dynotl_mobile_runs_v2',RUN_COUNTER_KEY='dynotl_mobile_run_counter_v2';
 var OMEGA_EMA_K=0.15,ALPHA_WINDOW_N=10,ROLLER_STARTUP_SKIP_SAMPLES=4;
 var ROLLER_DISTINCT_EPS_RPM=0.5,ROLLER_JUMP_MIN_RPM=250.0,ROLLER_JUMP_RATIO=0.55,ROLLER_JUMP_MAX_DT_MS=300.0,ROLLER_JUMP_COOLDOWN_SAMPLES=2;
+
+// SIM emulates the ESP32 VIP one-magnet wheel sensor path, then emits the same
+// D,timeMs,wheelRPM,engineRPM,afrVoltage packets as BLE hardware.
+var SIM={
+ tMs:0,tickMs:5,lastPacketMs:0,phase:0,lastPulseUs:0,lastValidPeriodUs:0,
+ hist:[0,0,0,0,0],histCount:0,histIndex:0,startupLocked:false,
+ periodFilteredUs:0,rpmFiltered:0,rpmOutput:0,lastHallPulseMs:0,
+ engineFiltered:0,afrFiltered:0
+};
+var SIM_SAMPLE_MS=25,SIM_ROLLER_TIMEOUT_MS=1000,SIM_ABS_MIN_PERIOD_US=6000;
+var SIM_EARLY_GATE_PERCENT=45,SIM_PERIOD_ALPHA=0.40,SIM_OUTPUT_ALPHA=0.18,SIM_AFR_ALPHA=0.20;
 function n(id,d){var v=parseFloat($(id).value);return isFinite(v)?v:d}
 function afrFromV(v){var v0=n('afrVMin',0),v1=n('afrVMax',3.15),a0=n('afrMin',10),a1=n('afrMax',20);if(v1===v0)return a0;return a0+(v-v0)*(a1-a0)/(v1-v0)}
 function setBle(on,msg){S.connected=on;$('bleStatus').textContent=msg||(on?'BLE OK':'BLE OFF');$('bleStatus').classList.toggle('ok',on);$('ctlBle').textContent=on?'OFF':'BLE';$('bleTop').textContent=on?'OFF':'BLE'}
@@ -405,8 +416,123 @@ function updateLive(){$('liveRpm').textContent=Math.round(S.rpm);$('liveSpeed').
 function startRun(){if(S.recording)return;S.recording=true;S.hpMax=S.tqMax=0;S.runPower=[];S.runRpm=[];S.lastPlotRpm=0;S.omegaF=0;S.ow=[];S.tw=[];S.rollerCalcPrimed=false;S.rollerStartupSamplesRemaining=0;S.runStartedWall=Date.now();$('ctlRun').textContent='RUNNING';$('ctlRun').classList.add('red');drawAll()}
 function stopRun(){if(!S.recording)return;S.recording=false;$('ctlRun').textContent='RUN';$('ctlRun').classList.remove('red');saveCurrentRun();drawAll()}
 function toggleAuto(){S.auto=!S.auto;$('autoStart').checked=S.auto;$('ctlAuto').classList.toggle('on',S.auto);save()}
-function toggleSim(){S.sim=!S.sim;$('ctlSim').textContent=S.sim?'SIM OFF':'SIM';if(S.sim)simLoop()}
-function simLoop(){if(!S.sim)return;S.simT+=50;var x=(S.simT%9000)/9000,rr=450+3200*Math.sin(Math.PI*x),rpm=1500+10500*Math.sin(Math.PI*x),v=1.7+.45*Math.sin(x*18);sample(S.simT,Math.max(0,rr),Math.max(0,rpm),v);setTimeout(simLoop,50)}
+function simMedian5(a,b,c,d,e){
+ var v=[a,b,c,d,e];v.sort(function(x,y){return x-y});return v[2]
+}
+function simResetWheel(){
+ SIM.phase=0;SIM.lastPulseUs=0;SIM.lastValidPeriodUs=0;
+ SIM.hist=[0,0,0,0,0];SIM.histCount=0;SIM.histIndex=0;SIM.startupLocked=false;
+ SIM.periodFilteredUs=0;SIM.rpmFiltered=0;SIM.rpmOutput=0;SIM.lastHallPulseMs=0
+}
+function simStartupWindowOk(medianUs){
+ if(!(medianUs>=SIM_ABS_MIN_PERIOD_US))return false;
+ var minOk=Math.max(SIM_ABS_MIN_PERIOD_US,medianUs*0.40),maxOk=medianUs*2.50,good=0;
+ for(var i=0;i<5;i++)if(SIM.hist[i]>=minOk&&SIM.hist[i]<=maxOk)good++;
+ return good>=4
+}
+function simProcessPeriod(periodUs,nowMs){
+ if(!(periodUs>=SIM_ABS_MIN_PERIOD_US))return;
+ SIM.hist[SIM.histIndex]=periodUs;SIM.histIndex=(SIM.histIndex+1)%5;if(SIM.histCount<5)SIM.histCount++;
+
+ if(!SIM.startupLocked){
+   SIM.rpmFiltered=0;SIM.rpmOutput=0;
+   if(SIM.histCount<5)return;
+   var med=simMedian5(SIM.hist[0],SIM.hist[1],SIM.hist[2],SIM.hist[3],SIM.hist[4]);
+   if(!simStartupWindowOk(med))return;
+   var rpm=60000000/med;
+   if(!(rpm>0&&rpm<=10000))return;
+   SIM.periodFilteredUs=med;SIM.rpmFiltered=rpm;SIM.startupLocked=true;SIM.lastHallPulseMs=nowMs;return
+ }
+
+ var p=simMedian5(SIM.hist[0],SIM.hist[1],SIM.hist[2],SIM.hist[3],SIM.hist[4]);
+ SIM.periodFilteredUs=SIM.periodFilteredUs>0
+   ?SIM.periodFilteredUs*(1-SIM_PERIOD_ALPHA)+p*SIM_PERIOD_ALPHA
+   :p;
+ var rr=60000000/SIM.periodFilteredUs;
+ if(rr>=0&&rr<=10000){SIM.rpmFiltered=rr;SIM.lastHallPulseMs=nowMs}
+}
+function simHallEdge(edgeUs){
+ if(!SIM.lastPulseUs){SIM.lastPulseUs=edgeUs;return}
+ var dt=edgeUs-SIM.lastPulseUs;
+ if(dt<SIM_ABS_MIN_PERIOD_US)return;
+ if(SIM.lastValidPeriodUs>0){
+   var dynamicMin=Math.max(SIM_ABS_MIN_PERIOD_US,SIM.lastValidPeriodUs*SIM_EARLY_GATE_PERCENT/100);
+   if(dt<dynamicMin)return
+ }
+ SIM.lastValidPeriodUs=dt;SIM.lastPulseUs=edgeUs;simProcessPeriod(dt,edgeUs/1000)
+}
+function simTargetAt(ms){
+ // Repeating dyno pull: stationary -> launch -> pull -> coast -> stationary.
+ var cycle=14000,t=ms%cycle,wheel=0,engine=1450,afrV=1.58;
+ if(t<1200){
+   wheel=0;engine=1450+80*Math.sin(t/180);afrV=1.62
+ }else if(t<3000){
+   var q=(t-1200)/1800;
+   wheel=220+980*q;engine=1800+3300*q;afrV=1.55-0.12*q
+ }else if(t<9000){
+   var q=(t-3000)/6000;
+   wheel=1200+2850*q;engine=5100+7600*q;afrV=1.43+0.10*Math.sin(q*Math.PI*3)
+ }else if(t<11200){
+   var q=(t-9000)/2200;
+   wheel=4050*(1-q)+500*q;engine=12700*(1-q)+2600*q;afrV=1.62+0.15*q
+ }else{
+   wheel=0;engine=1450;afrV=1.65
+ }
+ return{wheel:Math.max(0,wheel),engine:Math.max(0,engine),afrV:Math.max(0,Math.min(3.3,afrV))}
+}
+function simEmitPacket(){
+ var target=simTargetAt(SIM.tMs);
+ // Firmware output smoothing runs every 25 ms even when no new Hall edge arrives.
+ if(SIM.rpmFiltered<=0)SIM.rpmOutput=0;
+ else if(SIM.rpmOutput<=0)SIM.rpmOutput=SIM.rpmFiltered;
+ else SIM.rpmOutput=SIM.rpmOutput*(1-SIM_OUTPUT_ALPHA)+SIM.rpmFiltered*SIM_OUTPUT_ALPHA;
+
+ // Emulate engine RPM EMA 0.25 and AFR EMA 0.20 from the ESP32 sensor code.
+ SIM.engineFiltered=SIM.engineFiltered<=0?target.engine:SIM.engineFiltered*0.75+target.engine*0.25;
+ SIM.afrFiltered=SIM.afrFiltered<=0?target.afrV:SIM.afrFiltered*(1-SIM_AFR_ALPHA)+target.afrV*SIM_AFR_ALPHA;
+
+ // Feed exactly the same text packet parser used by BLE notifications.
+ handleLine(
+   'D,'+Math.round(SIM.tMs)+','+
+   SIM.rpmOutput.toFixed(2)+','+
+   SIM.engineFiltered.toFixed(2)+','+
+   SIM.afrFiltered.toFixed(3)
+ )
+}
+function simStep(){
+ if(!S.sim)return;
+ var dt=SIM.tickMs,target=simTargetAt(SIM.tMs),rps=target.wheel/60;
+ var phase0=SIM.phase,advance=rps*(dt/1000),phase1=phase0+advance;
+
+ // One magnet = one Hall edge for every complete wheel revolution.
+ if(advance>0){
+   while(phase1>=1){
+     var frac=(1-phase0)/advance;
+     if(!isFinite(frac)||frac<0)frac=0;if(frac>1)frac=1;
+     var edgeMs=SIM.tMs+frac*dt;
+     simHallEdge(Math.round(edgeMs*1000));
+     phase1-=1;phase0=0;advance=phase1
+   }
+ }
+ SIM.phase=phase1;
+ SIM.tMs+=dt;S.simT=SIM.tMs;
+
+ // Same 1-second no-pulse timeout/reset as the real wheel firmware.
+ if(SIM.lastPulseUs>0&&(SIM.tMs-SIM.lastPulseUs/1000)>SIM_ROLLER_TIMEOUT_MS)simResetWheel();
+
+ if(SIM.tMs-SIM.lastPacketMs>=SIM_SAMPLE_MS){SIM.lastPacketMs=SIM.tMs;simEmitPacket()}
+ setTimeout(simStep,dt)
+}
+function resetSimulator(){
+ SIM.tMs=0;SIM.lastPacketMs=0;SIM.engineFiltered=0;SIM.afrFiltered=0;simResetWheel();
+ S.simT=0;S.lastT=0;S.omegaF=0;S.ow=[];S.tw=[];S.rollerCalcPrimed=false;S.rollerStartupSamplesRemaining=0;
+ S.rollerGuardLastDistinctRpm=0;S.rollerGuardLastDistinctMs=0
+}
+function toggleSim(){
+ S.sim=!S.sim;$('ctlSim').textContent=S.sim?'SIM OFF':'SIM';
+ if(S.sim){resetSimulator();setBle(false,'SIM 1-MAG');simStep()}
+ else{setBle(S.connected,S.connected?'BLE OK':'BLE OFF')}
+}
 function update201(t,speed,rpm,afr){if(S.wait201&&speed>=1){S.wait201=false;S.run201=true;S.t2010=S.t201last=t;S.d201=0;$('state201').textContent='RUNNING'}if(!S.run201)return;var dt=(t-S.t201last)/1000;if(dt>0&&dt<1)S.d201+=speed/3.6*dt;S.t201last=t;S.maxS201=Math.max(S.maxS201,speed);S.maxR201=Math.max(S.maxR201,rpm);$('dist201').textContent=S.d201.toFixed(1)+' m';$('time201').textContent=((t-S.t2010)/1000).toFixed(3)+' s';$('speed201').textContent=speed.toFixed(1);$('rpm201').textContent=Math.round(rpm);if(S.d201>=201){S.run201=false;S.done201=true;var tt=(t-S.t2010)/1000;$('state201').textContent='DONE';$('result201').textContent=tt.toFixed(3)+' s';$('maxSpeed201').textContent=S.maxS201.toFixed(1);$('maxRpm201').textContent=Math.round(S.maxR201);$('afrEnd201').textContent=afr.toFixed(1)}}
 function reset201(){S.run201=S.wait201=S.done201=false;S.d201=0;S.maxS201=S.maxR201=0;$('state201').textContent='Waiting';$('dist201').textContent='0.0 m';$('time201').textContent='--';$('speed201').textContent='0.0';$('rpm201').textContent='0';$('result201').textContent='--';$('maxSpeed201').textContent='0.0';$('maxRpm201').textContent='0';$('afrEnd201').textContent='--'}
 function setupCanvas(c){
