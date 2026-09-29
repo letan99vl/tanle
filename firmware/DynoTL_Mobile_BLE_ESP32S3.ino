@@ -4,7 +4,7 @@
 #include <BLEUtils.h>
 #include <BLE2902.h>
 
-static const char *DEVICE_NAME  = "DYNOTL-MOBILE";
+static const char *DEVICE_NAME  = "DynoTL Mobile Hardware";
 static const char *SERVICE_UUID = "d7a10001-7c35-4a6d-9f0e-2ea3117f1000";
 static const char *LIVE_UUID    = "d7a10002-7c35-4a6d-9f0e-2ea3117f1000";
 static const char *COMMAND_UUID = "d7a10003-7c35-4a6d-9f0e-2ea3117f1000";
