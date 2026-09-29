@@ -120,6 +120,47 @@ main{display:none;min-height:0;overflow:hidden}.page.on{display:block;height:100
  .compare-run-chip{height:24px;font-size:7px;padding:0 6px}
 }
 </style>
+<style id="mobile-chart-clean-v3">
+.stored-chart-box{grid-template-rows:31px 22px minmax(0,1fr)!important}
+.compare-chart-box{grid-template-rows:31px 31px minmax(0,1fr)!important}
+.chartbox{padding:3px 5px 5px!important}
+.charthead{padding:0 3px!important;overflow:hidden}
+.charthead>span:first-child{font-size:9px!important;letter-spacing:.55px;white-space:nowrap}
+.chart-runbar{margin-left:auto;max-width:67%;overflow:hidden}
+.chart-runbar>span:first-child{display:none!important}
+.chart-runbar select{height:24px!important;max-width:154px!important;min-width:110px!important;padding:0 5px!important;font-size:8px!important;text-overflow:ellipsis}
+.chart-runbar .vals{font-size:7px!important;max-width:145px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mobile-chart-legend{height:22px;display:flex;align-items:center;justify-content:center;gap:11px;border-top:1px solid #11161a;border-bottom:1px solid #11161a;background:#07090b;overflow:hidden;white-space:nowrap}
+.mobile-chart-legend .lg{position:relative;padding-left:15px;font:700 7px Arial,sans-serif;color:#adb5bd;letter-spacing:.2px}
+.mobile-chart-legend .lg:before{content:"";position:absolute;left:0;top:50%;width:11px;height:2px;transform:translateY(-50%);border-radius:2px}
+.mobile-chart-legend .hp:before,.mobile-chart-legend .erpm:before{background:#ff3038}
+.mobile-chart-legend .tq:before{background:#ff9f1c}
+.mobile-chart-legend .rrpm:before{background:#37d45a}
+.mobile-chart-legend .spd:before{background:#d3d6da}
+.mobile-chart-legend .afr:before{background:#3488ff}
+.mobile-chart-legend .axis-note{margin-left:auto;padding-right:5px;color:#626c76;font:700 7px Arial,sans-serif}
+.chartwrap{overflow:hidden!important;min-width:0!important;min-height:0!important}
+.chartwrap canvas{display:block!important;width:100%!important;height:100%!important;transform:none!important;filter:none!important}
+.compare-head .compare-tools{max-width:62%;overflow:hidden}
+.compare-tools label{display:flex;align-items:center;gap:4px}
+.compare-tools select{height:24px!important;max-width:92px!important;font-size:8px!important}
+#compareHint{font-size:7px!important;white-space:nowrap}
+.compare-run-list-mobile{height:31px!important;padding:2px 3px!important;gap:4px!important;border-top:1px solid #11161a;border-bottom:1px solid #11161a;background:#07090b}
+.compare-run-chip{height:25px!important;padding:0 6px!important;font-size:7px!important;border-radius:6px!important}
+.compare-run-chip input{width:11px!important;height:11px!important}
+@media(max-height:430px){
+ .stored-chart-box{grid-template-rows:27px 19px minmax(0,1fr)!important}
+ .compare-chart-box{grid-template-rows:27px 27px minmax(0,1fr)!important}
+ .charthead>span:first-child{font-size:8px!important}
+ .chart-runbar{max-width:64%}
+ .chart-runbar select{height:21px!important;max-width:126px!important;min-width:96px!important;font-size:7px!important}
+ .chart-runbar .vals{display:none!important}
+ .mobile-chart-legend{height:19px;gap:8px}
+ .mobile-chart-legend .lg{font-size:6px;padding-left:12px}.mobile-chart-legend .lg:before{width:9px}
+ .compare-run-list-mobile{height:27px!important}
+ .compare-run-chip{height:22px!important;font-size:6px!important}
+}
+</style>
 </head>
 <body>
 <div id="app">
@@ -155,6 +196,7 @@ main{display:none;min-height:0;overflow:hidden}.page.on{display:block;height:100
    <span>HP / TORQUE VS RPM</span>
    <div class="chart-runbar"><span>SAVED RUN</span><select id="powerRunSelect"></select><span id="powerVals" class="vals">NO SAVED RUN</span></div>
   </div>
+  <div class="mobile-chart-legend"><span class="lg hp">HP</span><span class="lg tq">TORQUE</span><span class="axis-note">X: RPM</span></div>
   <div class="chartwrap"><canvas id="powerCanvas"></canvas></div>
  </section>
 </main>
@@ -165,6 +207,7 @@ main{display:none;min-height:0;overflow:hidden}.page.on{display:block;height:100
    <span>RPM / SPEED / AFR VS TIME</span>
    <div class="chart-runbar"><span>SAVED RUN</span><select id="rpmRunSelect"></select><span id="rpmVals" class="vals">NO SAVED RUN</span></div>
   </div>
+  <div class="mobile-chart-legend"><span class="lg erpm">ENGINE RPM</span><span class="lg rrpm">ROLLER RPM</span><span class="lg spd">SPEED</span><span class="lg afr">AFR</span><span class="axis-note">X: TIME</span></div>
   <div class="chartwrap"><canvas id="rpmCanvas"></canvas></div>
  </section>
 </main>
@@ -242,22 +285,49 @@ function toggleSim(){S.sim=!S.sim;$('ctlSim').textContent=S.sim?'SIM OFF':'SIM';
 function simLoop(){if(!S.sim)return;S.simT+=50;var x=(S.simT%9000)/9000,rr=450+3200*Math.sin(Math.PI*x),rpm=1500+10500*Math.sin(Math.PI*x),v=1.7+.45*Math.sin(x*18);sample(S.simT,Math.max(0,rr),Math.max(0,rpm),v);setTimeout(simLoop,50)}
 function update201(t,speed,rpm,afr){if(S.wait201&&speed>=1){S.wait201=false;S.run201=true;S.t2010=S.t201last=t;S.d201=0;$('state201').textContent='RUNNING'}if(!S.run201)return;var dt=(t-S.t201last)/1000;if(dt>0&&dt<1)S.d201+=speed/3.6*dt;S.t201last=t;S.maxS201=Math.max(S.maxS201,speed);S.maxR201=Math.max(S.maxR201,rpm);$('dist201').textContent=S.d201.toFixed(1)+' m';$('time201').textContent=((t-S.t2010)/1000).toFixed(3)+' s';$('speed201').textContent=speed.toFixed(1);$('rpm201').textContent=Math.round(rpm);if(S.d201>=201){S.run201=false;S.done201=true;var tt=(t-S.t2010)/1000;$('state201').textContent='DONE';$('result201').textContent=tt.toFixed(3)+' s';$('maxSpeed201').textContent=S.maxS201.toFixed(1);$('maxRpm201').textContent=Math.round(S.maxR201);$('afrEnd201').textContent=afr.toFixed(1)}}
 function reset201(){S.run201=S.wait201=S.done201=false;S.d201=0;S.maxS201=S.maxR201=0;$('state201').textContent='Waiting';$('dist201').textContent='0.0 m';$('time201').textContent='--';$('speed201').textContent='0.0';$('rpm201').textContent='0';$('result201').textContent='--';$('maxSpeed201').textContent='0.0';$('maxRpm201').textContent='0';$('afrEnd201').textContent='--'}
-function setupCanvas(c){var dpr=Math.min(devicePixelRatio||1,2),r=c.getBoundingClientRect(),w=Math.max(20,r.width),h=Math.max(20,r.height);if(c.width!==Math.round(w*dpr)||c.height!==Math.round(h*dpr)){c.width=Math.round(w*dpr);c.height=Math.round(h*dpr)}var x=c.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);return{x:x,w:w,h:h}}
+function setupCanvas(c){
+ var dpr=Math.min(window.devicePixelRatio||1,3);
+ var w=Math.max(20,c.clientWidth||c.parentElement.clientWidth||300);
+ var h=Math.max(20,c.clientHeight||c.parentElement.clientHeight||150);
+ var pw=Math.round(w*dpr),ph=Math.round(h*dpr);
+ if(c.width!==pw||c.height!==ph){c.width=pw;c.height=ph}
+ c.style.width=w+'px';c.style.height=h+'px';
+ var x=c.getContext('2d');
+ x.setTransform(dpr,0,0,dpr,0,0);
+ x.imageSmoothingEnabled=true;
+ return{x:x,w:w,h:h,dpr:dpr}
+}
 function niceMax(v){v=Math.max(1,Number(v)||1);var p=Math.pow(10,Math.floor(Math.log10(v))),q=v/p;if(q<=1)q=1;else if(q<=2)q=2;else if(q<=5)q=5;else q=10;return q*p}
 function fmtAxis(v){var a=Math.abs(v);if(a>=1000)return Math.round(v).toString();if(a>=100)return Math.round(v).toString();if(a>=10)return (Math.round(v*10)/10).toString();return (Math.round(v*100)/100).toString()}
 function chartFrame(g,opt){
- var x=g.x,w=g.w,h=g.h,L=54,R=opt.right2?84:(opt.right?55:18),T=23,B=38,P={l:L,r:w-R,t:T,b:h-B};P.w=P.r-P.l;P.h=P.b-P.t;
- x.clearRect(0,0,w,h);x.fillStyle='#030405';x.fillRect(0,0,w,h);x.font='9px Arial';x.textBaseline='middle';
+ var x=g.x,w=g.w,h=g.h,compact=(h<360||w<760);
+ var hasR2=!!opt.right2,L=compact?42:48,R=hasR2?(compact?68:76):(opt.right?(compact?46:52):14),T=8,B=compact?28:31;
+ var P={l:L,r:w-R,t:T,b:h-B};P.w=Math.max(40,P.r-P.l);P.h=Math.max(40,P.b-P.t);
+ x.clearRect(0,0,w,h);x.fillStyle='#030405';x.fillRect(0,0,w,h);x.textBaseline='middle';
+ var xt=compact?4:5,yt=compact?4:5,i,v,px,py;
  x.save();x.setLineDash([3,4]);x.lineWidth=1;
- var xt=6,yt=5,i,v,px,py;
- for(i=0;i<=xt;i++){px=P.l+P.w*i/xt;x.strokeStyle='#171b20';x.beginPath();x.moveTo(px,P.t);x.lineTo(px,P.b);x.stroke();v=opt.xMin+(opt.xMax-opt.xMin)*i/xt;x.fillStyle='#8b949e';x.textAlign='center';x.fillText(opt.xFmt?opt.xFmt(v):fmtAxis(v),px,P.b+13)}
- for(i=0;i<=yt;i++){py=P.b-P.h*i/yt;x.strokeStyle='#171b20';x.beginPath();x.moveTo(P.l,py);x.lineTo(P.r,py);x.stroke();v=(opt.yMin||0)+(opt.yMax-(opt.yMin||0))*i/yt;x.fillStyle=opt.yColor||'#ff4a50';x.textAlign='right';x.fillText(fmtAxis(v),P.l-7,py)}
+ for(i=0;i<=xt;i++){
+   px=P.l+P.w*i/xt;x.strokeStyle='#15191d';x.beginPath();x.moveTo(px,P.t);x.lineTo(px,P.b);x.stroke();
+   v=opt.xMin+(opt.xMax-opt.xMin)*i/xt;x.fillStyle='#89939d';x.textAlign='center';x.font=(compact?'7':'8')+'px Arial';
+   x.fillText(opt.xFmt?opt.xFmt(v):fmtAxis(v),px,P.b+(compact?9:11));
+ }
+ for(i=0;i<=yt;i++){
+   py=P.b-P.h*i/yt;x.strokeStyle='#15191d';x.beginPath();x.moveTo(P.l,py);x.lineTo(P.r,py);x.stroke();
+   v=(opt.yMin||0)+(opt.yMax-(opt.yMin||0))*i/yt;x.fillStyle=opt.yColor||'#ff4a50';x.textAlign='right';x.font=(compact?'7':'8')+'px Arial';
+   x.fillText(fmtAxis(v),P.l-5,py);
+ }
  x.restore();
- x.strokeStyle='#32373d';x.lineWidth=1;x.strokeRect(P.l+.5,P.t+.5,P.w-1,P.h-1);
- x.fillStyle='#c8cdd2';x.textAlign='center';x.font='700 9px Arial';x.fillText(opt.xLabel||'',P.l+P.w/2,h-9);
- x.save();x.translate(12,P.t+P.h/2);x.rotate(-Math.PI/2);x.fillStyle=opt.yColor||'#ff4a50';x.textAlign='center';x.fillText(opt.yLabel||'',0,0);x.restore();
- if(opt.right){for(i=0;i<=yt;i++){py=P.b-P.h*i/yt;v=opt.right.max*i/yt;x.fillStyle=opt.right.color;x.textAlign='left';x.font='9px Arial';x.fillText(fmtAxis(v),P.r+7,py)}x.save();x.translate(w-12,P.t+P.h/2);x.rotate(Math.PI/2);x.fillStyle=opt.right.color;x.textAlign='center';x.font='700 9px Arial';x.fillText(opt.right.label,0,0);x.restore()}
- if(opt.right2){for(i=0;i<=yt;i++){py=P.b-P.h*i/yt;v=opt.right2.min+(opt.right2.max-opt.right2.min)*i/yt;x.fillStyle=opt.right2.color;x.textAlign='left';x.font='8px Arial';x.fillText(fmtAxis(v),P.r+43,py)}x.save();x.translate(w-3,P.t+P.h/2);x.rotate(Math.PI/2);x.fillStyle=opt.right2.color;x.textAlign='center';x.font='700 8px Arial';x.fillText(opt.right2.label,0,0);x.restore()}
+ x.strokeStyle='#30363d';x.lineWidth=1;x.strokeRect(P.l+.5,P.t+.5,P.w-1,P.h-1);
+ x.fillStyle='#89939d';x.textAlign='center';x.font='700 '+(compact?'7':'8')+'px Arial';x.fillText(opt.xLabel||'',P.l+P.w/2,h-(compact?6:7));
+ if(opt.yLabel){x.fillStyle=opt.yColor||'#ff4a50';x.textAlign='left';x.font='700 '+(compact?'7':'8')+'px Arial';x.fillText(opt.yLabel,P.l+3,P.t+7)}
+ if(opt.right){
+   for(i=0;i<=yt;i++){py=P.b-P.h*i/yt;v=opt.right.max*i/yt;x.fillStyle=opt.right.color;x.textAlign='left';x.font=(compact?'7':'8')+'px Arial';x.fillText(fmtAxis(v),P.r+5,py)}
+   x.fillStyle=opt.right.color;x.textAlign='right';x.font='700 '+(compact?'6':'7')+'px Arial';x.fillText(opt.right.shortLabel||opt.right.label||'',w-3,P.t+7)
+ }
+ if(opt.right2){
+   for(i=0;i<=yt;i++){py=P.b-P.h*i/yt;v=opt.right2.min+(opt.right2.max-opt.right2.min)*i/yt;x.fillStyle=opt.right2.color;x.textAlign='left';x.font=(compact?'6':'7')+'px Arial';x.fillText(fmtAxis(v),P.r+(compact?31:35),py)}
+   x.fillStyle=opt.right2.color;x.textAlign='right';x.font='700 '+(compact?'6':'7')+'px Arial';x.fillText(opt.right2.shortLabel||opt.right2.label||'',w-3,P.t+17)
+ }
  return P
 }
 function plotSeries(g,P,data,getX,getY,xMin,xMax,yMin,yMax,color,width){
@@ -271,16 +341,16 @@ function drawPower(){
  var c=$('powerCanvas'),g=setupCanvas(c),run=getSelectedRun(),d=S.recording?S.runPower:(run?run.power:[]);
  var maxHp=0,maxTq=0;if(d&&d.length)d.forEach(function(a){maxHp=Math.max(maxHp,+a[1]||0);maxTq=Math.max(maxTq,+a[2]||0)});
  var xMin=d&&d.length?Math.min.apply(null,d.map(function(a){return+a[0]})):0,xMax=d&&d.length?Math.max.apply(null,d.map(function(a){return+a[0]})):1;if(xMax<=xMin)xMax=xMin+1;
- var hpY=niceMax(maxHp*1.1),tqY=niceMax(maxTq*1.1),P=chartFrame(g,{xMin:xMin,xMax:xMax,xLabel:'ENGINE RPM / ROLLER RPM',yMax:hpY,yLabel:'HP',yColor:'#ff3038',right:{max:tqY,label:'TORQUE (Nm)',color:'#ff9f1c'}});
- drawLegend(g,[['HP','#ff3038'],['TORQUE','#ff9f1c']]);if(!d||d.length<2){chartEmpty(g,'NO SAVED RUN DATA');return}
+ var hpY=niceMax(maxHp*1.1),tqY=niceMax(maxTq*1.1),P=chartFrame(g,{xMin:xMin,xMax:xMax,xLabel:'ENGINE RPM / ROLLER RPM',yMax:hpY,yLabel:'HP',yColor:'#ff3038',right:{max:tqY,label:'TORQUE (Nm)',shortLabel:'Nm',color:'#ff9f1c'}});
+ if(!d||d.length<2){chartEmpty(g,'NO SAVED RUN DATA');return}
  plotSeries(g,P,d,function(a){return+a[0]},function(a){return+a[1]},xMin,xMax,0,hpY,'#ff3038',1.8);plotSeries(g,P,d,function(a){return+a[0]},function(a){return+a[2]},xMin,xMax,0,tqY,'#ff9f1c',1.8)
 }
 function drawRpm(){
  var c=$('rpmCanvas'),g=setupCanvas(c),run=getSelectedRun(),d=S.recording?S.runRpm:(run?run.rpm:[]);
- if(!d||!d.length){var P0=chartFrame(g,{xMin:0,xMax:1,xLabel:'TIME (s)',yMax:n('maxRpm',16000),yLabel:'RPM',yColor:'#ff4c52',right:{max:n('maxSpeed',160),label:'SPEED km/h',color:'#d3d6da'},right2:{min:10,max:20,label:'AFR',color:'#3488ff'}});chartEmpty(g,'NO SAVED RUN DATA');return}
+ if(!d||!d.length){var P0=chartFrame(g,{xMin:0,xMax:1,xLabel:'TIME (s)',yMax:n('maxRpm',16000),yLabel:'RPM',yColor:'#ff4c52',right:{max:n('maxSpeed',160),label:'SPEED km/h',shortLabel:'km/h',color:'#d3d6da'},right2:{min:10,max:20,label:'AFR',shortLabel:'AFR',color:'#3488ff'}});chartEmpty(g,'NO SAVED RUN DATA');return}
  var t0=+d[0][0],td=d.map(function(a){return[(+a[0]-t0),+a[1],+a[2],+a[3],+a[4]]}),xMax=Math.max(1,td[td.length-1][0]),rpmY=niceMax(Math.max(1000,Math.max.apply(null,td.map(function(a){return Math.max(a[1]||0,a[2]||0)})))*1.05),speedY=niceMax(Math.max(20,Math.max.apply(null,td.map(function(a){return a[3]||0})))*1.08);
- var P=chartFrame(g,{xMin:0,xMax:xMax,xLabel:'TIME (s)',xFmt:function(v){return v.toFixed(v<10?1:0)},yMax:rpmY,yLabel:'RPM',yColor:'#ff4c52',right:{max:speedY,label:'SPEED km/h',color:'#d3d6da'},right2:{min:10,max:20,label:'AFR',color:'#3488ff'}});
- drawLegend(g,[['ENGINE RPM','#ff4c52'],['ROLLER RPM','#37d45a'],['SPEED','#d3d6da'],['AFR','#3488ff']]);
+ var P=chartFrame(g,{xMin:0,xMax:xMax,xLabel:'TIME (s)',xFmt:function(v){return v.toFixed(v<10?1:0)},yMax:rpmY,yLabel:'RPM',yColor:'#ff4c52',right:{max:speedY,label:'SPEED km/h',shortLabel:'km/h',color:'#d3d6da'},right2:{min:10,max:20,label:'AFR',shortLabel:'AFR',color:'#3488ff'}});
+
  plotSeries(g,P,td,function(a){return a[0]},function(a){return a[1]},0,xMax,0,rpmY,'#ff4c52',1.7);
  plotSeries(g,P,td,function(a){return a[0]},function(a){return a[2]},0,xMax,0,rpmY,'#37d45a',1.4);
  plotSeries(g,P,td,function(a){return a[0]},function(a){return a[3]},0,xMax,0,speedY,'#d3d6da',1.4);
@@ -300,7 +370,7 @@ function drawCompare(){
  var xMin=all.length?Math.min.apply(null,all.map(function(a){return a[0]})):0,xMax=all.length?Math.max.apply(null,all.map(function(a){return a[0]})):1;if(xMax<=xMin)xMax=xMin+1;
  var yMin=metric==='afr'?10:0,yMax=metric==='afr'?20:niceMax(Math.max(1,all.length?Math.max.apply(null,all.map(function(a){return a[1]})):1)*1.1);
  var P=chartFrame(g,{xMin:xMin,xMax:xMax,xLabel:'ENGINE RPM / ROLLER RPM',yMin:yMin,yMax:yMax,yLabel:yLabel,yColor:yColor});
- var pal=['#ff4d57','#40c4ff','#ffd740','#69f0ae','#b388ff'];drawLegend(g,sets.map(function(s,i){return['RUN #'+s.run.seq,pal[i%pal.length]]}));
+ var pal=['#ff4d57','#40c4ff','#ffd740','#69f0ae','#b388ff'];
  if(sets.length<2){chartEmpty(g,'SELECT 2–5 SAVED RUNS');return}
  sets.forEach(function(s,i){plotSeries(g,P,s.data,function(a){return a[0]},function(a){return a[1]},xMin,xMax,yMin,yMax,pal[i%pal.length],1.8)})
 }
@@ -315,10 +385,10 @@ function saveCurrentRun(){
 }
 function persistRunHistory(){try{localStorage.setItem(RUN_HISTORY_KEY,JSON.stringify(runHistory))}catch(e){}}
 function restoreRunHistory(){try{var a=JSON.parse(localStorage.getItem(RUN_HISTORY_KEY)||'[]');if(Array.isArray(a))runHistory=a.slice(-10)}catch(e){runHistory=[]}selectedRunIndex=runHistory.length?runHistory.length-1:-1}
-function runLabel(r){return'#'+r.seq+' · '+r.timestamp+' · '+(r.hpMax||0).toFixed(1)+' HP'}
+function runLabel(r){return'RUN #'+r.seq+' · '+(r.hpMax||0).toFixed(1)+'HP · '+(r.tqMax||0).toFixed(1)+'Nm'}
 function renderRunSelectors(){
  ['powerRunSelect','rpmRunSelect'].forEach(function(id){var s=$(id);if(!s)return;var keep=selectedRunIndex;s.innerHTML='';if(!runHistory.length){var o=document.createElement('option');o.value='';o.textContent='-- NO SAVED RUN --';s.appendChild(o);return}for(var i=runHistory.length-1;i>=0;i--){var o=document.createElement('option');o.value=String(i);o.textContent=runLabel(runHistory[i]);s.appendChild(o)}s.value=String(keep>=0?keep:runHistory.length-1)})
- var r=getSelectedRun();$('powerVals').textContent=r?('RUN #'+r.seq+' · '+r.hpMax.toFixed(1)+' HP · '+r.tqMax.toFixed(1)+' Nm'):'NO SAVED RUN';$('rpmVals').textContent=r?('RUN #'+r.seq+' · '+Math.round(r.rpmMax)+' RPM · '+r.speedMax.toFixed(1)+' km/h'):'NO SAVED RUN'
+ var r=getSelectedRun();$('powerVals').textContent=r?(r.hpMax.toFixed(1)+'HP · '+r.tqMax.toFixed(1)+'Nm'):'NO RUN';$('rpmVals').textContent=r?(Math.round(r.rpmMax)+'RPM · '+r.speedMax.toFixed(1)+'km/h'):'NO RUN'
 }
 function renderCompareRunList(){
  var box=$('compareRunList');if(!box)return;box.innerHTML='';if(!runHistory.length){box.innerHTML='<span class="chart-empty">NO SAVED RUNS</span>';return}
