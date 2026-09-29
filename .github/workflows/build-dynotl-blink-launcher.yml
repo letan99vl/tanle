@@ -62,11 +62,36 @@ jobs:
           sed -i 's/BLINK-REDLEO-ANDROID\/1.1/BLINK-REDLEO-ANDROID\/1.3-v11/' "$SRC"
           sed -i '/s.setCacheMode(WebSettings.LOAD_NO_CACHE);/a\            try { webView.clearCache(true); webView.clearHistory(); } catch (Throwable ignored) {}' "$SRC"
 
+          # DynoTL app identity: install beside Blink, never overwrite it.
+          sed -i "s/applicationId 'vn.blinkredleo.app'/applicationId 'vn.dynotl.mobile'/" android-build/app/build.gradle
+          sed -i 's/android:label="BLINK REDLEO"/android:label="DynoTL Mobile"/' android-build/app/src/main/AndroidManifest.xml
+
+          # Keep Blink picker/scan logic, change only BLE target identity and UUIDs.
+          sed -i 's/BLINK-REDLEO/DynoTL/g' "$SRC"
+          sed -i 's/afaf0001-7c35-4a6d-9f0e-2ea3117f1000/d7a10001-7c35-4a6d-9f0e-2ea3117f1000/g' "$SRC"
+          sed -i 's/afaf0002-7c35-4a6d-9f0e-2ea3117f1000/d7a10002-7c35-4a6d-9f0e-2ea3117f1000/g' "$SRC"
+          sed -i 's/afaf0003-7c35-4a6d-9f0e-2ea3117f1000/d7a10003-7c35-4a6d-9f0e-2ea3117f1000/g' "$SRC"
+          sed -i 's/afaf0005-7c35-4a6d-9f0e-2ea3117f1000/d7a10005-7c35-4a6d-9f0e-2ea3117f1000/g' "$SRC"
+
+          # DynoTL intentionally has no MAP characteristic. Do not require or subscribe to it.
+          sed -i 's/BluetoothGattCharacteristic map = svc.getCharacteristic(MAP_UUID);/BluetoothGattCharacteristic map = null;/' "$SRC"
+          sed -i 's/ || map == null//g' "$SRC"
+          sed -i '/notifyQueue.add(map);/d' "$SRC"
+          sed -i 's/LIVE \/ COMMAND \/ MAP \/ STATUS/LIVE \/ COMMAND \/ STATUS/g' "$SRC"
+
+          # If the injected JS bridge contains Blink UUIDs, point those to DynoTL too.
+          if [ -f android-build/app/src/main/assets/native_bridge.js ]; then
+            sed -i 's/afaf0001-7c35-4a6d-9f0e-2ea3117f1000/d7a10001-7c35-4a6d-9f0e-2ea3117f1000/g' android-build/app/src/main/assets/native_bridge.js
+            sed -i 's/afaf0002-7c35-4a6d-9f0e-2ea3117f1000/d7a10002-7c35-4a6d-9f0e-2ea3117f1000/g' android-build/app/src/main/assets/native_bridge.js
+            sed -i 's/afaf0003-7c35-4a6d-9f0e-2ea3117f1000/d7a10003-7c35-4a6d-9f0e-2ea3117f1000/g' android-build/app/src/main/assets/native_bridge.js
+            sed -i 's/afaf0005-7c35-4a6d-9f0e-2ea3117f1000/d7a10005-7c35-4a6d-9f0e-2ea3117f1000/g' android-build/app/src/main/assets/native_bridge.js
+          fi
+
       - name: Inspect Blink BLE constants
         run: |
           SRC=android-build/app/src/main/java/vn/blinkredleo/app/MainActivity.java
           echo "=== BLE CONSTANTS / DISCOVERY ==="
-          grep -nE 'DEVICE_PREFIX|UUID|MAP|mapChar|getCharacteristic|onServicesDiscovered|SERVICE' "$SRC" || true
+          grep -nE 'DEVICE_PREFIX|UUID|MAP|mapChar|getCharacteristic|onServicesDiscovered|SERVICE|notifyQueue.add' "$SRC" || true
           echo "=== BUILD ID / MANIFEST ==="
           grep -nE 'applicationId|namespace' android-build/app/build.gradle || true
           grep -nE 'package=|android:label|activity' android-build/app/src/main/AndroidManifest.xml || true
