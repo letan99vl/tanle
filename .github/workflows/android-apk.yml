@@ -58,156 +58,119 @@ jobs:
           s = s.replace("import android.widget.Toast;\n", "import android.widget.Toast;\nimport android.widget.TextView;\nimport android.widget.ScrollView;\n")
           s = s.replace("import java.io.InputStreamReader;\n", "import java.io.InputStreamReader;\nimport java.io.StringWriter;\nimport java.io.PrintWriter;\n")
 
-          old_oncreate = '''    @Override
-              @SuppressLint({"SetJavaScriptEnabled", "JavascriptInterface"})
-              protected void onCreate(Bundle savedInstanceState) {
-                  super.onCreate(savedInstanceState);
-                  requestWindowFeature(Window.FEATURE_NO_TITLE);
-                  prefs = getSharedPreferences("dynotl", MODE_PRIVATE);
-                  setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
-                  enterImmersive();
-                  getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-
-                  BluetoothManager bm = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
-                  bluetoothAdapter = bm != null ? bm.getAdapter() : null;
-
-                  webView = new WebView(this);
-                  setContentView(webView);
-                  WebSettings s = webView.getSettings();
-                  s.setJavaScriptEnabled(true);
-                  s.setDomStorageEnabled(true);
-                  s.setDatabaseEnabled(true);
-                  s.setAllowFileAccess(false);
-                  s.setAllowContentAccess(false);
-                  s.setMediaPlaybackRequiresUserGesture(false);
-                  s.setCacheMode(WebSettings.LOAD_DEFAULT);
-                  s.setUserAgentString(s.getUserAgentString() + " DYNOTL-MOBILE-ANDROID/1.0");
-                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) s.setSafeBrowsingEnabled(true);
-
-                  webView.addJavascriptInterface(new BleJsBridge(), "AndroidBLE");
-                  webView.setWebViewClient(new WebViewClient() {
-                      @Override
-                      public void onPageFinished(WebView view, String url) {
-                          injectNativeBridge();
-                      }
-                  });
-                  webView.loadUrl(START_URL);
-              }
-          '''.replace("              ","")
-
+          start = s.index('    @Override\n    @SuppressLint({"SetJavaScriptEnabled", "JavascriptInterface"})\n    protected void onCreate(Bundle savedInstanceState) {')
+          end = s.index('    private void injectNativeBridge()', start)
           new_oncreate = '''    @Override
-              @SuppressLint({"SetJavaScriptEnabled", "JavascriptInterface"})
-              protected void onCreate(Bundle savedInstanceState) {
-                  super.onCreate(savedInstanceState);
-                  prefs = getSharedPreferences("dynotl", MODE_PRIVATE);
-                  installCrashRecorder();
+    @SuppressLint({"SetJavaScriptEnabled", "JavascriptInterface"})
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        prefs = getSharedPreferences("dynotl", MODE_PRIVATE);
+        installCrashRecorder();
 
-                  showStatusScreen("DynoTL Mobile\\nStarting...");
-                  getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        showStatusScreen("DynoTL Mobile\\nStarting...");
+        getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
-                  main.postDelayed(() -> {
-                      try {
-                          startWebView();
-                      } catch (Throwable t) {
-                          showFatal("STARTUP", t);
-                      }
-                  }, 250);
-              }
+        main.postDelayed(() -> {
+            try {
+                startWebView();
+            } catch (Throwable t) {
+                showFatal("STARTUP", t);
+            }
+        }, 250);
+    }
 
-              @SuppressLint({"SetJavaScriptEnabled", "JavascriptInterface"})
-              private void startWebView() {
-                  WebView w = new WebView(this);
-                  webView = w;
-                  WebSettings s = w.getSettings();
-                  s.setJavaScriptEnabled(true);
-                  s.setDomStorageEnabled(true);
-                  s.setMediaPlaybackRequiresUserGesture(false);
-                  s.setCacheMode(WebSettings.LOAD_DEFAULT);
-                  try { s.setUserAgentString(s.getUserAgentString() + " DYNOTL-MOBILE-ANDROID/1.1-SAFE"); } catch (Throwable ignored) { }
+    @SuppressLint({"SetJavaScriptEnabled", "JavascriptInterface"})
+    private void startWebView() {
+        WebView w = new WebView(this);
+        webView = w;
+        WebSettings s = w.getSettings();
+        s.setJavaScriptEnabled(true);
+        s.setDomStorageEnabled(true);
+        s.setMediaPlaybackRequiresUserGesture(false);
+        s.setCacheMode(WebSettings.LOAD_DEFAULT);
+        try { s.setUserAgentString(s.getUserAgentString() + " DYNOTL-MOBILE-ANDROID/1.1-SAFE"); } catch (Throwable ignored) { }
 
-                  w.addJavascriptInterface(new BleJsBridge(), "AndroidBLE");
-                  w.setWebViewClient(new WebViewClient() {
-                      @Override
-                      public void onPageFinished(WebView view, String url) {
-                          try {
-                              injectNativeBridge();
-                              safeEnterImmersive();
-                          } catch (Throwable t) {
-                              showFatal("PAGE FINISH", t);
-                          }
-                      }
+        w.addJavascriptInterface(new BleJsBridge(), "AndroidBLE");
+        w.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                try {
+                    injectNativeBridge();
+                    safeEnterImmersive();
+                } catch (Throwable t) {
+                    showFatal("PAGE FINISH", t);
+                }
+            }
 
-                      @Override
-                      public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
-                          String why = "WebView renderer stopped";
-                          if (detail != null) why += detail.didCrash() ? " (crash)" : " (killed by system)";
-                          try {
-                              view.removeJavascriptInterface("AndroidBLE");
-                              view.destroy();
-                          } catch (Throwable ignored) { }
-                          webView = null;
-                          showFatalText("WEBVIEW RENDERER", why + "\\n\\nAndroid WebView/Chrome may need updating.");
-                          return true;
-                      }
-                  });
-                  setContentView(w);
-                  w.loadUrl(START_URL);
-              }
+            @Override
+            public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
+                String why = "WebView renderer stopped";
+                if (detail != null) why += detail.didCrash() ? " (crash)" : " (killed by system)";
+                try {
+                    view.removeJavascriptInterface("AndroidBLE");
+                    view.destroy();
+                } catch (Throwable ignored) { }
+                webView = null;
+                showFatalText("WEBVIEW RENDERER", why + "\\n\\nAndroid WebView/Chrome may need updating.");
+                return true;
+            }
+        });
+        setContentView(w);
+        w.loadUrl(START_URL);
+    }
 
-              private void showStatusScreen(String text) {
-                  TextView tv = new TextView(this);
-                  tv.setText(text);
-                  tv.setTextColor(Color.WHITE);
-                  tv.setBackgroundColor(Color.rgb(8, 10, 12));
-                  tv.setTextSize(18f);
-                  tv.setPadding(32, 32, 32, 32);
-                  setContentView(tv);
-              }
+    private void showStatusScreen(String text) {
+        TextView tv = new TextView(this);
+        tv.setText(text);
+        tv.setTextColor(Color.WHITE);
+        tv.setBackgroundColor(Color.rgb(8, 10, 12));
+        tv.setTextSize(18f);
+        tv.setPadding(32, 32, 32, 32);
+        setContentView(tv);
+    }
 
-              private void showFatal(String stage, Throwable t) {
-                  showFatalText(stage, stackTrace(t));
-              }
+    private void showFatal(String stage, Throwable t) {
+        showFatalText(stage, stackTrace(t));
+    }
 
-              private void showFatalText(String stage, String detail) {
-                  try {
-                      TextView tv = new TextView(this);
-                      tv.setText("DynoTL Mobile diagnostic\\n\\nStage: " + stage + "\\n\\n" + detail);
-                      tv.setTextColor(Color.WHITE);
-                      tv.setBackgroundColor(Color.rgb(24, 6, 8));
-                      tv.setTextSize(14f);
-                      tv.setTextIsSelectable(true);
-                      tv.setPadding(24, 24, 24, 24);
-                      ScrollView sv = new ScrollView(this);
-                      sv.addView(tv);
-                      setContentView(sv);
-                  } catch (Throwable ignored) { }
-              }
+    private void showFatalText(String stage, String detail) {
+        try {
+            TextView tv = new TextView(this);
+            tv.setText("DynoTL Mobile diagnostic\\n\\nStage: " + stage + "\\n\\n" + detail);
+            tv.setTextColor(Color.WHITE);
+            tv.setBackgroundColor(Color.rgb(24, 6, 8));
+            tv.setTextSize(14f);
+            tv.setTextIsSelectable(true);
+            tv.setPadding(24, 24, 24, 24);
+            ScrollView sv = new ScrollView(this);
+            sv.addView(tv);
+            setContentView(sv);
+        } catch (Throwable ignored) { }
+    }
 
-              private String stackTrace(Throwable t) {
-                  try {
-                      StringWriter sw = new StringWriter();
-                      t.printStackTrace(new PrintWriter(sw));
-                      return sw.toString();
-                  } catch (Throwable e) {
-                      return String.valueOf(t);
-                  }
-              }
+    private String stackTrace(Throwable t) {
+        try {
+            StringWriter sw = new StringWriter();
+            t.printStackTrace(new PrintWriter(sw));
+            return sw.toString();
+        } catch (Throwable e) {
+            return String.valueOf(t);
+        }
+    }
 
-              private void installCrashRecorder() {
-                  final Thread.UncaughtExceptionHandler old = Thread.getDefaultUncaughtExceptionHandler();
-                  Thread.setDefaultUncaughtExceptionHandler((thread, error) -> {
-                      try {
-                          getSharedPreferences("dynotl", MODE_PRIVATE).edit()
-                                  .putString("lastCrash", stackTrace(error)).commit();
-                      } catch (Throwable ignored) { }
-                      if (old != null) old.uncaughtException(thread, error);
-                  });
-              }
-          '''.replace("              ","")
+    private void installCrashRecorder() {
+        final Thread.UncaughtExceptionHandler old = Thread.getDefaultUncaughtExceptionHandler();
+        Thread.setDefaultUncaughtExceptionHandler((thread, error) -> {
+            try {
+                getSharedPreferences("dynotl", MODE_PRIVATE).edit()
+                        .putString("lastCrash", stackTrace(error)).commit();
+            } catch (Throwable ignored) { }
+            if (old != null) old.uncaughtException(thread, error);
+        });
+    }
 
-          if old_oncreate not in s:
-              raise SystemExit("onCreate block not found")
-          s = s.replace(old_oncreate, new_oncreate)
+'''
+          s = s[:start] + new_oncreate + s[end:]
 
           hook = "    @Override protected void onWindowFocusChanged(boolean hasFocus) {"
           helper = '''    private void safeEnterImmersive() {
