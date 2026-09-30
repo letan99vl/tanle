@@ -1,0 +1,21 @@
+{
+  "snapshot_date": "2026-10-01",
+  "owner": "letan99vl",
+  "current_pc_app": "v1.2026.946",
+  "cloud_worker": "dynotl-cloud",
+  "cloud_url": "https://dynotl-cloud.dynotl-quyen.workers.dev",
+  "firmware_worker": "dynotl-firmware",
+  "firmware_url": "https://dynotl-firmware.dynotl-quyen.workers.dev",
+  "firmware_kv_namespace": "DYNOTL_FIRMWARE",
+  "firmware_kv_binding": "FIRMWARE_KV",
+  "launcher_universal": "DynoTL_Setup_Universal_Monitor_v1.exe",
+  "rescue_clean": "DynoTL_Clean_Install_Universal_Monitor_v3.exe",
+  "webview_latest_candidate": "DynoTL_WebView_Fix_v7_STA_STABLE.exe",
+  "webview_last_user_confirmed_running": "DynoTL_WebView_Fix_v6_NATIVE_STABLE.exe",
+  "github_tanle_tree_sha": "66eb7fe7a38322a29120385ae7c1eb2731809ebf",
+  "github_blink_redleo_tree_sha": "c08033a55743852c6f69de85b5e216bc506f278e",
+  "known_missing": [
+    "exact firmware server/uploader v5_401_FIX source",
+    "exact monitor server patch source"
+  ]
+}
