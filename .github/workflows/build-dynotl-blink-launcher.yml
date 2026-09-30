@@ -62,32 +62,8 @@ jobs:
           sed -i 's/BLINK-REDLEO-ANDROID\/1.1/BLINK-REDLEO-ANDROID\/1.4-v12/' "$SRC"
           sed -i '/s.setCacheMode(WebSettings.LOAD_NO_CACHE);/a\            try { webView.clearCache(true); webView.clearHistory(); } catch (Throwable ignored) {}' "$SRC"
 
-          # Make Android WebView pass vertical touch/scroll to the page just like Bluefy.
-          python3 - <<'PY'
-          from pathlib import Path
-          p=Path("android-build/app/src/main/java/vn/blinkredleo/app/MainActivity.java")
-          s=p.read_text()
-          marker="        webView = new WebView(this);\n"
-          extra='''        webView = new WebView(this);
-        webView.setVerticalScrollBarEnabled(true);
-        webView.setHorizontalScrollBarEnabled(false);
-        webView.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);
-        try { webView.setNestedScrollingEnabled(true); } catch (Throwable ignored) {}
-        webView.setOnTouchListener((v, event) -> {
-            try {
-                int a = event.getActionMasked();
-                if (a == android.view.MotionEvent.ACTION_DOWN || a == android.view.MotionEvent.ACTION_MOVE) {
-                    if (v.getParent() != null) v.getParent().requestDisallowInterceptTouchEvent(true);
-                }
-            } catch (Throwable ignored) {}
-            return false;
-        });
-'''
-          if marker not in s:
-              raise SystemExit("WebView creation marker not found")
-          s=s.replace(marker,extra,1)
-          p.write_text(s)
-          PY
+          # Make Android WebView scroll nested CSS pages reliably.
+          python3 -c 'from pathlib import Path; p=Path("android-build/app/src/main/java/vn/blinkredleo/app/MainActivity.java"); s=p.read_text(); m="        webView = new WebView(this);\\n"; e=m+"        webView.setVerticalScrollBarEnabled(true);\\n        webView.setHorizontalScrollBarEnabled(false);\\n        webView.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);\\n        try { webView.setNestedScrollingEnabled(true); } catch (Throwable ignored) {}\\n"; assert m in s; p.write_text(s.replace(m,e,1))'
 
           # DynoTL app identity: install beside Blink, never overwrite it.
           sed -i "s/applicationId 'vn.blinkredleo.app'/applicationId 'vn.dynotl.mobile'/" android-build/app/build.gradle
