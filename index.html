@@ -201,6 +201,22 @@ main{display:none;min-height:0;overflow:hidden}.page.on{display:block;height:100
  #settingsSaveStatus{font-size:7px}
 }
 </style>
+<style id="power-peaks-ignition-v5">
+#power .power-chart-box{grid-template-rows:31px 30px 22px minmax(0,1fr)!important}
+.power-peak-strip{height:30px;display:flex;align-items:stretch;gap:5px;padding:2px 3px;overflow:hidden}
+.power-peak{min-width:0;flex:1;display:flex;align-items:baseline;justify-content:center;gap:5px;border:1px solid #252b31;border-radius:6px;background:#080b0e;padding:2px 7px}
+.power-peak span{font:800 7px Arial,sans-serif;letter-spacing:.55px;color:#79838d;white-space:nowrap}
+.power-peak b{font:900 17px Arial,sans-serif;line-height:1;color:#f3f5f7;white-space:nowrap}
+.power-peak em{font:800 7px Arial,sans-serif;color:#7c858e;font-style:normal}
+.hp-peak{border-color:#4d1b1e}.hp-peak b{color:#ff444c}
+.tq-peak{border-color:#4c3518}.tq-peak b{color:#ffad36}
+@media(max-height:430px){
+ #power .power-chart-box{grid-template-rows:27px 25px 19px minmax(0,1fr)!important}
+ .power-peak-strip{height:25px;padding:1px 3px}
+ .power-peak{padding:1px 5px;gap:4px}
+ .power-peak span{font-size:6px}.power-peak b{font-size:14px}.power-peak em{font-size:6px}
+}
+</style>
 </head>
 <body>
 <div id="app">
@@ -231,10 +247,14 @@ main{display:none;min-height:0;overflow:hidden}.page.on{display:block;height:100
 </main>
 
 <main id="power" class="page chartpage">
- <section class="chartbox stored-chart-box">
+ <section class="chartbox stored-chart-box power-chart-box">
   <div class="charthead">
    <span>HP / TORQUE VS RPM</span>
    <div class="chart-runbar"><span>SAVED RUN</span><select id="powerRunSelect"></select><span id="powerVals" class="vals">NO SAVED RUN</span></div>
+  </div>
+  <div class="power-peak-strip">
+   <div class="power-peak hp-peak"><span>MAX HP</span><b id="powerMaxHp">0.0</b></div>
+   <div class="power-peak tq-peak"><span>MAX TORQUE</span><b id="powerMaxTq">0.0</b><em>Nm</em></div>
   </div>
   <div class="mobile-chart-legend power-legend"><span class="lg hp">HP</span><span class="lg tq">TORQUE</span><div class="smoothbar" aria-label="Chart smoothing"><button type="button" data-smooth="0">RAW</button><button type="button" data-smooth="1" class="on">LIGHT</button><button type="button" data-smooth="2">MED</button></div><span class="axis-note">X: RPM</span></div>
   <div class="chartwrap"><canvas id="powerCanvas"></canvas></div>
@@ -289,6 +309,10 @@ main{display:none;min-height:0;overflow:hidden}.page.on{display:block;height:100
    <label class="setline"><span>Volt max</span><input id="afrVMax" type="number" step=".01" value="3.15"></label>
    <label class="setline"><span>AFR max</span><input id="afrMax" type="number" step=".1" value="20"></label>
   </section>
+  <section class="card"><h3>ENGINE RPM</h3>
+   <label class="setline"><span>Ignition cycle</span><select id="ignitionCycle"><option value="360">360° · 1 pulse/rev</option><option value="720">720° · 1 pulse/2 rev</option></select></label>
+   <p class="note">Use 720° when the RPM pickup sees one ignition pulse every two crank revolutions. The app multiplies engine RPM ×2.</p>
+  </section>
   <section class="card"><h3>AUTO RUN</h3>
    <label class="setline"><span>Auto start</span><input id="autoStart" type="checkbox"></label>
    <label class="setline"><span>Min speed km/h</span><input id="autoSpeed" type="number" value="10"></label>
@@ -306,7 +330,7 @@ main{display:none;min-height:0;overflow:hidden}.page.on{display:block;height:100
 var S={connected:false,recording:false,sim:false,auto:false,device:null,server:null,live:null,cmd:null,status:null,lineBuf:'',lastT:0,omegaF:0,ow:[],tw:[],rpm:0,rrpm:0,speed:0,afr:0,hp:0,tq:0,alpha:0,hpMax:0,tqMax:0,runPower:[],runRpm:[],liveRpmPts:[],lastSampleT:0,simT:0,run201:false,wait201:false,done201:false,d201:0,t2010:0,t201last:0,maxS201:0,maxR201:0,rollerCalcPrimed:false,rollerStartupSamplesRemaining:0,rollerGuardLastDistinctRpm:0,rollerGuardLastDistinctMs:0,lastPlotRpm:0,smoothingLevel:1};
 var BLE={service:'d7a10001-7c35-4a6d-9f0e-2ea3117f1000',live:'d7a10002-7c35-4a6d-9f0e-2ea3117f1000',cmd:'d7a10003-7c35-4a6d-9f0e-2ea3117f1000',status:'d7a10005-7c35-4a6d-9f0e-2ea3117f1000'};
 var $=function(id){return document.getElementById(id)},dec=new TextDecoder(),enc=new TextEncoder();
-var cfgIds=['rollerD','rollerJ','maxRpm','maxSpeed','afrVMin','afrMin','afrVMax','afrMax','autoSpeed','autoHp','autoAlpha'];
+var cfgIds=['rollerD','rollerJ','maxRpm','maxSpeed','afrVMin','afrMin','afrVMax','afrMax','ignitionCycle','autoSpeed','autoHp','autoAlpha'];
 var runHistory=[],selectedRunIndex=-1,RUN_HISTORY_KEY='dynotl_mobile_runs_v2',RUN_COUNTER_KEY='dynotl_mobile_run_counter_v2';
 var OMEGA_EMA_K=0.15,ALPHA_WINDOW_N=10,ROLLER_STARTUP_SKIP_SAMPLES=4;
 var ROLLER_DISTINCT_EPS_RPM=0.5,ROLLER_JUMP_MIN_RPM=250.0,ROLLER_JUMP_RATIO=0.55,ROLLER_JUMP_MAX_DT_MS=300.0,ROLLER_JUMP_COOLDOWN_SAMPLES=2;
@@ -323,6 +347,8 @@ var SIM_SAMPLE_MS=25,SIM_ROLLER_TIMEOUT_MS=1000,SIM_ABS_MIN_PERIOD_US=6000;
 var SIM_EARLY_GATE_PERCENT=45,SIM_PERIOD_ALPHA=0.40,SIM_OUTPUT_ALPHA=0.18,SIM_AFR_ALPHA=0.20;
 function n(id,d){var v=parseFloat($(id).value);return isFinite(v)?v:d}
 function afrFromV(v){var v0=n('afrVMin',0),v1=n('afrVMax',3.15),a0=n('afrMin',10),a1=n('afrMax',20);if(v1===v0)return a0;return a0+(v-v0)*(a1-a0)/(v1-v0)}
+function ignitionMultiplier(){var e=$('ignitionCycle');return e&&e.value==='720'?2:1}
+function correctEngineRpm(raw){raw=+raw||0;return raw*ignitionMultiplier()}
 function setBle(on,msg){S.connected=on;$('bleStatus').textContent=msg||(on?'BLE OK':'BLE OFF');$('bleStatus').classList.toggle('ok',on);$('ctlBle').textContent=on?'OFF':'BLE';$('bleTop').textContent=on?'OFF':'BLE'}
 async function connectBle(){if(S.connected){disconnectBle();return}if(!navigator.bluetooth){alert('Web Bluetooth unavailable. On iPhone open this HTTPS page in Bluefy or another Web Bluetooth compatible browser.');return}try{$('bleStatus').textContent='SCAN BLE';S.device=await navigator.bluetooth.requestDevice({
   acceptAllDevices:true,
@@ -332,7 +358,7 @@ function disconnectBle(){try{if(S.device&&S.device.gatt.connected)S.device.gatt.
 async function writeCmd(t){if(!S.cmd)return;var b=enc.encode(t);if(S.cmd.writeValueWithoutResponse)await S.cmd.writeValueWithoutResponse(b);else await S.cmd.writeValue(b)}
 function onStatus(e){try{var d=e.target.value;$('bleStatus').textContent=dec.decode(new Uint8Array(d.buffer,d.byteOffset,d.byteLength)).trim()||'BLE OK'}catch(x){}}
 function onLive(e){var d=e.target.value,txt=dec.decode(new Uint8Array(d.buffer,d.byteOffset,d.byteLength));S.lineBuf+=txt;var i;while((i=S.lineBuf.indexOf('\n'))>=0){var line=S.lineBuf.slice(0,i).replace(/\r/g,'').trim();S.lineBuf=S.lineBuf.slice(i+1);handleLine(line)}}
-function handleLine(line){if(!line||line.charAt(0)!=='D')return;var p=line.split(',');if(p.length<5)return;sample(+p[1],+p[2],+p[3],+p[4])}
+function handleLine(line){if(!line||line.charAt(0)!=='D')return;var p=line.split(',');if(p.length<5)return;sample(+p[1],+p[2],correctEngineRpm(+p[3]),+p[4])}
 function sample(t,rr,r,v){
  if(!isFinite(t)||!isFinite(rr)||!isFinite(r)||!isFinite(v))return;
  var D=n('rollerD',240)/1000,J=n('rollerJ',1.73);
@@ -495,7 +521,7 @@ function simEmitPacket(){
  handleLine(
    'D,'+Math.round(SIM.tMs)+','+
    SIM.rpmOutput.toFixed(2)+','+
-   SIM.engineFiltered.toFixed(2)+','+
+   (SIM.engineFiltered/ignitionMultiplier()).toFixed(2)+','+
    SIM.afrFiltered.toFixed(3)
  )
 }
@@ -623,9 +649,18 @@ function buildPowerDisplayData(raw){
 }
 function syncSmoothingButtons(){document.querySelectorAll('[data-smooth]').forEach(function(b){b.classList.toggle('on',parseInt(b.dataset.smooth,10)===S.smoothingLevel)})}
 function setSmoothingLevel(level,persist){level=parseInt(level,10);if(level!==0&&level!==1&&level!==2)level=1;S.smoothingLevel=level;syncSmoothingButtons();drawAll();if(persist!==false)save()}
+function updatePowerPeakUI(maxHp,maxTq){
+ var hp=$('powerMaxHp'),tq=$('powerMaxTq'),vals=$('powerVals');
+ maxHp=isFinite(maxHp)?maxHp:0;maxTq=isFinite(maxTq)?maxTq:0;
+ if(hp)hp.textContent=maxHp.toFixed(1);
+ if(tq)tq.textContent=maxTq.toFixed(1);
+ if(vals)vals.textContent=(maxHp>0||maxTq>0)?('MAX '+maxHp.toFixed(1)+'HP · '+maxTq.toFixed(1)+'Nm'):'NO RUN';
+}
 function drawPower(){
  var c=$('powerCanvas'),g=setupCanvas(c),run=getSelectedRun(),raw=S.recording?S.runPower:(run?run.power:[]),d=buildPowerDisplayData(raw);
  var maxHp=0,maxTq=0;if(raw&&raw.length)raw.forEach(function(a){maxHp=Math.max(maxHp,+a[1]||0);maxTq=Math.max(maxTq,+a[2]||0)});
+ if(!S.recording&&run){if((+run.hpMax||0)>maxHp)maxHp=+run.hpMax||0;if((+run.tqMax||0)>maxTq)maxTq=+run.tqMax||0}
+ updatePowerPeakUI(maxHp,maxTq);
  var xMin=d&&d.length?Math.min.apply(null,d.map(function(a){return+a[0]})):0,xMax=d&&d.length?Math.max.apply(null,d.map(function(a){return+a[0]})):1;if(xMax<=xMin)xMax=xMin+1;
  var hpY=niceMax(maxHp*1.1),tqY=niceMax(maxTq*1.1),P=chartFrame(g,{xMin:xMin,xMax:xMax,xLabel:'ENGINE RPM / ROLLER RPM',yMax:hpY,yLabel:'HP',yColor:'#ff3038',right:{max:tqY,label:'TORQUE (Nm)',shortLabel:'Nm',color:'#ff9f1c'}});
  if(!d||d.length<2){chartEmpty(g,'NO SAVED RUN DATA');return}
@@ -666,7 +701,7 @@ function saveCurrentRun(){
  if(!S.runPower||S.runPower.length<2||!S.runRpm||S.runRpm.length<2)return;
  var seq=parseInt(localStorage.getItem(RUN_COUNTER_KEY)||'0',10)+1;localStorage.setItem(RUN_COUNTER_KEY,String(seq));
  var rpmMax=0,speedMax=0;S.runRpm.forEach(function(a){rpmMax=Math.max(rpmMax,+a[1]||0);speedMax=Math.max(speedMax,+a[3]||0)});
- var item={seq:seq,timestamp:new Date().toLocaleString('vi-VN',{hour12:false}),power:S.runPower.map(function(a){return a.slice()}),rpm:S.runRpm.map(function(a){return a.slice()}),hpMax:S.hpMax||0,tqMax:S.tqMax||0,rpmMax:rpmMax,speedMax:speedMax};
+ var item={seq:seq,timestamp:new Date().toLocaleString('vi-VN',{hour12:false}),ignitionCycle:$('ignitionCycle')?$('ignitionCycle').value:'360',power:S.runPower.map(function(a){return a.slice()}),rpm:S.runRpm.map(function(a){return a.slice()}),hpMax:S.hpMax||0,tqMax:S.tqMax||0,rpmMax:rpmMax,speedMax:speedMax};
  runHistory.push(item);if(runHistory.length>10)runHistory.shift();selectedRunIndex=runHistory.length-1;persistRunHistory();renderRunHistoryUI()
 }
 function persistRunHistory(){try{localStorage.setItem(RUN_HISTORY_KEY,JSON.stringify(runHistory))}catch(e){}}
@@ -674,7 +709,7 @@ function restoreRunHistory(){try{var a=JSON.parse(localStorage.getItem(RUN_HISTO
 function runLabel(r){return'RUN #'+r.seq+' · '+(r.hpMax||0).toFixed(1)+'HP · '+(r.tqMax||0).toFixed(1)+'Nm'}
 function renderRunSelectors(){
  ['powerRunSelect','rpmRunSelect'].forEach(function(id){var s=$(id);if(!s)return;var keep=selectedRunIndex;s.innerHTML='';if(!runHistory.length){var o=document.createElement('option');o.value='';o.textContent='-- NO SAVED RUN --';s.appendChild(o);return}for(var i=runHistory.length-1;i>=0;i--){var o=document.createElement('option');o.value=String(i);o.textContent=runLabel(runHistory[i]);s.appendChild(o)}s.value=String(keep>=0?keep:runHistory.length-1)})
- var r=getSelectedRun();$('powerVals').textContent=r?(r.hpMax.toFixed(1)+'HP · '+r.tqMax.toFixed(1)+'Nm'):'NO RUN';$('rpmVals').textContent=r?(Math.round(r.rpmMax)+'RPM · '+r.speedMax.toFixed(1)+'km/h'):'NO RUN'
+ var r=getSelectedRun();if(r){var hp=+r.hpMax||0,tq=+r.tqMax||0;if((!hp||!tq)&&r.power&&r.power.length){r.power.forEach(function(a){hp=Math.max(hp,+a[1]||0);tq=Math.max(tq,+a[2]||0)})}updatePowerPeakUI(hp,tq)}else updatePowerPeakUI(0,0);$('rpmVals').textContent=r?(Math.round(+r.rpmMax||0)+'RPM · '+(+r.speedMax||0).toFixed(1)+'km/h'):'NO RUN'
 }
 function renderCompareRunList(){
  var box=$('compareRunList');if(!box)return;box.innerHTML='';if(!runHistory.length){box.innerHTML='<span class="chart-empty">NO SAVED RUNS</span>';return}
