@@ -1,0 +1,119 @@
+name: Build DynoTL from Exact Blink Launcher
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/build-dynotl-blink-launcher.yml'
+      - 'android/blink-launcher-source.b64'
+      - 'android/blink-add_ble_picker.py'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Accept Android licenses and install SDK
+        shell: bash
+        run: |
+          yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses >/dev/null || true
+          /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Setup Gradle 8.9
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Extract exact Blink Android source
+        run: |
+          rm -rf android-build
+          mkdir android-build
+          base64 -d android/blink-launcher-source.b64 > /tmp/android-app-source.zip
+          unzip -q /tmp/android-app-source.zip -d android-build
+          SRC=android-build/app/src/main/java/vn/blinkredleo/app/MainActivity.java
+          sed -i 's/@Override protected void onWindowFocusChanged/@Override public void onWindowFocusChanged/' "$SRC"
+          sed -i '/requestWindowFeature(Window.FEATURE_NO_TITLE);/d' "$SRC"
+          sed -i '/s.setDatabaseEnabled(true);/d' "$SRC"
+          sed -i '/s.setSafeBrowsingEnabled(true);/d' "$SRC"
+          sed -i 's/        enterImmersive();/        try { enterImmersive(); } catch (Throwable ignored) {}/' "$SRC"
+          sed -i 's/        BluetoothManager bm = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);/        BluetoothManager bm = null;/' "$SRC"
+          sed -i 's/        bluetoothAdapter = bm != null ? bm.getAdapter() : null;/        bluetoothAdapter = null;/' "$SRC"
+          sed -i '/    private void ensurePermissionsThenConnect(boolean auto) {/a\        if (bluetoothAdapter == null) { try { BluetoothManager bm = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE); bluetoothAdapter = bm != null ? bm.getAdapter() : null; } catch (Throwable ignored) {} }' "$SRC"
+          python3 android/blink-add_ble_picker.py "$SRC"
+
+          # ONLY runtime target change versus Blink launcher:
+          sed -i 's#https://letan99vl.github.io/Blink-Redleo/?android=1#https://letan99vl.github.io/tanle/?android=1#' "$SRC"
+
+          # Keep the same cache/user-agent behavior as the working Blink APK v11.
+          sed -i 's#https://letan99vl.github.io/tanle/?android=1#https://letan99vl.github.io/tanle/?android=1\&v=12#' "$SRC"
+          sed -i 's/WebSettings.LOAD_DEFAULT/WebSettings.LOAD_NO_CACHE/' "$SRC"
+          sed -i 's/BLINK-REDLEO-ANDROID\/1.1/BLINK-REDLEO-ANDROID\/1.4-v12/' "$SRC"
+          sed -i '/s.setCacheMode(WebSettings.LOAD_NO_CACHE);/a\            try { webView.clearCache(true); webView.clearHistory(); } catch (Throwable ignored) {}' "$SRC"
+
+          # Make Android WebView scroll nested CSS pages reliably.
+          sed -i '/new WebView(this);/a\        webView.setVerticalScrollBarEnabled(true);\n        webView.setHorizontalScrollBarEnabled(false);\n        webView.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);\n        try { webView.setNestedScrollingEnabled(true); } catch (Throwable ignored) {}' "$SRC"
+
+          # DynoTL app identity: install beside Blink, never overwrite it.
+          sed -i "s/applicationId 'vn.blinkredleo.app'/applicationId 'vn.dynotl.mobile'/" android-build/app/build.gradle
+          sed -i 's/android:label="BLINK REDLEO"/android:label="DynoTL Mobile"/' android-build/app/src/main/AndroidManifest.xml
+
+          # Keep Blink picker/scan logic, change only BLE target identity and UUIDs.
+          sed -i 's/BLINK-REDLEO/DynoTL/g' "$SRC"
+          sed -i 's/afaf0001-7c35-4a6d-9f0e-2ea3117f1000/d7a10001-7c35-4a6d-9f0e-2ea3117f1000/g' "$SRC"
+          sed -i 's/afaf0002-7c35-4a6d-9f0e-2ea3117f1000/d7a10002-7c35-4a6d-9f0e-2ea3117f1000/g' "$SRC"
+          sed -i 's/afaf0003-7c35-4a6d-9f0e-2ea3117f1000/d7a10003-7c35-4a6d-9f0e-2ea3117f1000/g' "$SRC"
+          sed -i 's/afaf0005-7c35-4a6d-9f0e-2ea3117f1000/d7a10005-7c35-4a6d-9f0e-2ea3117f1000/g' "$SRC"
+
+          # DynoTL intentionally has no MAP characteristic. Do not require or subscribe to it.
+          sed -i 's/BluetoothGattCharacteristic map = svc.getCharacteristic(MAP_UUID);/BluetoothGattCharacteristic map = null;/' "$SRC"
+          sed -i 's/ || map == null//g' "$SRC"
+          sed -i '/notifyQueue.add(map);/d' "$SRC"
+          sed -i 's/LIVE \/ COMMAND \/ MAP \/ STATUS/LIVE \/ COMMAND \/ STATUS/g' "$SRC"
+
+          # If the injected JS bridge contains Blink UUIDs, point those to DynoTL too.
+          if [ -f android-build/app/src/main/assets/native_bridge.js ]; then
+            sed -i 's/afaf0001-7c35-4a6d-9f0e-2ea3117f1000/d7a10001-7c35-4a6d-9f0e-2ea3117f1000/g' android-build/app/src/main/assets/native_bridge.js
+            sed -i 's/afaf0002-7c35-4a6d-9f0e-2ea3117f1000/d7a10002-7c35-4a6d-9f0e-2ea3117f1000/g' android-build/app/src/main/assets/native_bridge.js
+            sed -i 's/afaf0003-7c35-4a6d-9f0e-2ea3117f1000/d7a10003-7c35-4a6d-9f0e-2ea3117f1000/g' android-build/app/src/main/assets/native_bridge.js
+            sed -i 's/afaf0005-7c35-4a6d-9f0e-2ea3117f1000/d7a10005-7c35-4a6d-9f0e-2ea3117f1000/g' android-build/app/src/main/assets/native_bridge.js
+          fi
+
+      - name: Inspect Blink BLE constants
+        run: |
+          SRC=android-build/app/src/main/java/vn/blinkredleo/app/MainActivity.java
+          echo "=== BLE CONSTANTS / DISCOVERY ==="
+          grep -nE 'DEVICE_PREFIX|UUID|MAP|mapChar|getCharacteristic|onServicesDiscovered|SERVICE|notifyQueue.add' "$SRC" || true
+          echo "=== BUILD ID / MANIFEST ==="
+          grep -nE 'applicationId|namespace' android-build/app/build.gradle || true
+          grep -nE 'package=|android:label|activity' android-build/app/src/main/AndroidManifest.xml || true
+
+      - name: Build signed release APK
+        working-directory: android-build
+        run: gradle --no-daemon assembleRelease
+
+      - name: Prepare APK
+        run: |
+          cp android-build/app/build/outputs/apk/release/app-release.apk DynoTL-BlinkLauncher.apk
+          sha256sum DynoTL-BlinkLauncher.apk | tee DynoTL-BlinkLauncher.apk.sha256
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DynoTL-Exact-Blink-Launcher
+          path: |
+            DynoTL-BlinkLauncher.apk
+            DynoTL-BlinkLauncher.apk.sha256
+          if-no-files-found: error
+          retention-days: 30
