@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DynoTL Cloud Admin</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#0b0d10;color:#eef2f7;font-family:system-ui,Segoe UI,Arial,sans-serif}.wrap{max-width:1200px;margin:auto;padding:22px}.top{display:flex;gap:14px;align-items:center;flex-wrap:wrap}.brand{font-weight:900;font-size:25px;letter-spacing:.5px}.red{color:#ff3434}.muted{color:#9ea9b7}.card{background:#12161c;border:1px solid #252c35;border-radius:14px;padding:16px;margin-top:16px}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}input,select,button{border-radius:9px;border:1px solid #303946;background:#0d1116;color:#fff;padding:10px 12px;font:inherit}input{min-width:180px}button{cursor:pointer;font-weight:700}button:hover{border-color:#ff4040}.primary{background:#c91f25;border-color:#ef343a}.danger{background:#55171a}.good{color:#53dd82}.bad{color:#ff6b70}.keybox{font-family:ui-monospace,Consolas,monospace;font-size:18px;word-break:break-all}.hidden{display:none!important}.tablewrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:1050px}th,td{padding:10px 8px;border-bottom:1px solid #252c35;text-align:left;font-size:13px;vertical-align:top}th{position:sticky;top:0;background:#12161c;color:#bac4d0}.smallbtn{padding:6px 8px;font-size:12px}.pill{padding:3px 7px;border-radius:999px;background:#252c35;display:inline-block}.status-new{color:#f5ce67}.status-active{color:#53dd82}.status-expired,.status-revoked{color:#ff6b70}code{background:#090c10;padding:2px 5px;border-radius:5px}.spacer{flex:1}.login{max-width:560px;margin:8vh auto}.toast{position:fixed;right:18px;bottom:18px;background:#1f2832;border:1px solid #3b4857;padding:12px 16px;border-radius:10px;display:none;max-width:420px}
+</style></head><body>
+<div class="wrap">
+  <div class="top"><div class="brand"><span class="red">Dyno</span>TL Cloud Admin</div><span id="version" class="muted"></span><div class="spacer"></div><button id="logout" class="hidden">Đăng xuất</button></div>
+  <div id="login" class="card login"><h2>Đăng nhập quản lý KEY</h2><p class="muted">Nhập ADMIN TOKEN trong thư mục <code>private</code> của bộ deploy.</p><div class="row"><input id="token" type="password" placeholder="ADMIN TOKEN" style="flex:1"><button class="primary" onclick="login()">ĐĂNG NHẬP</button></div><p id="loginErr" class="bad"></p></div>
+  <div id="panel" class="hidden">
+    <div class="card"><h3>Tạo KEY mới</h3><div class="row"><label>Số ngày <input id="days" type="number" value="30" min="1" max="36500" style="min-width:110px;width:120px"></label><input id="note" placeholder="Ghi chú / tên khách" style="flex:1"><input id="customKey" placeholder="KEY tùy chọn (để trống = tự tạo)" style="flex:1"><button class="primary" onclick="createKey()">TẠO KEY</button></div><div id="newKeyBox" class="hidden" style="margin-top:14px"><div class="muted">KEY vừa tạo:</div><div class="row"><div id="newKey" class="keybox good" style="flex:1"></div><button onclick="copyText(document.getElementById('newKey').textContent)">COPY</button></div></div></div>
+    <div class="card"><div class="row"><h3 style="margin:0">Danh sách KEY</h3><div class="spacer"></div><input id="search" placeholder="Tìm KEY / ghi chú / HWID" onkeydown="if(event.key==='Enter')loadKeys()"><button onclick="loadKeys()">TẢI LẠI</button></div><div class="tablewrap"><table><thead><tr><th>KEY</th><th>Ghi chú</th><th>Thời hạn</th><th>Trạng thái</th><th>HWID</th><th>Kích hoạt / hết hạn</th><th>Launcher</th><th>Thao tác</th></tr></thead><tbody id="tbody"></tbody></table></div></div>
+  </div>
+</div><div id="toast" class="toast"></div>
+<script>
+let TOKEN=localStorage.getItem('dynotl_admin_token')||'';
+const $=id=>document.getElementById(id);
+function toast(t,bad=false){const e=$('toast');e.textContent=t;e.style.display='block';e.style.borderColor=bad?'#c94449':'#3b4857';setTimeout(()=>e.style.display='none',2500)}
+async function api(path,opt={}){opt.headers={...(opt.headers||{}),'Authorization':'Bearer '+TOKEN};if(opt.body&&!opt.headers['Content-Type'])opt.headers['Content-Type']='application/json';const r=await fetch(path,opt);let j={};try{j=await r.json()}catch{};if(r.status===401)throw new Error('unauthorized');if(!r.ok||!j.ok)throw new Error(j.error||('HTTP '+r.status));return j}
+async function login(){TOKEN=$('token').value.trim();try{const j=await api('/admin/api/ping');localStorage.setItem('dynotl_admin_token',TOKEN);showPanel(j)}catch(e){$('loginErr').textContent='TOKEN không đúng.'}}
+function showPanel(j){$('login').classList.add('hidden');$('panel').classList.remove('hidden');$('logout').classList.remove('hidden');$('version').textContent=(j?.app_version||'');loadKeys()}
+$('logout').onclick=()=>{localStorage.removeItem('dynotl_admin_token');location.reload()};
+async function boot(){if(!TOKEN)return;try{showPanel(await api('/admin/api/ping'))}catch{localStorage.removeItem('dynotl_admin_token');TOKEN=''}}
+async function createKey(){try{const body={duration_days:Number($('days').value),note:$('note').value,key:$('customKey').value};const j=await api('/admin/api/create',{method:'POST',body:JSON.stringify(body)});$('newKey').textContent=j.key;$('newKeyBox').classList.remove('hidden');copyText(j.key);toast('Đã tạo KEY và copy vào clipboard');loadKeys()}catch(e){toast('Lỗi: '+e.message,true)}}
+function fmt(ts){if(!ts)return '-';return new Date(ts*1000).toLocaleString('vi-VN')}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function status(x){const now=Math.floor(Date.now()/1000);if(Number(x.revoked))return ['REVOKED','status-revoked'];if(x.expires_at&&Number(x.expires_at)<=now)return ['EXPIRED','status-expired'];if(x.hwid_hash)return ['ACTIVE','status-active'];return ['NEW','status-new']}
+function btn(label,action,hash,cls=''){return '<button class="smallbtn '+cls+'" data-action="'+action+'" data-hash="'+hash+'">'+label+'</button>'}
+async function loadKeys(){
+  try{
+    const q=encodeURIComponent($('search').value.trim());const j=await api('/admin/api/list?q='+q);let out='';
+    for(const x of j.licenses){
+      const st=status(x);
+      out+='<tr><td><div class="keybox" style="font-size:13px">'+esc(x.key_value)+'</div><button class="smallbtn copykey" data-key="'+esc(x.key_value)+'">COPY</button></td>';
+      out+='<td>'+esc(x.note)+'</td><td>'+x.duration_days+' ngày</td><td><span class="pill '+st[1]+'">'+st[0]+'</span></td>';
+      out+='<td style="max-width:190px;word-break:break-all">'+esc(x.hwid_hash||'-')+'</td>';
+      out+='<td>Kích hoạt: '+fmt(x.activated_at)+'<br>Hết hạn: '+fmt(x.expires_at)+'</td><td>'+esc(x.launcher_version||'-')+'</td><td><div class="row">';
+      out+=btn('KICK','kick',x.key_hash)+btn('RESET HWID','reset',x.key_hash);
+      out+=Number(x.revoked)?btn('MỞ KHÓA','unrevoke',x.key_hash):btn('REVOKE','revoke',x.key_hash,'danger');
+      out+=btn('XÓA','delete',x.key_hash,'danger')+'</div></td></tr>';
+    }
+    $('tbody').innerHTML=out;
+    document.querySelectorAll('.copykey').forEach(b=>b.onclick=()=>copyText(b.dataset.key));
+    document.querySelectorAll('button[data-action]').forEach(b=>b.onclick=()=>act(b.dataset.action,b.dataset.hash));
+  }catch(e){if(e.message==='unauthorized')location.reload();else toast('Lỗi tải KEY: '+e.message,true)}
+}
+async function act(a,h){if(a==='delete'&&!confirm('Xóa KEY này vĩnh viễn?'))return;if((a==='reset'||a==='revoke')&&!confirm(a==='reset'?'Reset HWID và thời gian kích hoạt của KEY này?':'Khóa KEY này?'))return;try{await api('/admin/api/'+a,{method:'POST',body:JSON.stringify({key_hash:h})});toast('Đã '+a);loadKeys()}catch(e){toast('Lỗi: '+e.message,true)}}
+async function copyText(t){try{await navigator.clipboard.writeText(t)}catch{const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove()}}
+boot();
+</script></body></html>
