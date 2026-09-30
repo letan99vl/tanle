@@ -57,10 +57,37 @@ jobs:
           sed -i 's#https://letan99vl.github.io/Blink-Redleo/?android=1#https://letan99vl.github.io/tanle/?android=1#' "$SRC"
 
           # Keep the same cache/user-agent behavior as the working Blink APK v11.
-          sed -i 's#https://letan99vl.github.io/tanle/?android=1#https://letan99vl.github.io/tanle/?android=1\&v=11#' "$SRC"
+          sed -i 's#https://letan99vl.github.io/tanle/?android=1#https://letan99vl.github.io/tanle/?android=1\&v=12#' "$SRC"
           sed -i 's/WebSettings.LOAD_DEFAULT/WebSettings.LOAD_NO_CACHE/' "$SRC"
-          sed -i 's/BLINK-REDLEO-ANDROID\/1.1/BLINK-REDLEO-ANDROID\/1.3-v11/' "$SRC"
+          sed -i 's/BLINK-REDLEO-ANDROID\/1.1/BLINK-REDLEO-ANDROID\/1.4-v12/' "$SRC"
           sed -i '/s.setCacheMode(WebSettings.LOAD_NO_CACHE);/a\            try { webView.clearCache(true); webView.clearHistory(); } catch (Throwable ignored) {}' "$SRC"
+
+          # Make Android WebView pass vertical touch/scroll to the page just like Bluefy.
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path("android-build/app/src/main/java/vn/blinkredleo/app/MainActivity.java")
+          s=p.read_text()
+          marker="        webView = new WebView(this);\n"
+          extra='''        webView = new WebView(this);
+        webView.setVerticalScrollBarEnabled(true);
+        webView.setHorizontalScrollBarEnabled(false);
+        webView.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);
+        try { webView.setNestedScrollingEnabled(true); } catch (Throwable ignored) {}
+        webView.setOnTouchListener((v, event) -> {
+            try {
+                int a = event.getActionMasked();
+                if (a == android.view.MotionEvent.ACTION_DOWN || a == android.view.MotionEvent.ACTION_MOVE) {
+                    if (v.getParent() != null) v.getParent().requestDisallowInterceptTouchEvent(true);
+                }
+            } catch (Throwable ignored) {}
+            return false;
+        });
+'''
+          if marker not in s:
+              raise SystemExit("WebView creation marker not found")
+          s=s.replace(marker,extra,1)
+          p.write_text(s)
+          PY
 
           # DynoTL app identity: install beside Blink, never overwrite it.
           sed -i "s/applicationId 'vn.blinkredleo.app'/applicationId 'vn.dynotl.mobile'/" android-build/app/build.gradle
