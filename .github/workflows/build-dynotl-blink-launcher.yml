@@ -63,7 +63,7 @@ jobs:
           sed -i '/s.setCacheMode(WebSettings.LOAD_NO_CACHE);/a\            try { webView.clearCache(true); webView.clearHistory(); } catch (Throwable ignored) {}' "$SRC"
 
           # Make Android WebView scroll nested CSS pages reliably.
-          python3 -c 'from pathlib import Path; p=Path("android-build/app/src/main/java/vn/blinkredleo/app/MainActivity.java"); s=p.read_text(); m="        webView = new WebView(this);\\n"; e=m+"        webView.setVerticalScrollBarEnabled(true);\\n        webView.setHorizontalScrollBarEnabled(false);\\n        webView.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);\\n        try { webView.setNestedScrollingEnabled(true); } catch (Throwable ignored) {}\\n"; assert m in s; p.write_text(s.replace(m,e,1))'
+          sed -i '/new WebView(this);/a\        webView.setVerticalScrollBarEnabled(true);\n        webView.setHorizontalScrollBarEnabled(false);\n        webView.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);\n        try { webView.setNestedScrollingEnabled(true); } catch (Throwable ignored) {}' "$SRC"
 
           # DynoTL app identity: install beside Blink, never overwrite it.
           sed -i "s/applicationId 'vn.blinkredleo.app'/applicationId 'vn.dynotl.mobile'/" android-build/app/build.gradle
