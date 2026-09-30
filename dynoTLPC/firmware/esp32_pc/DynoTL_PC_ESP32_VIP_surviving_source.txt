@@ -1,0 +1,634 @@
+// ============================================================================
+// Dyno ESP32 - 1 NAM CHAM - chong xung gia + Median 5 period
+//
+// Dua tren code Dyno ESP32 hien tai:
+//   GPIO18 = Hall lo
+//   GPIO16 = pickup RPM may
+//   GPIO4  = AFR analog
+//
+// Muc tieu:
+//   - 1 nam cham = 1 xung / 1 vong lo
+//   - Bat canh Hall bang interrupt de lay thoi gian chinh xac
+//   - Bo xung den qua som so voi vong truoc
+//   - Median 5 period de loai 1 mau bat thuong
+//   - Loc nhe period, KHONG du doan gia toc giua 2 xung
+//   - Smooth them Roller RPM moi 25 ms de giam bac thang tren bieu do
+//   - Luc moi bat dau quay: cho DU 5 period, kiem tra hop ly, lay Median 5 roi moi xuat RPM
+//   - Giu nguyen format Serial de PM Dyno cu van doc duoc:
+//
+//     D,timeMs,rollerRPM,engineRPM,afrVoltage
+//
+// ============================================================================
+
+#include <Arduino.h>
+#include "driver/pcnt.h"
+
+// ===== Chan dung THUC TE theo code hien tai =====
+#define HALL_PIN    18
+#define ENGINE_PIN  16
+#define AFR_PIN     4
+
+// ============================================================================
+// CAU HINH CHUNG
+// ============================================================================
+
+// 1 nam cham tren lo = 1 xung / vong
+const float PULSES_PER_REV_ROLLER = 1.0f;
+
+// Wasted spark thuong = 1 xung / vong
+const float PULSES_PER_REV_ENGINE = 1.0f;
+
+// Gui du lieu sang PM Dyno moi 25 ms
+const unsigned long SAMPLE_INTERVAL_MS = 25;
+
+// Qua thoi gian nay khong co xung thi cho RPM ve 0
+const unsigned long ENGINE_TIMEOUT_MS = 400;
+const unsigned long ROLLER_TIMEOUT_MS = 1000;
+
+// Gioi han RPM
+const float MAX_RPM_ENGINE = 20000.0f;
+const float MAX_RPM_ROLLER = 10000.0f;
+
+// ============================================================================
+// LOC XUNG
+// ============================================================================
+
+// Engine: giu nhu code cu
+const uint32_t ENGINE_MIN_PERIOD_US = 250;
+
+// Lo 1 nam cham:
+// 10000 RPM => 1 vong = 6000 us
+// Bat ky xung nao ngan hon 6000 us deu khong the la vong lo hop le.
+const uint32_t ROLLER_ABS_MIN_PERIOD_US = 6000;
+
+// Chong xung gia dong:
+// Xung moi phai cach xung hop le truoc it nhat 45% period truoc.
+//
+// Vi du period truoc = 300000 us (~200 RPM)
+// => bo tat ca xung den truoc 135000 us.
+// Nhung neu bi mat 1 xung lam period thanh 600000 us,
+// vong tiep theo 300000 us van duoc chap nhan (300000 > 270000).
+const uint32_t ROLLER_EARLY_GATE_PERCENT = 45;
+
+// Sau Median 5, loc nhe period.
+// Tang => bam nhanh hon, giam => muot hon.
+// 0.40 la muc de test ban dau cho 1 nam cham.
+const float ROLLER_PERIOD_ALPHA = 0.40f;
+
+// Loc rieng cho gia tri Roller RPM GUI SANG PM DYNO moi 25 ms.
+// Nho hon = muot hon nhung tre hon.
+// 0.18 la muc can bang de test voi 1 nam cham.
+const float ROLLER_OUTPUT_ALPHA = 0.18f;
+
+// ADC
+const float ADC_REF_V  = 3.3f;
+const int   ADC_MAX    = 4095;
+const float AFRV_ALPHA = 0.20f;
+
+static inline float clampf(float x, float lo, float hi) {
+  if (x < lo) return lo;
+  if (x > hi) return hi;
+  return x;
+}
+
+// ============================================================================
+// ENGINE RPM - GIU KIEU PCNT CUA CODE CU
+// ============================================================================
+
+static const pcnt_unit_t    ENG_PCNT_UNIT = PCNT_UNIT_1;
+static const pcnt_channel_t ENG_PCNT_CH   = PCNT_CHANNEL_0;
+
+void setupEnginePCNTCount() {
+  pcnt_config_t c = {};
+
+  c.pulse_gpio_num = ENGINE_PIN;
+  c.ctrl_gpio_num  = PCNT_PIN_NOT_USED;
+  c.unit           = ENG_PCNT_UNIT;
+  c.channel        = ENG_PCNT_CH;
+
+  c.pos_mode = PCNT_COUNT_INC;
+  c.neg_mode = PCNT_COUNT_DIS;
+
+  c.lctrl_mode = PCNT_MODE_KEEP;
+  c.hctrl_mode = PCNT_MODE_KEEP;
+
+  c.counter_l_lim = 0;
+  c.counter_h_lim = 32767;
+
+  pcnt_unit_config(&c);
+
+  // PCNT glitch filter toi da ~12.8 us @ APB 80 MHz
+  pcnt_set_filter_value(ENG_PCNT_UNIT, 1023);
+  pcnt_filter_enable(ENG_PCNT_UNIT);
+
+  pcnt_counter_pause(ENG_PCNT_UNIT);
+  pcnt_counter_clear(ENG_PCNT_UNIT);
+  pcnt_counter_resume(ENG_PCNT_UNIT);
+}
+
+static int16_t  engLastCount = 0;
+static uint32_t engLastUs = 0;
+
+static bool     engPeriodReady = false;
+static uint32_t engPeriodUs = 0;
+
+void pollEnginePeriodFromPCNT() {
+  int16_t c = 0;
+  pcnt_get_counter_value(ENG_PCNT_UNIT, &c);
+
+  int16_t delta = c - engLastCount;
+
+  if (delta <= 0) {
+    return;
+  }
+
+  uint32_t now = micros();
+  uint32_t dt  = now - engLastUs;
+
+  uint32_t per = dt / (uint32_t)delta;
+
+  if (per >= ENGINE_MIN_PERIOD_US && per > 0) {
+    engPeriodUs = per;
+    engPeriodReady = true;
+    engLastUs = now;
+  } else {
+    // Xung qua sat: bo nhung cap nhat moc thoi gian nhu code cu
+    engLastUs = now;
+  }
+
+  engLastCount = c;
+
+  // Tranh counter tang qua lon
+  if (c > 20000) {
+    pcnt_counter_clear(ENG_PCNT_UNIT);
+    engLastCount = 0;
+  }
+}
+
+// ============================================================================
+// HALL LO - INTERRUPT TRUC TIEP + CHONG XUNG GIA DONG
+// ============================================================================
+
+// Moc canh Hall HOP LE gan nhat
+volatile uint32_t hallLastValidEdgeUsISR = 0;
+
+// Period HOP LE gan nhat
+volatile uint32_t hallLastValidPeriodUsISR = 0;
+
+// Period moi de loop xu ly
+volatile uint32_t hallNewPeriodUsISR = 0;
+
+// Bao co period moi
+volatile bool hallNewPeriodReadyISR = false;
+
+// Dem xung bi loai de debug noi bo neu can
+volatile uint32_t hallRejectedPulseCountISR = 0;
+
+
+// ISR Hall:
+// - Bat canh RISING
+// - Khong cap nhat moc thoi gian neu xung bi nghi la xung gia
+// - Nhu vay xung gia khong lam hong period cua xung that tiep theo
+void IRAM_ATTR hallISR() {
+  uint32_t now = micros();
+
+  // Canh dau tien chi dung lam moc
+  if (hallLastValidEdgeUsISR == 0) {
+    hallLastValidEdgeUsISR = now;
+    return;
+  }
+
+  uint32_t dt = now - hallLastValidEdgeUsISR;
+
+  // 1) Gioi han tuyet doi theo MAX RPM
+  if (dt < ROLLER_ABS_MIN_PERIOD_US) {
+    hallRejectedPulseCountISR++;
+    return;
+  }
+
+  // 2) Gioi han dong theo period hop le truoc
+  if (hallLastValidPeriodUsISR > 0) {
+    uint32_t dynamicMinUs =
+        (hallLastValidPeriodUsISR * ROLLER_EARLY_GATE_PERCENT) / 100UL;
+
+    if (dynamicMinUs < ROLLER_ABS_MIN_PERIOD_US) {
+      dynamicMinUs = ROLLER_ABS_MIN_PERIOD_US;
+    }
+
+    // Xung den qua som => coi la nhieu, KHONG doi moc canh hop le
+    if (dt < dynamicMinUs) {
+      hallRejectedPulseCountISR++;
+      return;
+    }
+  }
+
+  // Xung hop le
+  hallNewPeriodUsISR = dt;
+  hallNewPeriodReadyISR = true;
+
+  hallLastValidPeriodUsISR = dt;
+  hallLastValidEdgeUsISR = now;
+}
+
+// ============================================================================
+// MEDIAN PERIOD + LOC PERIOD
+// ============================================================================
+
+static uint32_t rollerPeriodHistory[5] = {0, 0, 0, 0, 0};
+static uint8_t  rollerPeriodHistoryCount = 0;
+static uint8_t  rollerPeriodHistoryIndex = 0;
+
+static float rollerPeriodFilteredUs = 0.0f;
+static float rollerRPMFiltered = 0.0f;
+
+// Gia tri RPM sau cung gui sang PM Dyno.
+// Bien nay duoc cap nhat moi SAMPLE_INTERVAL_MS de lam min bac thang.
+static float rollerRPMOutput = 0.0f;
+
+// Khoa khoi dong:
+// Chi sau khi co mot cua so DU 5 period hop ly va lay Median 5
+// thi moi cho phep xuat Roller RPM sang PM Dyno.
+// Muc dich: tranh xung gia dau tien lam nhay vot RPM luc lo vua quay.
+static bool rollerStartupLocked = false;
+
+static unsigned long lastHallPulseMs = 0;
+
+
+// Median cua 3 so
+static inline uint32_t median5u32(
+    uint32_t a,
+    uint32_t b,
+    uint32_t c,
+    uint32_t d,
+    uint32_t e
+) {
+  uint32_t v[5] = {a, b, c, d, e};
+
+  // Sap xep 5 phan tu - chi chay khi co xung Hall, tai rat nhe
+  for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t j = i + 1; j < 5; j++) {
+      if (v[j] < v[i]) {
+        uint32_t t = v[i];
+        v[i] = v[j];
+        v[j] = t;
+      }
+    }
+  }
+
+  return v[2];
+}
+
+
+// Kiem tra cua so 5 period luc khoi dong.
+//
+// Y tuong:
+// - Lay Median 5 lam moc.
+// - It nhat 4/5 mau phai nam trong khoang 40%..250% cua Median.
+// - Nhu vay 1 xung gia rat ngan/dai khong lam khoa sai startup.
+// - Neu cua so chua dat, tiep tuc truot cua so 5 mau cho den khi hop ly.
+//
+// Khoang nay co chu y de rong de van chap nhan lo dang tang toc manh.
+static bool startupWindowLooksReasonable(uint32_t medianUs) {
+  if (medianUs < ROLLER_ABS_MIN_PERIOD_US) {
+    return false;
+  }
+
+  uint32_t minOk = (medianUs * 40UL) / 100UL;
+  uint32_t maxOk = (medianUs * 250UL) / 100UL;
+
+  if (minOk < ROLLER_ABS_MIN_PERIOD_US) {
+    minOk = ROLLER_ABS_MIN_PERIOD_US;
+  }
+
+  uint8_t good = 0;
+
+  for (uint8_t i = 0; i < 5; i++) {
+    uint32_t p = rollerPeriodHistory[i];
+
+    if (p >= minOk && p <= maxOk) {
+      good++;
+    }
+  }
+
+  return (good >= 4);
+}
+
+
+// Dua period moi vao bo loc
+void processRollerPeriod(uint32_t periodUs, unsigned long nowMs) {
+  if (periodUs == 0) {
+    return;
+  }
+
+  if (periodUs < ROLLER_ABS_MIN_PERIOD_US) {
+    return;
+  }
+
+  // Luu period moi vao vong dem 5 mau
+  rollerPeriodHistory[rollerPeriodHistoryIndex] = periodUs;
+
+  rollerPeriodHistoryIndex++;
+  if (rollerPeriodHistoryIndex >= 5) {
+    rollerPeriodHistoryIndex = 0;
+  }
+
+  if (rollerPeriodHistoryCount < 5) {
+    rollerPeriodHistoryCount++;
+  }
+
+  // ========================================================================
+  // STARTUP LOCK:
+  // CHO DU 5 PERIOD + KIEM TRA CUA SO HOP LY + MEDIAN 5
+  // ========================================================================
+  if (!rollerStartupLocked) {
+    rollerRPMFiltered = 0.0f;
+    rollerRPMOutput = 0.0f;
+
+    if (rollerPeriodHistoryCount < 5) {
+      return;
+    }
+
+    uint32_t startupMedianUs = median5u32(
+        rollerPeriodHistory[0],
+        rollerPeriodHistory[1],
+        rollerPeriodHistory[2],
+        rollerPeriodHistory[3],
+        rollerPeriodHistory[4]
+    );
+
+    // Neu cua so 5 mau con nhieu xung bat thuong thi chua khoa.
+    // Cu tiep tuc nhan mau moi; cua so 5 mau se tu truot.
+    if (!startupWindowLooksReasonable(startupMedianUs)) {
+      return;
+    }
+
+    float startupRPM =
+        60000000.0f
+        / ((float)startupMedianUs * PULSES_PER_REV_ROLLER);
+
+    if (startupRPM <= 0.0f || startupRPM > MAX_RPM_ROLLER) {
+      return;
+    }
+
+    // Chi den day moi cong nhan RPM khoi dong.
+    rollerPeriodFilteredUs = (float)startupMedianUs;
+    rollerRPMFiltered = startupRPM;
+    rollerRPMOutput = 0.0f;
+
+    rollerStartupLocked = true;
+    lastHallPulseMs = nowMs;
+
+    return;
+  }
+
+  // ========================================================================
+  // DA KHOA KHOI DONG: MEDIAN 5 + LOC PERIOD
+  // ========================================================================
+
+  uint32_t periodForFilter = median5u32(
+      rollerPeriodHistory[0],
+      rollerPeriodHistory[1],
+      rollerPeriodHistory[2],
+      rollerPeriodHistory[3],
+      rollerPeriodHistory[4]
+  );
+
+  if (rollerPeriodFilteredUs <= 0.0f) {
+    rollerPeriodFilteredUs = (float)periodForFilter;
+  } else {
+    rollerPeriodFilteredUs =
+        rollerPeriodFilteredUs * (1.0f - ROLLER_PERIOD_ALPHA)
+      + (float)periodForFilter * ROLLER_PERIOD_ALPHA;
+  }
+
+  float rpm =
+      60000000.0f
+      / (rollerPeriodFilteredUs * PULSES_PER_REV_ROLLER);
+
+  if (rpm >= 0.0f && rpm <= MAX_RPM_ROLLER) {
+    rollerRPMFiltered = rpm;
+    lastHallPulseMs = nowMs;
+  }
+}
+
+// Lay period tu ISR ve loop
+void updateRollerFromHall(unsigned long nowMs) {
+  bool ready = false;
+  uint32_t periodUs = 0;
+
+  noInterrupts();
+
+  if (hallNewPeriodReadyISR) {
+    periodUs = hallNewPeriodUsISR;
+    hallNewPeriodReadyISR = false;
+    ready = true;
+  }
+
+  interrupts();
+
+  if (ready) {
+    processRollerPeriod(periodUs, nowMs);
+  }
+}
+
+
+// Reset bo loc Hall khi dung qua lau
+void resetRollerState() {
+  rollerRPMFiltered = 0.0f;
+  rollerRPMOutput = 0.0f;
+  rollerPeriodFilteredUs = 0.0f;
+  rollerStartupLocked = false;
+
+  rollerPeriodHistory[0] = 0;
+  rollerPeriodHistory[1] = 0;
+  rollerPeriodHistory[2] = 0;
+  rollerPeriodHistory[3] = 0;
+  rollerPeriodHistory[4] = 0;
+
+  rollerPeriodHistoryCount = 0;
+  rollerPeriodHistoryIndex = 0;
+
+  noInterrupts();
+
+  hallLastValidEdgeUsISR = 0;
+  hallLastValidPeriodUsISR = 0;
+  hallNewPeriodUsISR = 0;
+  hallNewPeriodReadyISR = false;
+
+  interrupts();
+}
+
+// ============================================================================
+// SETUP
+// ============================================================================
+
+void setup() {
+  // Hall idle LOW, gap nam cham HIGH
+  pinMode(HALL_PIN, INPUT_PULLDOWN);
+
+  // Pickup may / opto / open collector
+  pinMode(ENGINE_PIN, INPUT_PULLUP);
+
+  // ADC AFR
+  analogReadResolution(12);
+
+#if defined(ARDUINO_ARCH_ESP32)
+  analogSetPinAttenuation(AFR_PIN, ADC_11db);
+#endif
+
+  pinMode(AFR_PIN, INPUT);
+
+  Serial.begin(115200);
+  delay(300);
+
+  // Engine PCNT nhu ban cu
+  setupEnginePCNTCount();
+
+  // Hall lo: bat canh truc tiep
+  attachInterrupt(
+      digitalPinToInterrupt(HALL_PIN),
+      hallISR,
+      RISING
+  );
+
+  uint32_t nowUs = micros();
+
+  engLastUs = nowUs;
+  engLastCount = 0;
+
+  Serial.println("DynoPhongBac - ESP32 - startup5 + median5 + smooth 0.18 + timeout fix");
+  Serial.println("HEADER,D,timeMs,rollerRPM,engineRPM,afrVoltage");
+}
+
+// ============================================================================
+// LOOP
+// ============================================================================
+
+void loop() {
+  static unsigned long lastSampleMs = 0;
+
+  static float engineRPMFiltered = 0.0f;
+  static unsigned long lastEngPulseMs = 0;
+
+  static float afrVoltFiltered = 0.0f;
+
+  unsigned long nowMs = millis();
+
+  // Engine
+  pollEnginePeriodFromPCNT();
+
+  // Roller
+  updateRollerFromHall(nowMs);
+
+  // ========================================================================
+  // ENGINE RPM
+  // ========================================================================
+
+  if (engPeriodReady && PULSES_PER_REV_ENGINE > 0.0f) {
+    engPeriodReady = false;
+
+    float rpmInstant =
+        (60.0f * 1000000.0f)
+        / ((float)engPeriodUs * PULSES_PER_REV_ENGINE);
+
+    if (rpmInstant <= MAX_RPM_ENGINE) {
+      const float alphaE = 0.25f;
+
+      engineRPMFiltered =
+          (engineRPMFiltered <= 0.0f)
+          ? rpmInstant
+          : (
+              engineRPMFiltered * (1.0f - alphaE)
+              + rpmInstant * alphaE
+            );
+
+      lastEngPulseMs = nowMs;
+    }
+  }
+
+  if (nowMs - lastEngPulseMs > ENGINE_TIMEOUT_MS) {
+    engineRPMFiltered = 0.0f;
+  }
+
+  // ========================================================================
+  // ROLLER TIMEOUT - FIX
+  // ========================================================================
+  //
+  // Timeout hoat dong ca khi Startup5 CHUA khoa duoc RPM.
+  // Neu Hall da nhan 1-4 period roi con lan dung, state se duoc reset
+  // sau ROLLER_TIMEOUT_MS, tranh giu period/moc cu sang lan quay tiep theo.
+  uint32_t hallLastEdgeSnapshotUs = 0;
+
+  noInterrupts();
+  hallLastEdgeSnapshotUs = hallLastValidEdgeUsISR;
+  interrupts();
+
+  if (
+      hallLastEdgeSnapshotUs != 0
+      && (uint32_t)(micros() - hallLastEdgeSnapshotUs)
+          > (ROLLER_TIMEOUT_MS * 1000UL)
+  ) {
+    resetRollerState();
+  }
+
+  // ========================================================================
+  // OUTPUT
+  // ========================================================================
+
+  if (nowMs - lastSampleMs >= SAMPLE_INTERVAL_MS) {
+
+    // ======================================================================
+    // OUTPUT SMOOTHING CHO ROLLER RPM
+    // ======================================================================
+    //
+    // rollerRPMFiltered chi doi khi co 1 vong Hall moi.
+    // Voi 1 nam cham, o RPM thap co the 100-300 ms moi co 1 gia tri moi,
+    // trong khi Serial gui moi 25 ms. Neu gui thang rollerRPMFiltered thi
+    // duong ve se thanh bac thang.
+    //
+    // EMA nay lam gia tri gui ra tien dan den RPM moi o moi lan gui 25 ms,
+    // nen duong tren PM Dyno se mem va lien tuc hon.
+    if (rollerRPMFiltered <= 0.0f) {
+      rollerRPMOutput = 0.0f;
+    } else if (rollerRPMOutput <= 0.0f) {
+      rollerRPMOutput = rollerRPMFiltered;
+    } else {
+      rollerRPMOutput =
+          rollerRPMOutput * (1.0f - ROLLER_OUTPUT_ALPHA)
+        + rollerRPMFiltered * ROLLER_OUTPUT_ALPHA;
+    }
+
+    // AFR voltage
+    int raw = analogRead(AFR_PIN);
+
+    raw = (raw < 0)
+        ? 0
+        : (raw > ADC_MAX ? ADC_MAX : raw);
+
+    float v =
+        (raw * ADC_REF_V)
+        / (float)ADC_MAX;
+
+    v = clampf(v, 0.0f, 3.3f);
+
+    if (afrVoltFiltered <= 0.0001f) {
+      afrVoltFiltered = v;
+    } else {
+      afrVoltFiltered =
+          afrVoltFiltered * (1.0f - AFRV_ALPHA)
+        + v * AFRV_ALPHA;
+    }
+
+    // Giu NGUYEN format de PM Dyno cu khong can sua
+    Serial.print("D,");
+    Serial.print(nowMs);
+    Serial.print(",");
+    Serial.print(rollerRPMOutput, 2);
+    Serial.print(",");
+    Serial.print(engineRPMFiltered, 2);
+    Serial.print(",");
+    Serial.println(afrVoltFiltered, 3);
+
+    lastSampleMs = nowMs;
+  }
+}
