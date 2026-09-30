@@ -1,0 +1,17 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "dynotl-cloud",
+	"main": "src/index.js",
+	"compatibility_date": "2026-09-16",
+	"workers_dev": true,
+	"vars": {
+		"APP_VERSION": "v1.2026.946"
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "dynotl-cloud",
+			"database_id": "d376734a-33a5-4944-ac71-ea022728fa7f"
+		}
+	]
+}
