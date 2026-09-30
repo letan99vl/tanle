@@ -355,13 +355,8 @@ function n(id,d){var v=parseFloat($(id).value);return isFinite(v)?v:d}
 function afrFromV(v){var v0=n('afrVMin',0),v1=n('afrVMax',3.15),a0=n('afrMin',10),a1=n('afrMax',20);if(v1===v0)return a0;return a0+(v-v0)*(a1-a0)/(v1-v0)}
 function ignitionMultiplier(){var e=$('ignitionCycle');return e&&e.value==='720'?2:1}
 function correctEngineRpm(raw){raw=+raw||0;return raw*ignitionMultiplier()}
-function torqueNmFromHpRpm(hp,rpm){
- hp=+hp||0;rpm=+rpm||0;
- if(!(hp>0&&rpm>0))return 0;
- var torqueFtLb=hp*5252.0/rpm;
- var torqueNm=torqueFtLb*1.3558;
- return isFinite(torqueNm)&&torqueNm>0?torqueNm:0
-}
+// PC J_DIV10 is the active torque mode in DynoTL Mobile.
+// HP/RPM torque helper intentionally removed to prevent accidental fallback.
 function normalizePowerData(data){
  return(data||[]).map(function(a){
    var rpm=+a[0]||0,hp=+a[1]||0,tq=+a[2]||0;
@@ -431,9 +426,10 @@ function sample(t,rr,r,v){
    }
  }
 
- // Exact PC default torque mode (HP_RPM): HP + engine RPM only.
- // J*alpha belongs to the separate PC "J" torque mode and must not be used here.
- tq=torqueNmFromHpRpm(hp,r);
+ // PC torque mode J_DIV10:
+ // torqueDisplay = torqueTotal / 10.0
+ // Mobile has no brake compensation, so torqueTotal = torqueJ = J * alpha.
+ tq=hpTorqueSampleValid?(torqueJ/10.0):0;
  if(!isFinite(tq)||tq<0)tq=0;
 
  S.lastT=t;S.alpha=alpha;S.rpm=r;S.rrpm=rr;S.speed=speed;S.afr=afr;S.hp=hp;S.tq=tq;
