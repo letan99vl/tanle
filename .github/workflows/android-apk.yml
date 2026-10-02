@@ -1,4 +1,4 @@
-name: Build DynoTL Mobile APK
+name: Build BT Speed Dyno APK
 
 on:
   workflow_dispatch:
@@ -58,12 +58,12 @@ jobs:
         run: gradle --no-daemon :app:assembleRelease
 
       - name: Rename APK
-        run: cp android-work/app/build/outputs/apk/release/app-release.apk DynoTL-Mobile-Safe.apk
+        run: cp android-work/app/build/outputs/apk/release/app-release.apk BT-Speed-Dyno-Safe.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: DynoTL-Mobile-Safe-APK
+          name: BT-Speed-Dyno-Safe-APK
           path: DynoTL-Mobile-Safe.apk
           if-no-files-found: error
           retention-days: 30
