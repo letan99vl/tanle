@@ -401,7 +401,7 @@ nav button.on{border-color:#ff7a00;background:linear-gradient(180deg,#4a2107,#1a
 (function(){
 'use strict';
 try{if(/[?&]android=1(?:&|$)/.test(location.search)){document.documentElement.classList.add('android-app');document.body&&document.body.classList.add('android-app')}}catch(e){}
-var S={connected:false,recording:false,sim:false,auto:false,device:null,server:null,live:null,cmd:null,status:null,lineBuf:'',statusBuf:'',lastT:0,omegaF:0,ow:[],tw:[],rpm:0,rrpm:0,speed:0,afr:0,hp:0,tq:0,alpha:0,hpMax:0,tqMax:0,runPower:[],runRpm:[],liveRpmPts:[],lastSampleT:0,simT:0,run201:false,wait201:false,done201:false,d201:0,t2010:0,t201last:0,maxS201:0,maxR201:0,rollerCalcPrimed:false,rollerStartupSamplesRemaining:0,rollerGuardLastDistinctRpm:0,rollerGuardLastDistinctMs:0,lastPlotRpm:0,smoothingLevel:1,powerPickX:null,powerHit:null};
+var S={connected:false,recording:false,sim:false,auto:false,device:null,server:null,live:null,cmd:null,status:null,lineBuf:'',statusBuf:'',lastT:0,omegaF:0,ow:[],tw:[],rpm:0,rrpm:0,speed:0,afr:0,hp:0,tq:0,alpha:0,hpMax:0,tqMax:0,hpMaxRpm:0,tqMaxRpm:0,runPower:[],runRpm:[],liveRpmPts:[],lastSampleT:0,simT:0,run201:false,wait201:false,done201:false,d201:0,t2010:0,t201last:0,maxS201:0,maxR201:0,rollerCalcPrimed:false,rollerStartupSamplesRemaining:0,rollerGuardLastDistinctRpm:0,rollerGuardLastDistinctMs:0,lastPlotRpm:0,smoothingLevel:1,powerPickX:null,powerHit:null};
 var BLE={service:'d7a10001-7c35-4a6d-9f0e-2ea3117f1000',live:'d7a10002-7c35-4a6d-9f0e-2ea3117f1000',cmd:'d7a10003-7c35-4a6d-9f0e-2ea3117f1000',status:'d7a10005-7c35-4a6d-9f0e-2ea3117f1000'};
 var $=function(id){return document.getElementById(id)},dec=new TextDecoder(),enc=new TextEncoder();
 var cfgIds=['rollerD','rollerJ','maxRpm','maxSpeed','afrVMin','afrMin','afrVMax','afrMax','afrDecelEps','ignitionCycle','rpmFilterUs','autoSpeed','autoHp','autoAlpha'];
@@ -520,7 +520,9 @@ function sample(t,rr,r,v){
 
  if(S.recording){
    if(hpTorqueSampleValid){
-     S.hpMax=Math.max(S.hpMax,hp);S.tqMax=Math.max(S.tqMax,tq);
+     var peakRpm=(r>0)?r:0;
+     if(hp>S.hpMax){S.hpMax=hp;S.hpMaxRpm=peakRpm}
+     if(tq>S.tqMax){S.tqMax=tq;S.tqMaxRpm=peakRpm}
      var plotX=(r>0)?r:rr;
      if(plotX>=S.lastPlotRpm){
        S.runPower.push([plotX,hp,tq,r>0?r:0]);
@@ -537,7 +539,7 @@ function sample(t,rr,r,v){
  update201(t,speed,r,afr);drawAll()
 }
 function updateLive(){$('liveRpm').textContent=Math.round(S.rpm);$('liveSpeed').textContent=S.speed.toFixed(0);$('liveAfr').textContent=isFinite(S.afr)?S.afr.toFixed(1):'--';$('liveHp').textContent=S.hp.toFixed(1);$('liveTq').textContent=S.tq.toFixed(1);$('rpmBar').style.width=Math.min(100,S.rpm/n('maxRpm',16000)*100)+'%';$('speedBar').style.width=Math.min(100,S.speed/n('maxSpeed',160)*100)+'%'}
-function startRun(){if(S.recording)return;S.recording=true;S.hpMax=S.tqMax=0;S.runPower=[];S.runRpm=[];S.lastPlotRpm=0;S.omegaF=0;S.ow=[];S.tw=[];S.rollerCalcPrimed=false;S.rollerStartupSamplesRemaining=0;S.runStartedWall=Date.now();$('ctlRun').textContent='RUNNING';$('ctlRun').classList.add('red');drawAll()}
+function startRun(){if(S.recording)return;S.recording=true;S.hpMax=S.tqMax=0;S.hpMaxRpm=S.tqMaxRpm=0;S.runPower=[];S.runRpm=[];S.lastPlotRpm=0;S.omegaF=0;S.ow=[];S.tw=[];S.rollerCalcPrimed=false;S.rollerStartupSamplesRemaining=0;S.runStartedWall=Date.now();$('ctlRun').textContent='RUNNING';$('ctlRun').classList.add('red');drawAll()}
 function stopRun(){if(!S.recording)return;S.recording=false;$('ctlRun').textContent='RUN';$('ctlRun').classList.remove('red');saveCurrentRun();drawAll()}
 function toggleAuto(){S.auto=!S.auto;$('autoStart').checked=S.auto;$('ctlAuto').classList.toggle('on',S.auto);save()}
 function simMedian5(a,b,c,d,e){
@@ -808,9 +810,18 @@ function drawPower(){
    if(hp>maxHp){maxHp=hp;hpRpm=axisIsEngine?((+a[3]||0)>0?(+a[3]):(+a[0]||0)):NaN}
    if(tq>maxTq){maxTq=tq;tqRpm=axisIsEngine?((+a[3]||0)>0?(+a[3]):(+a[0]||0)):NaN}
  });
- if(!S.recording&&run){
-   if((+run.hpMax||0)>maxHp){maxHp=+run.hpMax||0;hpRpm=NaN}
-   if((+run.tqMax||0)>maxTq){maxTq=+run.tqMax||0;tqRpm=NaN}
+ if(S.recording){
+   if((+S.hpMax||0)>=maxHp){maxHp=+S.hpMax||0;if(+S.hpMaxRpm>0)hpRpm=+S.hpMaxRpm}
+   if((+S.tqMax||0)>=maxTq){maxTq=+S.tqMax||0;if(+S.tqMaxRpm>0)tqRpm=+S.tqMaxRpm}
+ }else if(run){
+   if((+run.hpMax||0)>=maxHp){
+     maxHp=+run.hpMax||0;
+     if(+run.hpMaxRpm>0)hpRpm=+run.hpMaxRpm;
+   }
+   if((+run.tqMax||0)>=maxTq){
+     maxTq=+run.tqMax||0;
+     if(+run.tqMaxRpm>0)tqRpm=+run.tqMaxRpm;
+   }
  }
  updatePowerPeakUI(maxHp,maxTq,hpRpm,tqRpm);
  var xMin=d&&d.length?Math.min.apply(null,d.map(function(a){return+a[0]})):0,xMax=d&&d.length?Math.max.apply(null,d.map(function(a){return+a[0]})):1;if(xMax<=xMin)xMax=xMin+1;
@@ -857,7 +868,7 @@ function saveCurrentRun(){
  var rpmMax=0,speedMax=0;S.runRpm.forEach(function(a){rpmMax=Math.max(rpmMax,+a[1]||0);speedMax=Math.max(speedMax,+a[3]||0)});
  var fixedPower=normalizePowerData(S.runPower),hpPeak=S.hpMax||0,tqPeak=S.tqMax||0;
  fixedPower.forEach(function(a){hpPeak=Math.max(hpPeak,+a[1]||0);tqPeak=Math.max(tqPeak,+a[2]||0)});
- var item={seq:seq,timestamp:new Date().toLocaleString('vi-VN',{hour12:false}),ignitionCycle:$('ignitionCycle')?$('ignitionCycle').value:'360',power:fixedPower.map(function(a){return a.slice()}),rpm:S.runRpm.map(function(a){return a.slice()}),hpMax:hpPeak,tqMax:tqPeak,rpmMax:rpmMax,speedMax:speedMax};
+ var item={seq:seq,timestamp:new Date().toLocaleString('vi-VN',{hour12:false}),ignitionCycle:$('ignitionCycle')?$('ignitionCycle').value:'360',power:fixedPower.map(function(a){return a.slice()}),rpm:S.runRpm.map(function(a){return a.slice()}),hpMax:hpPeak,tqMax:tqPeak,hpMaxRpm:S.hpMaxRpm||0,tqMaxRpm:S.tqMaxRpm||0,rpmMax:rpmMax,speedMax:speedMax};
  runHistory.push(item);if(runHistory.length>10)runHistory.shift();selectedRunIndex=runHistory.length-1;persistRunHistory();renderRunHistoryUI()
 }
 function persistRunHistory(){try{localStorage.setItem(RUN_HISTORY_KEY,JSON.stringify(runHistory))}catch(e){}}
