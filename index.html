@@ -202,19 +202,20 @@ main{display:none;min-height:0;overflow:hidden}.page.on{display:block;height:100
 }
 </style>
 <style id="power-peaks-ignition-v5">
-#power .power-chart-box{grid-template-rows:31px 30px 22px minmax(0,1fr)!important}
-.power-peak-strip{height:30px;display:flex;align-items:stretch;gap:5px;padding:2px 3px;overflow:hidden}
-.power-peak{min-width:0;flex:1;display:flex;align-items:baseline;justify-content:center;gap:5px;border:1px solid #252b31;border-radius:6px;background:#080b0e;padding:2px 7px}
-.power-peak span{font:800 7px Arial,sans-serif;letter-spacing:.55px;color:#79838d;white-space:nowrap}
-.power-peak b{font:900 17px Arial,sans-serif;line-height:1;color:#f3f5f7;white-space:nowrap}
-.power-peak em{font:800 7px Arial,sans-serif;color:#7c858e;font-style:normal}
+#power .power-chart-box{grid-template-rows:31px 38px 22px minmax(0,1fr)!important}
+.power-peak-strip{height:38px;display:flex;align-items:stretch;gap:5px;padding:2px 3px;overflow:hidden}
+.power-peak{min-width:0;flex:1;display:grid;grid-template-columns:auto auto auto;grid-template-rows:auto auto;align-content:center;justify-content:center;column-gap:5px;row-gap:1px;border:1px solid #252b31;border-radius:6px;background:#080b0e;padding:2px 7px}
+.power-peak span{font:800 7px Arial,sans-serif;letter-spacing:.55px;color:#79838d;white-space:nowrap;align-self:end}
+.power-peak b{font:900 17px Arial,sans-serif;line-height:1;color:#f3f5f7;white-space:nowrap;align-self:end}
+.power-peak em{font:800 7px Arial,sans-serif;color:#7c858e;font-style:normal;align-self:end}
+.power-peak small{grid-column:1/-1;text-align:center;font:900 8px Arial,sans-serif;color:#d7dce1;letter-spacing:.3px;white-space:nowrap;line-height:1}
 .hp-peak{border-color:#4d1b1e}.hp-peak b{color:#ff7a00}
 .tq-peak{border-color:#4c3518}.tq-peak b{color:#ffad36}
 @media(max-height:430px){
- #power .power-chart-box{grid-template-rows:27px 25px 19px minmax(0,1fr)!important}
- .power-peak-strip{height:25px;padding:1px 3px}
- .power-peak{padding:1px 5px;gap:4px}
- .power-peak span{font-size:6px}.power-peak b{font-size:14px}.power-peak em{font-size:6px}
+ #power .power-chart-box{grid-template-rows:27px 33px 19px minmax(0,1fr)!important}
+ .power-peak-strip{height:33px;padding:1px 3px}
+ .power-peak{padding:1px 5px;column-gap:4px;row-gap:0}
+ .power-peak span{font-size:6px}.power-peak b{font-size:14px}.power-peak em{font-size:6px}.power-peak small{font-size:7px}
 }
 </style>
 <style id="android-settings-scroll-v6">
@@ -267,7 +268,7 @@ nav button.on{border-color:#ff7a00;background:linear-gradient(180deg,#4a2107,#1a
 </style>
 
 <style id="power-touch-readout-v1">
-.power-peak small{font:800 7px Arial,sans-serif;color:#9aa2aa;white-space:nowrap;margin-left:3px}
+.power-peak small{font:900 8px Arial,sans-serif;color:#d7dce1;white-space:nowrap}
 #powerCanvas{cursor:crosshair;touch-action:manipulation}
 @media(max-height:430px){.power-peak small{font-size:6px}}
 </style>
@@ -749,6 +750,23 @@ function buildPowerDisplayData(raw){
 }
 function syncSmoothingButtons(){document.querySelectorAll('[data-smooth]').forEach(function(b){b.classList.toggle('on',parseInt(b.dataset.smooth,10)===S.smoothingLevel)})}
 function setSmoothingLevel(level,persist){level=parseInt(level,10);if(level!==0&&level!==1&&level!==2)level=1;S.smoothingLevel=level;syncSmoothingButtons();drawAll();if(persist!==false)save()}
+function deriveSavedPeakInfo(run){
+ var out={hp:+run.hpMax||0,tq:+run.tqMax||0,hpRpm:+run.hpMaxRpm||0,tqRpm:+run.tqMaxRpm||0};
+ var raw=normalizePowerData(run&&run.power||[]);
+ var rawHp=-Infinity,rawTq=-Infinity,rawHpRpm=0,rawTqRpm=0;
+ raw.forEach(function(a){
+   var hp=+a[1]||0,tq=+a[2]||0,rpm=(+a[3]||0)>0?(+a[3]):(+a[0]||0);
+   if(hp>rawHp){rawHp=hp;rawHpRpm=rpm}
+   if(tq>rawTq){rawTq=tq;rawTqRpm=rpm}
+ });
+ // Legacy runs do not contain explicit peak RPM. Use the actual stored
+ // power curve peak when it exists, rather than leaving the RPM blank.
+ if(!(out.hpRpm>0)&&rawHpRpm>0)out.hpRpm=rawHpRpm;
+ if(!(out.tqRpm>0)&&rawTqRpm>0)out.tqRpm=rawTqRpm;
+ if(!(out.hp>0)&&isFinite(rawHp))out.hp=rawHp;
+ if(!(out.tq>0)&&isFinite(rawTq))out.tq=rawTq;
+ return out;
+}
 function updatePowerPeakUI(maxHp,maxTq,hpRpm,tqRpm){
  var hp=$('powerMaxHp'),tq=$('powerMaxTq'),hpR=$('powerMaxHpRpm'),tqR=$('powerMaxTqRpm'),vals=$('powerVals');
  maxHp=isFinite(maxHp)?maxHp:0;maxTq=isFinite(maxTq)?maxTq:0;
@@ -866,13 +884,14 @@ function drawPower(){
    if((+S.hpMax||0)>=maxHp){maxHp=+S.hpMax||0;if(+S.hpMaxRpm>0)hpRpm=+S.hpMaxRpm}
    if((+S.tqMax||0)>=maxTq){maxTq=+S.tqMax||0;if(+S.tqMaxRpm>0)tqRpm=+S.tqMaxRpm}
  }else if(run){
-   if((+run.hpMax||0)>=maxHp){
-     maxHp=+run.hpMax||0;
-     if(+run.hpMaxRpm>0)hpRpm=+run.hpMaxRpm;
+   var savedPk=deriveSavedPeakInfo(run);
+   if((+savedPk.hp||0)>=maxHp){
+     maxHp=+savedPk.hp||0;
+     if(+savedPk.hpRpm>0)hpRpm=+savedPk.hpRpm;
    }
-   if((+run.tqMax||0)>=maxTq){
-     maxTq=+run.tqMax||0;
-     if(+run.tqMaxRpm>0)tqRpm=+run.tqMaxRpm;
+   if((+savedPk.tq||0)>=maxTq){
+     maxTq=+savedPk.tq||0;
+     if(+savedPk.tqRpm>0)tqRpm=+savedPk.tqRpm;
    }
  }
  updatePowerPeakUI(maxHp,maxTq,hpRpm,tqRpm);
@@ -928,7 +947,7 @@ function restoreRunHistory(){try{var a=JSON.parse(localStorage.getItem(RUN_HISTO
 function runLabel(r){return'RUN #'+r.seq+' · '+(r.hpMax||0).toFixed(1)+'HP · '+(r.tqMax||0).toFixed(1)+'Nm'}
 function renderRunSelectors(){
  ['powerRunSelect','rpmRunSelect'].forEach(function(id){var s=$(id);if(!s)return;var keep=selectedRunIndex;s.innerHTML='';if(!runHistory.length){var o=document.createElement('option');o.value='';o.textContent='-- NO SAVED RUN --';s.appendChild(o);return}for(var i=runHistory.length-1;i>=0;i--){var o=document.createElement('option');o.value=String(i);o.textContent=runLabel(runHistory[i]);s.appendChild(o)}s.value=String(keep>=0?keep:runHistory.length-1)})
- var r=getSelectedRun();if(r){var hp=+r.hpMax||0,tq=+r.tqMax||0;if((!hp||!tq)&&r.power&&r.power.length){normalizePowerData(r.power).forEach(function(a){hp=Math.max(hp,+a[1]||0);tq=Math.max(tq,+a[2]||0)})}updatePowerPeakUI(hp,tq,NaN,NaN)}else updatePowerPeakUI(0,0,NaN,NaN);$('rpmVals').textContent=r?(Math.round(+r.rpmMax||0)+'RPM · '+(+r.speedMax||0).toFixed(1)+'km/h'):'NO RUN'
+ var r=getSelectedRun();if(r){var pk=deriveSavedPeakInfo(r);updatePowerPeakUI(pk.hp,pk.tq,pk.hpRpm,pk.tqRpm)}else updatePowerPeakUI(0,0,NaN,NaN);$('rpmVals').textContent=r?(Math.round(+r.rpmMax||0)+'RPM · '+(+r.speedMax||0).toFixed(1)+'km/h'):'NO RUN'
 }
 function renderCompareRunList(){
  var box=$('compareRunList');if(!box)return;box.innerHTML='';if(!runHistory.length){box.innerHTML='<span class="chart-empty">NO SAVED RUNS</span>';return}
