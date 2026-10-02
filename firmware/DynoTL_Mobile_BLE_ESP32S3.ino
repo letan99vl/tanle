@@ -9,6 +9,7 @@
 #include <BLEServer.h>
 #include <BLEUtils.h>
 #include <BLE2902.h>
+#include <Preferences.h>
 
 // ============================================================================
 // HARDWARE IO
@@ -30,7 +31,11 @@ const unsigned long ROLLER_TIMEOUT_MS = 1000;
 const float MAX_RPM_ENGINE = 20000.0f;
 const float MAX_RPM_ROLLER = 10000.0f;
 
-const uint32_t ENGINE_MIN_PERIOD_US = 250;
+const uint32_t DEFAULT_ENGINE_LOCKOUT_US = 3500;
+const uint32_t ENGINE_LOCKOUT_MIN_US = 50;
+const uint32_t ENGINE_LOCKOUT_MAX_US = 10000;
+volatile uint32_t engineLockoutUs = DEFAULT_ENGINE_LOCKOUT_US;
+Preferences prefs;
 const uint32_t ROLLER_ABS_MIN_PERIOD_US = 6000;
 const uint32_t ROLLER_EARLY_GATE_PERCENT = 45;
 
@@ -50,7 +55,7 @@ static inline float clampf(float x, float lo, float hi) {
 // ============================================================================
 // DYNOTL MOBILE BLE
 // ============================================================================
-static const char *DEVICE_NAME  = "DynoTL-Mobile";
+static const char *DEVICE_NAME  = "BT Speed Dyno";
 static const char *SERVICE_UUID = "d7a10001-7c35-4a6d-9f0e-2ea3117f1000";
 static const char *LIVE_UUID    = "d7a10002-7c35-4a6d-9f0e-2ea3117f1000";
 static const char *COMMAND_UUID = "d7a10003-7c35-4a6d-9f0e-2ea3117f1000";
@@ -100,14 +105,14 @@ void dynoPublishSample(
 class DynoBleServerCallbacks : public BLEServerCallbacks {
   void onConnect(BLEServer *) override {
     deviceConnected = true;
-    Serial.println("[DynoTL] BLE client connected");
+    Serial.println("[BT Speed Dyno] BLE client connected");
   }
 
   void onDisconnect(BLEServer *s) override {
     deviceConnected = false;
     delay(120);
     s->getAdvertising()->start();
-    Serial.println("[DynoTL] BLE advertising restarted");
+    Serial.println("[BT Speed Dyno] BLE advertising restarted");
   }
 };
 
@@ -118,8 +123,60 @@ class DynoBleCommandCallbacks : public BLECharacteristicCallbacks {
 
     if (cmd.equalsIgnoreCase("PING")) {
       bleNotifyChunks(statusChar, "PONG\n");
-    } else if (cmd.equalsIgnoreCase("STATUS")) {
-      bleNotifyChunks(statusChar, "DYNOTL READY\n");
+      return;
+    }
+
+    if (cmd.equalsIgnoreCase("STATUS")) {
+      char out[96];
+      snprintf(
+          out,
+          sizeof(out),
+          "BT SPEED DYNO READY;RPMLOCK=%lu\n",
+          (unsigned long)engineLockoutUs
+      );
+      bleNotifyChunks(statusChar, out);
+      return;
+    }
+
+    if (cmd.equalsIgnoreCase("RPMLOCK?")) {
+      char out[48];
+      snprintf(
+          out,
+          sizeof(out),
+          "RPMLOCK=%lu\n",
+          (unsigned long)engineLockoutUs
+      );
+      bleNotifyChunks(statusChar, out);
+      return;
+    }
+
+    if (cmd.startsWith("RPMLOCK ")) {
+      long requested = cmd.substring(8).toInt();
+
+      if (
+          requested >= (long)ENGINE_LOCKOUT_MIN_US &&
+          requested <= (long)ENGINE_LOCKOUT_MAX_US
+      ) {
+        engineLockoutUs = (uint32_t)requested;
+        prefs.putUInt("rpmLockUs", engineLockoutUs);
+
+        // Drop old period state so the new gate is applied cleanly.
+        engPeriodReady = false;
+        engPeriodUs = 0;
+        engLastUs = micros();
+
+        char out[48];
+        snprintf(
+            out,
+            sizeof(out),
+            "RPMLOCK=%lu;SAVED\n",
+            (unsigned long)engineLockoutUs
+        );
+        bleNotifyChunks(statusChar, out);
+      } else {
+        bleNotifyChunks(statusChar, "ERR RPMLOCK RANGE 50..10000\n");
+      }
+      return;
     }
   }
 };
@@ -172,10 +229,10 @@ void dynoBleBegin() {
   Serial.flush();
 
   Serial.println("========================================");
-  Serial.println("[DynoTL] ESP32-S3 BLE advertising STARTED");
-  Serial.printf("[DynoTL] Name    : %s\n", DEVICE_NAME);
-  Serial.printf("[DynoTL] Service : %s\n", SERVICE_UUID);
-  Serial.println("[DynoTL] BLE mode: same structure as Blink-Redleo");
+  Serial.println("[BT Speed Dyno] ESP32-S3 BLE advertising STARTED");
+  Serial.printf("[BT Speed Dyno] Name    : %s\n", DEVICE_NAME);
+  Serial.printf("[BT Speed Dyno] Service : %s\n", SERVICE_UUID);
+  Serial.println("[BT Speed Dyno] BLE transport ready");
   Serial.println("========================================");
 }
 
@@ -229,7 +286,11 @@ void pollEnginePeriodFromPCNT() {
   uint32_t dt = now - engLastUs;
   uint32_t per = dt / (uint32_t)delta;
 
-  if (per >= ENGINE_MIN_PERIOD_US && per > 0) {
+  uint32_t lockoutUs = engineLockoutUs;
+  if (lockoutUs < ENGINE_LOCKOUT_MIN_US) lockoutUs = ENGINE_LOCKOUT_MIN_US;
+  if (lockoutUs > ENGINE_LOCKOUT_MAX_US) lockoutUs = ENGINE_LOCKOUT_MAX_US;
+
+  if (per >= lockoutUs && per > 0) {
     engPeriodUs = per;
     engPeriodReady = true;
     engLastUs = now;
@@ -470,11 +531,28 @@ void setup() {
   Serial.begin(115200);
   delay(1200);
 
+  prefs.begin("btspeed", false);
+  uint32_t savedLockout = prefs.getUInt(
+      "rpmLockUs",
+      DEFAULT_ENGINE_LOCKOUT_US
+  );
+  if (
+      savedLockout < ENGINE_LOCKOUT_MIN_US ||
+      savedLockout > ENGINE_LOCKOUT_MAX_US
+  ) {
+    savedLockout = DEFAULT_ENGINE_LOCKOUT_US;
+  }
+  engineLockoutUs = savedLockout;
+
   Serial.println();
   Serial.println("========================================");
-  Serial.println("[BOOT] DynoTL Mobile Hardware");
+  Serial.println("[BOOT] BT Speed Dyno Hardware");
   Serial.println("[BOOT] ESP32-S3 firmware started");
   Serial.println("[BOOT] GPIO18=Wheel Hall | GPIO16=Engine RPM | GPIO4=AFR");
+  Serial.printf(
+      "[BOOT] Engine RPM lockout = %lu us\n",
+      (unsigned long)engineLockoutUs
+  );
   Serial.println("========================================");
   Serial.flush();
   delay(200);
@@ -494,7 +572,7 @@ void setup() {
   engLastCount = 0;
 
   Serial.println(
-      "DynoTL Mobile Hardware - ESP32-S3 - VIP sensor core + BLE"
+      "BT Speed Dyno Hardware - ESP32-S3 - VIP sensor core + BLE"
   );
   Serial.println(
       "HEADER,D,timeMs,wheelRPM,engineRPM,afrVoltage"
