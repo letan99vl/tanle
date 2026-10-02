@@ -751,20 +751,18 @@ function buildPowerDisplayData(raw){
 function syncSmoothingButtons(){document.querySelectorAll('[data-smooth]').forEach(function(b){b.classList.toggle('on',parseInt(b.dataset.smooth,10)===S.smoothingLevel)})}
 function setSmoothingLevel(level,persist){level=parseInt(level,10);if(level!==0&&level!==1&&level!==2)level=1;S.smoothingLevel=level;syncSmoothingButtons();drawAll();if(persist!==false)save()}
 function deriveSavedPeakInfo(run){
- var out={hp:+run.hpMax||0,tq:+run.tqMax||0,hpRpm:+run.hpMaxRpm||0,tqRpm:+run.tqMaxRpm||0};
  var raw=normalizePowerData(run&&run.power||[]);
- var rawHp=-Infinity,rawTq=-Infinity,rawHpRpm=0,rawTqRpm=0;
+ var out={hp:0,tq:0,hpRpm:0,tqRpm:0};
  raw.forEach(function(a){
    var hp=+a[1]||0,tq=+a[2]||0,rpm=(+a[3]||0)>0?(+a[3]):(+a[0]||0);
-   if(hp>rawHp){rawHp=hp;rawHpRpm=rpm}
-   if(tq>rawTq){rawTq=tq;rawTqRpm=rpm}
+   if(hp>out.hp){out.hp=hp;out.hpRpm=rpm}
+   if(tq>out.tq){out.tq=tq;out.tqRpm=rpm}
  });
- // Legacy runs do not contain explicit peak RPM. Use the actual stored
- // power curve peak when it exists, rather than leaving the RPM blank.
- if(!(out.hpRpm>0)&&rawHpRpm>0)out.hpRpm=rawHpRpm;
- if(!(out.tqRpm>0)&&rawTqRpm>0)out.tqRpm=rawTqRpm;
- if(!(out.hp>0)&&isFinite(rawHp))out.hp=rawHp;
- if(!(out.tq>0)&&isFinite(rawTq))out.tq=rawTq;
+ // Newer runs store exact peak RPM. Only let stored metadata override
+ // the curve peak when that RPM exists, so value and RPM always match.
+ var sh=+run.hpMax||0,st=+run.tqMax||0,shr=+run.hpMaxRpm||0,str=+run.tqMaxRpm||0;
+ if(sh>out.hp&&shr>0){out.hp=sh;out.hpRpm=shr}
+ if(st>out.tq&&str>0){out.tq=st;out.tqRpm=str}
  return out;
 }
 function updatePowerPeakUI(maxHp,maxTq,hpRpm,tqRpm){
@@ -772,8 +770,8 @@ function updatePowerPeakUI(maxHp,maxTq,hpRpm,tqRpm){
  maxHp=isFinite(maxHp)?maxHp:0;maxTq=isFinite(maxTq)?maxTq:0;
  if(hp)hp.textContent=maxHp.toFixed(1);
  if(tq)tq.textContent=maxTq.toFixed(1);
- if(hpR)hpR.textContent=isFinite(hpR)&&hpR>0?('@ '+Math.round(hpR)+' RPM'):'';
- if(tqR)tqR.textContent=isFinite(tqR)&&tqR>0?('@ '+Math.round(tqR)+' RPM'):'';
+ if(hpR)hpR.textContent=isFinite(hpR)&&hpR>0?('@ '+Math.round(hpR)+' RPM'):'@ -- RPM';
+ if(tqR)tqR.textContent=isFinite(tqR)&&tqR>0?('@ '+Math.round(tqR)+' RPM'):'@ -- RPM';
  if(vals)vals.textContent=(maxHp>0||maxTq>0)?('MAX '+maxHp.toFixed(1)+'HP · '+maxTq.toFixed(1)+'Nm'):'NO RUN';
 }
 function powerRunHasEngineRpm(run,raw){
@@ -812,10 +810,20 @@ function drawPowerTouch(g,P,d,xMin,xMax,hpY,tqY,axisIsEngine){
 }
 function powerPointerLocalX(c,ev){
  var cw=Math.max(1,c.clientWidth||1);
+ var r=c.getBoundingClientRect(),bodyTransform='none',portrait=false;
+ try{bodyTransform=getComputedStyle(document.body).transform||'none'}catch(e){}
+ try{portrait=!!(window.matchMedia&&window.matchMedia('(orientation: portrait)').matches)}catch(e){}
 
- // Best path: project the viewport pointer onto the transformed
- // canvas local X edge. This remains correct when the whole app
- // is rotated 90 degrees in portrait mode.
+ // Desktop / normal landscape: never use transformed-quad math.
+ // Plain clientX maps 1:1 to the canvas horizontal axis.
+ if(!(portrait&&bodyTransform!=='none')){
+   var tx=(ev.clientX-r.left)/(r.width||1);
+   tx=Math.max(0,Math.min(1,tx));
+   return tx*cw;
+ }
+
+ // Portrait mobile is auto-rotated 90 degrees by CSS.
+ // Prefer quad projection only in this transformed case.
  try{
    if(c.getBoxQuads){
      var qs=c.getBoxQuads({box:'border'}),q=qs&&qs[0];
@@ -830,22 +838,10 @@ function powerPointerLocalX(c,ev){
    }
  }catch(e){}
 
- var r=c.getBoundingClientRect(),bodyTransform='none';
- try{bodyTransform=getComputedStyle(document.body).transform||'none'}catch(e){}
- var portrait=false;
- try{portrait=!!(window.matchMedia&&window.matchMedia('(orientation: portrait)').matches)}catch(e){}
-
- if(portrait&&bodyTransform!=='none'){
-   // body: rotate(90deg) translateY(-100%)
-   // local canvas X becomes viewport Y after the rotation.
-   var ty=(ev.clientY-r.top)/(r.height||1);
-   ty=Math.max(0,Math.min(1,ty));
-   return ty*cw;
- }
-
- var tx=(ev.clientX-r.left)/(r.width||1);
- tx=Math.max(0,Math.min(1,tx));
- return tx*cw;
+ // Fallback for iOS/WebView without getBoxQuads.
+ var ty=(ev.clientY-r.top)/(r.height||1);
+ ty=Math.max(0,Math.min(1,ty));
+ return ty*cw;
 }
 function bindPowerChartTouch(){
  var c=$('powerCanvas');if(!c||c._btPowerBound)return;c._btPowerBound=true;
@@ -881,18 +877,12 @@ function drawPower(){
    if(tq>maxTq){maxTq=tq;tqRpm=axisIsEngine?((+a[3]||0)>0?(+a[3]):(+a[0]||0)):NaN}
  });
  if(S.recording){
-   if((+S.hpMax||0)>=maxHp){maxHp=+S.hpMax||0;if(+S.hpMaxRpm>0)hpRpm=+S.hpMaxRpm}
-   if((+S.tqMax||0)>=maxTq){maxTq=+S.tqMax||0;if(+S.tqMaxRpm>0)tqRpm=+S.tqMaxRpm}
+   if((+S.hpMax||0)>maxHp&&(+S.hpMaxRpm||0)>0){maxHp=+S.hpMax;hpRpm=+S.hpMaxRpm}
+   if((+S.tqMax||0)>maxTq&&(+S.tqMaxRpm||0)>0){maxTq=+S.tqMax;tqRpm=+S.tqMaxRpm}
  }else if(run){
    var savedPk=deriveSavedPeakInfo(run);
-   if((+savedPk.hp||0)>=maxHp){
-     maxHp=+savedPk.hp||0;
-     if(+savedPk.hpRpm>0)hpRpm=+savedPk.hpRpm;
-   }
-   if((+savedPk.tq||0)>=maxTq){
-     maxTq=+savedPk.tq||0;
-     if(+savedPk.tqRpm>0)tqRpm=+savedPk.tqRpm;
-   }
+   maxHp=+savedPk.hp||maxHp;maxTq=+savedPk.tq||maxTq;
+   hpRpm=+savedPk.hpRpm||hpRpm;tqRpm=+savedPk.tqRpm||tqRpm;
  }
  updatePowerPeakUI(maxHp,maxTq,hpRpm,tqRpm);
  var xMin=d&&d.length?Math.min.apply(null,d.map(function(a){return+a[0]})):0,xMax=d&&d.length?Math.max.apply(null,d.map(function(a){return+a[0]})):1;if(xMax<=xMin)xMax=xMin+1;
@@ -944,7 +934,7 @@ function saveCurrentRun(){
 }
 function persistRunHistory(){try{localStorage.setItem(RUN_HISTORY_KEY,JSON.stringify(runHistory))}catch(e){}}
 function restoreRunHistory(){try{var a=JSON.parse(localStorage.getItem(RUN_HISTORY_KEY)||'[]');if(Array.isArray(a))runHistory=a.slice(-10)}catch(e){runHistory=[]}selectedRunIndex=runHistory.length?runHistory.length-1:-1}
-function runLabel(r){return'RUN #'+r.seq+' · '+(r.hpMax||0).toFixed(1)+'HP · '+(r.tqMax||0).toFixed(1)+'Nm'}
+function runLabel(r){var pk=deriveSavedPeakInfo(r);return'RUN #'+r.seq+' · '+(pk.hp||0).toFixed(1)+'HP · '+(pk.tq||0).toFixed(1)+'Nm'}
 function renderRunSelectors(){
  ['powerRunSelect','rpmRunSelect'].forEach(function(id){var s=$(id);if(!s)return;var keep=selectedRunIndex;s.innerHTML='';if(!runHistory.length){var o=document.createElement('option');o.value='';o.textContent='-- NO SAVED RUN --';s.appendChild(o);return}for(var i=runHistory.length-1;i>=0;i--){var o=document.createElement('option');o.value=String(i);o.textContent=runLabel(runHistory[i]);s.appendChild(o)}s.value=String(keep>=0?keep:runHistory.length-1)})
  var r=getSelectedRun();if(r){var pk=deriveSavedPeakInfo(r);updatePowerPeakUI(pk.hp,pk.tq,pk.hpRpm,pk.tqRpm)}else updatePowerPeakUI(0,0,NaN,NaN);$('rpmVals').textContent=r?(Math.round(+r.rpmMax||0)+'RPM · '+(+r.speedMax||0).toFixed(1)+'km/h'):'NO RUN'
@@ -952,7 +942,7 @@ function renderRunSelectors(){
 function renderCompareRunList(){
  var box=$('compareRunList');if(!box)return;box.innerHTML='';if(!runHistory.length){box.innerHTML='<span class="chart-empty">NO SAVED RUNS</span>';return}
  var auto=[];if(runHistory.length>=2)auto=[runHistory.length-1,runHistory.length-2];else auto=[runHistory.length-1];
- for(var i=runHistory.length-1;i>=0;i--){var lab=document.createElement('label');lab.className='compare-run-chip';var cb=document.createElement('input');cb.type='checkbox';cb.value=String(i);cb.checked=auto.indexOf(i)>=0;var sp=document.createElement('span');sp.textContent='RUN #'+runHistory[i].seq+' · '+runHistory[i].hpMax.toFixed(1)+'HP';lab.appendChild(cb);lab.appendChild(sp);if(cb.checked)lab.classList.add('checked');cb.addEventListener('change',function(){var checked=document.querySelectorAll('#compareRunList input:checked');if(checked.length>5){this.checked=false;return}this.parentElement.classList.toggle('checked',this.checked);$('compareHint').textContent=checked.length+' RUN(S) SELECTED';drawCompare()});box.appendChild(lab)}
+ for(var i=runHistory.length-1;i>=0;i--){var lab=document.createElement('label');lab.className='compare-run-chip';var cb=document.createElement('input');cb.type='checkbox';cb.value=String(i);cb.checked=auto.indexOf(i)>=0;var sp=document.createElement('span'),pk=deriveSavedPeakInfo(runHistory[i]);sp.textContent='RUN #'+runHistory[i].seq+' · '+(pk.hp||0).toFixed(1)+'HP';lab.appendChild(cb);lab.appendChild(sp);if(cb.checked)lab.classList.add('checked');cb.addEventListener('change',function(){var checked=document.querySelectorAll('#compareRunList input:checked');if(checked.length>5){this.checked=false;return}this.parentElement.classList.toggle('checked',this.checked);$('compareHint').textContent=checked.length+' RUN(S) SELECTED';drawCompare()});box.appendChild(lab)}
  $('compareHint').textContent=document.querySelectorAll('#compareRunList input:checked').length+' RUN(S) SELECTED'
 }
 function renderRunHistoryUI(){renderRunSelectors();renderCompareRunList();drawAll()}
