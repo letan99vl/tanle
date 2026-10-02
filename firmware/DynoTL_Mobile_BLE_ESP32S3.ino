@@ -48,12 +48,41 @@ const float ROLLER_OUTPUT_ALPHA = 0.18f;
 
 const float ADC_REF_V = 3.3f;
 const int ADC_MAX = 4095;
-const float AFRV_ALPHA = 0.20f;
+
+// AFR live filter:
+// 1) Median over the latest 5 voltage samples to reject spikes.
+// 2) Light EMA after the median so live AFR stays smooth but responsive.
+// Higher alpha = faster response / lighter smoothing.
+const float AFRV_EMA_ALPHA = 0.35f;
 
 static inline float clampf(float x, float lo, float hi) {
   if (x < lo) return lo;
   if (x > hi) return hi;
   return x;
+}
+
+static float medianSmallFloat(const float *src, uint8_t count) {
+  if (count == 0) return 0.0f;
+  if (count > 5) count = 5;
+
+  float v[5];
+  for (uint8_t i = 0; i < count; i++) {
+    v[i] = src[i];
+  }
+
+  for (uint8_t i = 0; i + 1 < count; i++) {
+    for (uint8_t j = i + 1; j < count; j++) {
+      if (v[j] < v[i]) {
+        float t = v[i];
+        v[i] = v[j];
+        v[j] = t;
+      }
+    }
+  }
+
+  uint8_t mid = count / 2;
+  if (count & 1U) return v[mid];
+  return (v[mid - 1] + v[mid]) * 0.5f;
 }
 
 // ============================================================================
@@ -595,6 +624,10 @@ void loop() {
   static unsigned long lastSampleMs = 0;
   static float engineRPMFiltered = 0.0f;
   static unsigned long lastEngPulseMs = 0;
+
+  static float afrVoltHistory[5] = {0, 0, 0, 0, 0};
+  static uint8_t afrVoltHistoryCount = 0;
+  static uint8_t afrVoltHistoryIndex = 0;
   static float afrVoltFiltered = 0.0f;
 
   unsigned long nowMs = millis();
@@ -658,7 +691,8 @@ void loop() {
           rollerRPMFiltered * ROLLER_OUTPUT_ALPHA;
     }
 
-    // AFR voltage with the same 12-bit ADC and EMA.
+    // AFR live voltage filter:
+    // raw ADC -> voltage -> Median 5 -> light EMA.
     int raw = analogRead(AFR_PIN);
 
     raw = (raw < 0)
@@ -671,12 +705,20 @@ void loop() {
 
     v = clampf(v, 0.0f, 3.3f);
 
+    afrVoltHistory[afrVoltHistoryIndex] = v;
+    afrVoltHistoryIndex++;
+    if (afrVoltHistoryIndex >= 5) afrVoltHistoryIndex = 0;
+    if (afrVoltHistoryCount < 5) afrVoltHistoryCount++;
+
+    float afrVoltMedian =
+        medianSmallFloat(afrVoltHistory, afrVoltHistoryCount);
+
     if (afrVoltFiltered <= 0.0001f) {
-      afrVoltFiltered = v;
+      afrVoltFiltered = afrVoltMedian;
     } else {
       afrVoltFiltered =
-          afrVoltFiltered * (1.0f - AFRV_ALPHA) +
-          v * AFRV_ALPHA;
+          afrVoltFiltered * (1.0f - AFRV_EMA_ALPHA) +
+          afrVoltMedian * AFRV_EMA_ALPHA;
     }
 
     // Keep old PC serial output.
