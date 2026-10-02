@@ -1,4 +1,5 @@
-// DynoTL Mobile Hardware - ESP32-S3
+// BT Speed Dyno Hardware - ESP32-S3
+// VIP filter core + runtime-adjustable engine RPM pulse filter
 // Sensor core ported from the user's Dyno ESP32 VIP code.
 // GPIO18 = wheel Hall, GPIO16 = engine pickup, GPIO4 = AFR analog.
 // Serial and BLE both publish: D,timeMs,wheelRPM,engineRPM,afrVoltage
@@ -31,10 +32,13 @@ const unsigned long ROLLER_TIMEOUT_MS = 1000;
 const float MAX_RPM_ENGINE = 20000.0f;
 const float MAX_RPM_ROLLER = 10000.0f;
 
-const uint32_t DEFAULT_ENGINE_LOCKOUT_US = 3500;
-const uint32_t ENGINE_LOCKOUT_MIN_US = 50;
-const uint32_t ENGINE_LOCKOUT_MAX_US = 10000;
-volatile uint32_t engineLockoutUs = DEFAULT_ENGINE_LOCKOUT_US;
+// Engine RPM pulse filter.
+// VIP source used ENGINE_MIN_PERIOD_US = 250 us.
+// Keep the same behavior, but make it runtime adjustable from the app.
+const uint32_t DEFAULT_ENGINE_FILTER_US = 250;
+const uint32_t ENGINE_FILTER_MIN_US = 50;
+const uint32_t ENGINE_FILTER_MAX_US = 10000;
+volatile uint32_t engineFilterUs = DEFAULT_ENGINE_FILTER_US;
 Preferences prefs;
 const uint32_t ROLLER_ABS_MIN_PERIOD_US = 6000;
 const uint32_t ROLLER_EARLY_GATE_PERCENT = 45;
@@ -131,45 +135,53 @@ class DynoBleCommandCallbacks : public BLECharacteristicCallbacks {
       snprintf(
           out,
           sizeof(out),
-          "BT SPEED DYNO READY;RPMLOCK=%lu\n",
-          (unsigned long)engineLockoutUs
+          "BT SPEED DYNO READY;RPMFILTER=%lu\n",
+          (unsigned long)engineFilterUs
       );
       bleNotifyChunks(statusChar, out);
       return;
     }
 
-    if (cmd.equalsIgnoreCase("RPMLOCK?")) {
+    if (
+        cmd.equalsIgnoreCase("RPMFILTER?") ||
+        cmd.equalsIgnoreCase("RPMLOCK?")
+    ) {
       char out[48];
       snprintf(
           out,
           sizeof(out),
-          "RPMLOCK=%lu\n",
-          (unsigned long)engineLockoutUs
+          "RPMFILTER=%lu\n",
+          (unsigned long)engineFilterUs
       );
       bleNotifyChunks(statusChar, out);
       return;
     }
 
-    if (cmd.startsWith("RPMLOCK ")) {
-      long requested = cmd.substring(8).toInt();
+    bool isFilterCmd = cmd.startsWith("RPMFILTER ");
+    bool isLegacyLockCmd = cmd.startsWith("RPMLOCK ");
+
+    if (isFilterCmd || isLegacyLockCmd) {
+      long requested = isFilterCmd
+          ? cmd.substring(10).toInt()
+          : cmd.substring(8).toInt();
 
       if (
-          requested >= (long)ENGINE_LOCKOUT_MIN_US &&
-          requested <= (long)ENGINE_LOCKOUT_MAX_US
+          requested >= (long)ENGINE_FILTER_MIN_US &&
+          requested <= (long)ENGINE_FILTER_MAX_US
       ) {
-        engineLockoutUs = (uint32_t)requested;
-        prefs.putUInt("rpmLockUs", engineLockoutUs);
+        engineFilterUs = (uint32_t)requested;
+        prefs.putUInt("rpmFiltUs", engineFilterUs);
 
-        char out[48];
+        char out[56];
         snprintf(
             out,
             sizeof(out),
-            "RPMLOCK=%lu;SAVED\n",
-            (unsigned long)engineLockoutUs
+            "RPMFILTER=%lu;SAVED\n",
+            (unsigned long)engineFilterUs
         );
         bleNotifyChunks(statusChar, out);
       } else {
-        bleNotifyChunks(statusChar, "ERR RPMLOCK RANGE 50..10000\n");
+        bleNotifyChunks(statusChar, "ERR RPMFILTER RANGE 50..10000\n");
       }
       return;
     }
@@ -281,11 +293,13 @@ void pollEnginePeriodFromPCNT() {
   uint32_t dt = now - engLastUs;
   uint32_t per = dt / (uint32_t)delta;
 
-  uint32_t lockoutUs = engineLockoutUs;
-  if (lockoutUs < ENGINE_LOCKOUT_MIN_US) lockoutUs = ENGINE_LOCKOUT_MIN_US;
-  if (lockoutUs > ENGINE_LOCKOUT_MAX_US) lockoutUs = ENGINE_LOCKOUT_MAX_US;
+  uint32_t filterUs = engineFilterUs;
+  if (filterUs < ENGINE_FILTER_MIN_US) filterUs = ENGINE_FILTER_MIN_US;
+  if (filterUs > ENGINE_FILTER_MAX_US) filterUs = ENGINE_FILTER_MAX_US;
 
-  if (per >= lockoutUs && per > 0) {
+  // Same role as ENGINE_MIN_PERIOD_US in the VIP source:
+  // reject engine pickup periods that are too short.
+  if (per >= filterUs && per > 0) {
     engPeriodUs = per;
     engPeriodReady = true;
     engLastUs = now;
@@ -527,17 +541,17 @@ void setup() {
   delay(1200);
 
   prefs.begin("btspeed", false);
-  uint32_t savedLockout = prefs.getUInt(
-      "rpmLockUs",
-      DEFAULT_ENGINE_LOCKOUT_US
+  uint32_t savedFilter = prefs.getUInt(
+      "rpmFiltUs",
+      DEFAULT_ENGINE_FILTER_US
   );
   if (
-      savedLockout < ENGINE_LOCKOUT_MIN_US ||
-      savedLockout > ENGINE_LOCKOUT_MAX_US
+      savedFilter < ENGINE_FILTER_MIN_US ||
+      savedFilter > ENGINE_FILTER_MAX_US
   ) {
-    savedLockout = DEFAULT_ENGINE_LOCKOUT_US;
+    savedFilter = DEFAULT_ENGINE_FILTER_US;
   }
-  engineLockoutUs = savedLockout;
+  engineFilterUs = savedFilter;
 
   Serial.println();
   Serial.println("========================================");
@@ -545,8 +559,8 @@ void setup() {
   Serial.println("[BOOT] ESP32-S3 firmware started");
   Serial.println("[BOOT] GPIO18=Wheel Hall | GPIO16=Engine RPM | GPIO4=AFR");
   Serial.printf(
-      "[BOOT] Engine RPM lockout = %lu us\n",
-      (unsigned long)engineLockoutUs
+      "[BOOT] Engine RPM pulse filter = %lu us\n",
+      (unsigned long)engineFilterUs
   );
   Serial.println("========================================");
   Serial.flush();
