@@ -160,11 +160,6 @@ class DynoBleCommandCallbacks : public BLECharacteristicCallbacks {
         engineLockoutUs = (uint32_t)requested;
         prefs.putUInt("rpmLockUs", engineLockoutUs);
 
-        // Drop old period state so the new gate is applied cleanly.
-        engPeriodReady = false;
-        engPeriodUs = 0;
-        engLastUs = micros();
-
         char out[48];
         snprintf(
             out,
