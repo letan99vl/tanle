@@ -69,6 +69,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: BT-Speed-Dyno-Safe-APK
-          path: DynoTL-Mobile-Safe.apk
+          path: BT-Speed-Dyno-Safe.apk
           if-no-files-found: error
           retention-days: 30
