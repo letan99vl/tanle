@@ -750,20 +750,18 @@ function buildPowerDisplayData(raw){
 }
 function syncSmoothingButtons(){document.querySelectorAll('[data-smooth]').forEach(function(b){b.classList.toggle('on',parseInt(b.dataset.smooth,10)===S.smoothingLevel)})}
 function setSmoothingLevel(level,persist){level=parseInt(level,10);if(level!==0&&level!==1&&level!==2)level=1;S.smoothingLevel=level;syncSmoothingButtons();drawAll();if(persist!==false)save()}
-function deriveSavedPeakInfo(run){
- var raw=normalizePowerData(run&&run.power||[]);
+function pairedPowerPeaks(data){
+ var raw=normalizePowerData(data||[]);
  var out={hp:0,tq:0,hpRpm:0,tqRpm:0};
  raw.forEach(function(a){
-   var hp=+a[1]||0,tq=+a[2]||0,rpm=+a[0]||0;
+   var rpm=+a[0]||0,hp=+a[1]||0,tq=+a[2]||0;
    if(hp>out.hp){out.hp=hp;out.hpRpm=rpm}
    if(tq>out.tq){out.tq=tq;out.tqRpm=rpm}
  });
- // Newer runs store exact peak RPM. Only let stored metadata override
- // the curve peak when that RPM exists, so value and RPM always match.
- var sh=+run.hpMax||0,st=+run.tqMax||0,shr=+run.hpMaxRpm||0,str=+run.tqMaxRpm||0;
- if(sh>out.hp&&shr>0){out.hp=sh;out.hpRpm=shr}
- if(st>out.tq&&str>0){out.tq=st;out.tqRpm=str}
  return out;
+}
+function deriveSavedPeakInfo(run){
+ return pairedPowerPeaks(run&&run.power||[]);
 }
 function updatePowerPeakUI(maxHp,maxTq,hpRpm,tqRpm){
  var hp=$('powerMaxHp'),tq=$('powerMaxTq'),hpR=$('powerMaxHpRpm'),tqR=$('powerMaxTqRpm'),vals=$('powerVals');
@@ -772,6 +770,8 @@ function updatePowerPeakUI(maxHp,maxTq,hpRpm,tqRpm){
  if(tq)tq.textContent=maxTq.toFixed(1);
  if(hpR)hpR.textContent='@ '+(isFinite(hpR)&&hpR>0?Math.round(hpR):'--')+' RPM';
  if(tqR)tqR.textContent='@ '+(isFinite(tqR)&&tqR>0?Math.round(tqR):'--')+' RPM';
+ if(hpR)hpR.title='Peak HP RPM: '+(isFinite(hpR)&&hpR>0?Math.round(hpR):'no RPM data');
+ if(tqR)tqR.title='Peak torque RPM: '+(isFinite(tqR)&&tqR>0?Math.round(tqR):'no RPM data');
  if(vals)vals.textContent=(maxHp>0||maxTq>0)?('MAX '+maxHp.toFixed(1)+'HP · '+maxTq.toFixed(1)+'Nm'):'NO RUN';
 }
 function powerRunHasEngineRpm(run,raw){
@@ -870,23 +870,12 @@ function bindPowerChartTouch(){
 }
 function drawPower(){
  var c=$('powerCanvas'),g=setupCanvas(c),run=getSelectedRun(),raw0=S.recording?S.runPower:(run?run.power:[]),raw=normalizePowerData(raw0),d=buildPowerDisplayData(raw);
- var axisIsEngine=powerRunHasEngineRpm(run,raw),maxHp=0,maxTq=0,hpRpm=NaN,tqRpm=NaN;
- if(raw&&raw.length)raw.forEach(function(a){
-   var hp=+a[1]||0,tq=+a[2]||0,xRpm=+a[0]||0;
-   // The power chart X value is engine RPM whenever engine RPM exists,
-   // otherwise it is roller RPM. Use the exact plotted X value so the
-   // peak RPM cannot be lost through separate metadata.
-   if(hp>maxHp){maxHp=hp;hpRpm=xRpm>0?xRpm:NaN}
-   if(tq>maxTq){maxTq=tq;tqRpm=xRpm>0?xRpm:NaN}
- });
- if(S.recording){
-   if((+S.hpMax||0)>maxHp&&(+S.hpMaxRpm||0)>0){maxHp=+S.hpMax;hpRpm=+S.hpMaxRpm}
-   if((+S.tqMax||0)>maxTq&&(+S.tqMaxRpm||0)>0){maxTq=+S.tqMax;tqRpm=+S.tqMaxRpm}
- }else if(run){
-   var savedPk=deriveSavedPeakInfo(run);
-   maxHp=+savedPk.hp||maxHp;maxTq=+savedPk.tq||maxTq;
-   hpRpm=+savedPk.hpRpm||hpRpm;tqRpm=+savedPk.tqRpm||tqRpm;
- }
+ var axisIsEngine=powerRunHasEngineRpm(run,raw),pk=pairedPowerPeaks(raw);
+ var maxHp=pk.hp,maxTq=pk.tq,hpRpm=pk.hpRpm,tqRpm=pk.tqRpm;
+
+ // Peak value and RPM are always taken from the exact same raw power
+ // sample that feeds this chart. This preserves RAW peak values while
+ // preventing a peak number from becoming detached from its RPM.
  updatePowerPeakUI(maxHp,maxTq,hpRpm,tqRpm);
  var xMin=d&&d.length?Math.min.apply(null,d.map(function(a){return+a[0]})):0,xMax=d&&d.length?Math.max.apply(null,d.map(function(a){return+a[0]})):1;if(xMax<=xMin)xMax=xMin+1;
  var hpY=niceMax(maxHp*1.1),tqY=niceMax(maxTq*1.1),P=chartFrame(g,{xMin:xMin,xMax:xMax,xLabel:axisIsEngine?'ENGINE RPM':'ROLLER RPM',yMax:hpY,yLabel:'HP',yColor:'#ff6a00',right:{max:tqY,label:'TORQUE (Nm)',shortLabel:'Nm',color:'#ff9f1c'}});
@@ -930,9 +919,8 @@ function saveCurrentRun(){
  if(!S.runPower||S.runPower.length<2||!S.runRpm||S.runRpm.length<2)return;
  var seq=parseInt(localStorage.getItem(RUN_COUNTER_KEY)||'0',10)+1;localStorage.setItem(RUN_COUNTER_KEY,String(seq));
  var rpmMax=0,speedMax=0;S.runRpm.forEach(function(a){rpmMax=Math.max(rpmMax,+a[1]||0);speedMax=Math.max(speedMax,+a[3]||0)});
- var fixedPower=normalizePowerData(S.runPower),hpPeak=S.hpMax||0,tqPeak=S.tqMax||0;
- fixedPower.forEach(function(a){hpPeak=Math.max(hpPeak,+a[1]||0);tqPeak=Math.max(tqPeak,+a[2]||0)});
- var item={seq:seq,timestamp:new Date().toLocaleString('vi-VN',{hour12:false}),ignitionCycle:$('ignitionCycle')?$('ignitionCycle').value:'360',power:fixedPower.map(function(a){return a.slice()}),rpm:S.runRpm.map(function(a){return a.slice()}),hpMax:hpPeak,tqMax:tqPeak,hpMaxRpm:S.hpMaxRpm||0,tqMaxRpm:S.tqMaxRpm||0,rpmMax:rpmMax,speedMax:speedMax};
+ var fixedPower=normalizePowerData(S.runPower),pk=pairedPowerPeaks(fixedPower),hpPeak=pk.hp,tqPeak=pk.tq;
+ var item={seq:seq,timestamp:new Date().toLocaleString('vi-VN',{hour12:false}),ignitionCycle:$('ignitionCycle')?$('ignitionCycle').value:'360',power:fixedPower.map(function(a){return a.slice()}),rpm:S.runRpm.map(function(a){return a.slice()}),hpMax:hpPeak,tqMax:tqPeak,hpMaxRpm:pk.hpRpm||0,tqMaxRpm:pk.tqRpm||0,rpmMax:rpmMax,speedMax:speedMax};
  runHistory.push(item);if(runHistory.length>10)runHistory.shift();selectedRunIndex=runHistory.length-1;persistRunHistory();renderRunHistoryUI()
 }
 function persistRunHistory(){try{localStorage.setItem(RUN_HISTORY_KEY,JSON.stringify(runHistory))}catch(e){}}
