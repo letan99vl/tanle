@@ -766,12 +766,13 @@ function deriveSavedPeakInfo(run){
 function updatePowerPeakUI(maxHp,maxTq,hpRpm,tqRpm){
  var hp=$('powerMaxHp'),tq=$('powerMaxTq'),hpR=$('powerMaxHpRpm'),tqR=$('powerMaxTqRpm'),vals=$('powerVals');
  maxHp=isFinite(maxHp)?maxHp:0;maxTq=isFinite(maxTq)?maxTq:0;
+ hpRpm=Number(hpRpm);tqRpm=Number(tqRpm);
  if(hp)hp.textContent=maxHp.toFixed(1);
  if(tq)tq.textContent=maxTq.toFixed(1);
- if(hpR)hpR.textContent='@ '+(isFinite(hpR)&&hpR>0?Math.round(hpR):'--')+' RPM';
- if(tqR)tqR.textContent='@ '+(isFinite(tqR)&&tqR>0?Math.round(tqR):'--')+' RPM';
- if(hpR)hpR.title='Peak HP RPM: '+(isFinite(hpR)&&hpR>0?Math.round(hpR):'no RPM data');
- if(tqR)tqR.title='Peak torque RPM: '+(isFinite(tqR)&&tqR>0?Math.round(tqR):'no RPM data');
+ if(hpR)hpR.textContent='@ '+(isFinite(hpRpm)&&hpRpm>0?Math.round(hpRpm):'--')+' RPM';
+ if(tqR)tqR.textContent='@ '+(isFinite(tqRpm)&&tqRpm>0?Math.round(tqRpm):'--')+' RPM';
+ if(hpR)hpR.title='Peak HP RPM: '+(isFinite(hpRpm)&&hpRpm>0?Math.round(hpRpm):'no RPM data');
+ if(tqR)tqR.title='Peak torque RPM: '+(isFinite(tqRpm)&&tqRpm>0?Math.round(tqRpm):'no RPM data');
  if(vals)vals.textContent=(maxHp>0||maxTq>0)?('MAX '+maxHp.toFixed(1)+'HP · '+maxTq.toFixed(1)+'Nm'):'NO RUN';
 }
 function powerRunHasEngineRpm(run,raw){
