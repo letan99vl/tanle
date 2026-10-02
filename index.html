@@ -208,14 +208,14 @@ main{display:none;min-height:0;overflow:hidden}.page.on{display:block;height:100
 .power-peak span{font:800 7px Arial,sans-serif;letter-spacing:.55px;color:#79838d;white-space:nowrap;align-self:end}
 .power-peak b{font:900 17px Arial,sans-serif;line-height:1;color:#f3f5f7;white-space:nowrap;align-self:end}
 .power-peak em{font:800 7px Arial,sans-serif;color:#7c858e;font-style:normal;align-self:end}
-.power-peak small{grid-column:1/-1;text-align:center;font:900 8px Arial,sans-serif;color:#d7dce1;letter-spacing:.3px;white-space:nowrap;line-height:1}
+.power-peak .peak-rpm{grid-column:1/-1;display:block;width:100%;min-width:88px;text-align:center;font:900 8px Arial,sans-serif;color:#d7dce1;letter-spacing:.3px;white-space:nowrap;line-height:1.1;overflow:visible}
 .hp-peak{border-color:#4d1b1e}.hp-peak b{color:#ff7a00}
 .tq-peak{border-color:#4c3518}.tq-peak b{color:#ffad36}
 @media(max-height:430px){
  #power .power-chart-box{grid-template-rows:27px 33px 19px minmax(0,1fr)!important}
  .power-peak-strip{height:33px;padding:1px 3px}
  .power-peak{padding:1px 5px;column-gap:4px;row-gap:0}
- .power-peak span{font-size:6px}.power-peak b{font-size:14px}.power-peak em{font-size:6px}.power-peak small{font-size:7px}
+ .power-peak span{font-size:6px}.power-peak b{font-size:14px}.power-peak em{font-size:6px}.power-peak .peak-rpm{grid-column:1/-1;display:block;width:100%;min-width:88px;text-align:center;font:900 8px Arial,sans-serif;color:#d7dce1;letter-spacing:.3px;white-space:nowrap;line-height:1.1;overflow:visible}
 }
 </style>
 <style id="android-settings-scroll-v6">
@@ -268,9 +268,9 @@ nav button.on{border-color:#ff7a00;background:linear-gradient(180deg,#4a2107,#1a
 </style>
 
 <style id="power-touch-readout-v1">
-.power-peak small{font:900 8px Arial,sans-serif;color:#d7dce1;white-space:nowrap}
+.power-peak .peak-rpm{grid-column:1/-1;display:block;width:100%;min-width:88px;text-align:center;font:900 8px Arial,sans-serif;color:#d7dce1;letter-spacing:.3px;white-space:nowrap;line-height:1.1;overflow:visible}
 #powerCanvas{cursor:crosshair;touch-action:manipulation}
-@media(max-height:430px){.power-peak small{font-size:6px}}
+@media(max-height:430px){.power-peak .peak-rpm{grid-column:1/-1;display:block;width:100%;min-width:88px;text-align:center;font:900 8px Arial,sans-serif;color:#d7dce1;letter-spacing:.3px;white-space:nowrap;line-height:1.1;overflow:visible}}
 </style>
 </head>
 <body>
@@ -310,8 +310,8 @@ nav button.on{border-color:#ff7a00;background:linear-gradient(180deg,#4a2107,#1a
    <div class="chart-runbar"><span>SAVED RUN</span><select id="powerRunSelect"></select><span id="powerVals" class="vals">NO SAVED RUN</span></div>
   </div>
   <div class="power-peak-strip">
-   <div class="power-peak hp-peak"><span>MAX HP</span><b id="powerMaxHp">0.0</b><small id="powerMaxHpRpm"></small></div>
-   <div class="power-peak tq-peak"><span>MAX TORQUE</span><b id="powerMaxTq">0.0</b><em>Nm</em><small id="powerMaxTqRpm"></small></div>
+   <div class="power-peak hp-peak"><span>MAX HP</span><b id="powerMaxHp">0.0</b><div id="powerMaxHpRpm" class="peak-rpm">@ -- RPM</div></div>
+   <div class="power-peak tq-peak"><span>MAX TORQUE</span><b id="powerMaxTq">0.0</b><em>Nm</em><div id="powerMaxTqRpm" class="peak-rpm">@ -- RPM</div></div>
   </div>
   <div class="mobile-chart-legend power-legend"><span class="lg hp">HP</span><span class="lg tq">TORQUE</span><div class="smoothbar" aria-label="Chart smoothing"><button type="button" data-smooth="0">RAW</button><button type="button" data-smooth="1" class="on">LIGHT</button><button type="button" data-smooth="2">MED</button></div><span class="axis-note">X: RPM</span></div>
   <div class="chartwrap"><canvas id="powerCanvas"></canvas></div>
@@ -754,7 +754,7 @@ function deriveSavedPeakInfo(run){
  var raw=normalizePowerData(run&&run.power||[]);
  var out={hp:0,tq:0,hpRpm:0,tqRpm:0};
  raw.forEach(function(a){
-   var hp=+a[1]||0,tq=+a[2]||0,rpm=(+a[3]||0)>0?(+a[3]):(+a[0]||0);
+   var hp=+a[1]||0,tq=+a[2]||0,rpm=+a[0]||0;
    if(hp>out.hp){out.hp=hp;out.hpRpm=rpm}
    if(tq>out.tq){out.tq=tq;out.tqRpm=rpm}
  });
@@ -770,8 +770,8 @@ function updatePowerPeakUI(maxHp,maxTq,hpRpm,tqRpm){
  maxHp=isFinite(maxHp)?maxHp:0;maxTq=isFinite(maxTq)?maxTq:0;
  if(hp)hp.textContent=maxHp.toFixed(1);
  if(tq)tq.textContent=maxTq.toFixed(1);
- if(hpR)hpR.textContent=isFinite(hpR)&&hpR>0?('@ '+Math.round(hpR)+' RPM'):'@ -- RPM';
- if(tqR)tqR.textContent=isFinite(tqR)&&tqR>0?('@ '+Math.round(tqR)+' RPM'):'@ -- RPM';
+ if(hpR)hpR.textContent='@ '+(isFinite(hpR)&&hpR>0?Math.round(hpR):'--')+' RPM';
+ if(tqR)tqR.textContent='@ '+(isFinite(tqR)&&tqR>0?Math.round(tqR):'--')+' RPM';
  if(vals)vals.textContent=(maxHp>0||maxTq>0)?('MAX '+maxHp.toFixed(1)+'HP · '+maxTq.toFixed(1)+'Nm'):'NO RUN';
 }
 function powerRunHasEngineRpm(run,raw){
@@ -872,9 +872,12 @@ function drawPower(){
  var c=$('powerCanvas'),g=setupCanvas(c),run=getSelectedRun(),raw0=S.recording?S.runPower:(run?run.power:[]),raw=normalizePowerData(raw0),d=buildPowerDisplayData(raw);
  var axisIsEngine=powerRunHasEngineRpm(run,raw),maxHp=0,maxTq=0,hpRpm=NaN,tqRpm=NaN;
  if(raw&&raw.length)raw.forEach(function(a){
-   var hp=+a[1]||0,tq=+a[2]||0;
-   if(hp>maxHp){maxHp=hp;hpRpm=axisIsEngine?((+a[3]||0)>0?(+a[3]):(+a[0]||0)):NaN}
-   if(tq>maxTq){maxTq=tq;tqRpm=axisIsEngine?((+a[3]||0)>0?(+a[3]):(+a[0]||0)):NaN}
+   var hp=+a[1]||0,tq=+a[2]||0,xRpm=+a[0]||0;
+   // The power chart X value is engine RPM whenever engine RPM exists,
+   // otherwise it is roller RPM. Use the exact plotted X value so the
+   // peak RPM cannot be lost through separate metadata.
+   if(hp>maxHp){maxHp=hp;hpRpm=xRpm>0?xRpm:NaN}
+   if(tq>maxTq){maxTq=tq;tqRpm=xRpm>0?xRpm:NaN}
  });
  if(S.recording){
    if((+S.hpMax||0)>maxHp&&(+S.hpMaxRpm||0)>0){maxHp=+S.hpMax;hpRpm=+S.hpMaxRpm}
