@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.webmanifest">
-<title>Dyno TL Mobile</title>
+<title>BT Speed Dyno</title>
 <style>
 :root{--bg:#040506;--panel:#0b0d10;--line:#252a30;--red:#ff3038;--orange:#ff9f1c;--green:#37d45a;--blue:#3488ff;--text:#f3f5f7;--muted:#89939d;--nav:40px;--ctl:44px}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;background:var(--bg);color:var(--text);font-family:Arial,sans-serif;overflow:hidden;touch-action:manipulation}
@@ -222,15 +222,60 @@ main{display:none;min-height:0;overflow:hidden}.page.on{display:block;height:100
 #settings .settingsgrid{overflow:visible!important;min-height:max-content}
 #settings .settingsgrid .card{overflow:visible!important;touch-action:auto!important}
 html.android-app #settings,body.android-app #settings{overflow-y:scroll!important}
-</style>\n</head>
+</style>\n
+<style id="bt-speed-orange-v1">
+:root{--red:#ff6a00;--orange:#ff9d00;--green:#39d98a;--blue:#4da3ff;--bg:#050505;--panel:#0b0b0c;--line:#2c211a;--text:#f7f7f7;--muted:#9d948d}
+html,body,#app{background:#050505}
+body{background:radial-gradient(circle at 50% -30%,rgba(255,106,0,.16),transparent 45%),linear-gradient(180deg,#050505,#090704)}
+header{border-bottom-color:#342114;background:linear-gradient(180deg,#0b0907,#060606)}
+.brand{font-style:italic;letter-spacing:1.1px}.brand b{color:#ff7a00}
+nav{overflow-x:auto;justify-content:flex-start;scrollbar-width:none}nav::-webkit-scrollbar{display:none}
+nav button{min-width:58px;border-color:#33271f;background:#0d0b09}
+nav button.on{border-color:#ff7a00;background:linear-gradient(180deg,#4a2107,#1a0d04);box-shadow:0 0 18px rgba(255,106,0,.16)}
+.pill.ok{color:#ffbd7e;border-color:#8a430f}.mini.red,.controls .stop{color:#ff9d62;border-color:#6f330c}
+.gauge,.centerbox,.chartbox,.card{border-color:#302117;background:linear-gradient(180deg,#0d0c0b,#070707)}
+.scale i{background:linear-gradient(90deg,#6c2a00,#ff6a00)}
+.controls{border-color:#392619;background:#090705ee}.controls .go{border-color:#8d430e;background:#261205}.controls .auto.on{color:#ffd19e;border-color:#8b4c14;background:#211005}
+.settingsgrid h3{color:#ff8126}.hp-peak{border-color:#6e3510}.hp-peak b{color:#ff7a00}.tq-peak{border-color:#5c461e}.tq-peak b{color:#ffc15a}
+#live .live-title-banner span{color:#fff5eb}
+#live .live-monitor-head{border-color:#4a2915;background:linear-gradient(105deg,#0f0b08,#060606 50%,#100b07)}
+#live .live-head-slashes{background:repeating-linear-gradient(130deg,transparent 0 3px,#ff6a00 3px 5px)}
+#live .live-kpi-value.afr{color:#ff8b2b!important;text-shadow:0 0 7px #ff7a0048,0 0 18px #ff6a0035!important}
+#live[data-source="ble"] .live-dot{background:#ff7a00;box-shadow:0 0 8px #ff6a0060}
+#live .live-record-dot.on{background:#ff7a00;box-shadow:0 0 9px #ff6a009c}
+.bt-afr-page{padding:6px;overflow:auto}.bt-afr-live-grid{height:100%;display:grid;grid-template-columns:1fr 1fr;gap:8px;min-height:0}
+.bt-afr-panel{position:relative;border:1px solid #3b2718;border-radius:14px;background:linear-gradient(180deg,#0f0c09,#070707);padding:12px;overflow:hidden}
+.bt-afr-panel:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(#ff9d00,#ff5a00)}
+.bt-afr-title{font:900 10px Arial;letter-spacing:1.2px;color:#a89b91;text-transform:uppercase}.bt-afr-big{font:900 clamp(54px,12vh,110px)/.95 Arial;margin-top:8px;color:#fff;font-variant-numeric:tabular-nums}
+.bt-afr-big.orange{color:#ff851b;text-shadow:0 0 24px rgba(255,106,0,.22)}.bt-afr-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.bt-tag{padding:6px 9px;border:1px solid #3a2a1f;border-radius:999px;background:#100d0a;font:800 9px Arial;color:#bbb0a8}
+.bt-tag.rich{color:#ff7777;border-color:#5d2323}.bt-tag.target{color:#66e8a0;border-color:#1d5b38}.bt-tag.lean{color:#ffc05e;border-color:#664516}
+#afrMap{padding:5px 7px;overflow:hidden}.bt-map-shell{height:100%;min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:5px}
+.bt-map-top{display:grid;grid-template-columns:1fr 1fr auto;gap:6px;align-items:stretch}.bt-map-kpi{border:1px solid #382619;border-radius:10px;background:#0c0a08;padding:7px 10px}
+.bt-map-kpi span{display:block;font:800 7px Arial;letter-spacing:.8px;color:#8f857e}.bt-map-kpi b{display:block;font:900 24px Arial;margin-top:1px}.bt-map-kpi b.orange{color:#ff8126}
+.bt-map-state{min-width:115px;display:grid;place-items:center;border:1px solid #3d2b1f;border-radius:10px;background:#0b0908;font:900 9px Arial;letter-spacing:.7px}
+.bt-map-scroll{min-height:0;overflow:auto;border:1px solid #38271c;border-radius:10px;background:#070707}.bt-map-table{width:100%;border-collapse:separate;border-spacing:0}
+.bt-map-table th{position:sticky;top:0;z-index:4;background:#130e0a;color:#ffb36f;font:900 8px Arial;letter-spacing:.8px;text-transform:uppercase}
+.bt-map-table th,.bt-map-table td{padding:8px 12px;border-bottom:1px solid #1d1814}.bt-map-table td{font:900 18px Arial;font-variant-numeric:tabular-nums}
+.bt-map-table tr.active td{background:linear-gradient(90deg,rgba(255,106,0,.22),rgba(255,106,0,.04))}.bt-map-table tr.active td:first-child{box-shadow:inset 4px 0 0 #ff7a00}
+.bt-afr-rich{color:#ff6b6b}.bt-afr-target{color:#54e796}.bt-afr-lean{color:#ffb64c}
+.bt-map-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}.bt-map-actions button{height:31px;border:1px solid #3a2a20;border-radius:7px;background:#0e0b09;color:#f2ece7;font:900 8px Arial}
+.bt-map-actions button.hot{border-color:#a84d0c;background:#2b1305;color:#ffc18d}.bt-analysis{display:none;margin:6px 0 0;border:1px solid #51331f;border-radius:10px;background:#0b0908;padding:8px;font-size:9px;line-height:1.45}
+.bt-analysis.show{display:block}.bt-analysis h3{margin:0 0 6px;color:#ff9a45;font-size:10px}.bt-band-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:6px}
+.bt-band{border:1px solid #2d241e;border-radius:7px;padding:6px;background:#090807}.bt-band b{display:block;font-size:8px}.bt-band span{font-size:7px;color:#9d938b}
+@media(max-height:430px){.bt-afr-panel{padding:8px}.bt-afr-big{font-size:clamp(42px,10vh,74px)}.bt-map-table th,.bt-map-table td{padding:5px 10px}.bt-map-table td{font-size:15px}.bt-map-kpi b{font-size:19px}.bt-map-actions button{height:27px;font-size:7px}}
+</style>
+</head>
 <body>
 <div id="app">
 <header>
- <div class="brand">DYNO <b>TL</b> MOBILE</div>
+ <div class="brand">BT <b>SPEED</b> DYNO</div>
  <nav>
   <button data-page="live" class="on">LIVE</button>
   <button data-page="power">HP/TOR</button>
-  <button data-page="rpm">RPM/AFR</button>
+  <button data-page="rpm">RPM</button>
+  <button data-page="afrLive">AFR</button>
+  <button data-page="afrMap">AFR MAP</button>
   <button data-page="compare">COMPARE</button>
   <button data-page="test201">201m</button>
   <button data-page="settings">SET</button>
@@ -240,7 +285,7 @@ html.android-app #settings,body.android-app #settings{overflow-y:scroll!importan
 
 <main id="live" class="page on live-red-main">
  <section id="livePcMount" class="pc-original-shell">
-  <div class="pc-live-loading">LOADING DYNOTL LIVE...</div>
+  <div class="pc-live-loading">LOADING BT SPEED DYNO...</div>
  </section>
  <div class="legacy-live-values" aria-hidden="true">
   <span id="liveRpm">0</span><span id="liveSpeed">0</span><span id="liveAfr">--</span><span id="liveHp">0.0</span><span id="liveTq">0.0</span>
@@ -277,6 +322,20 @@ html.android-app #settings,body.android-app #settings{overflow-y:scroll!importan
  </section>
 </main>
 
+
+<main id="afrLive" class="page bt-afr-page">
+ <div class="bt-afr-live-grid">
+  <section class="bt-afr-panel"><div class="bt-afr-title">BT Speed AFR · Live AFR</div><div id="btAfrLiveValue" class="bt-afr-big orange">--</div><div class="bt-afr-meta"><span id="btAfrState" class="bt-tag">WAITING</span><span id="btAfrWriteState" class="bt-tag">WRITE AUTO</span><span id="btAfrVoltage" class="bt-tag">0.000 V</span></div></section>
+  <section class="bt-afr-panel"><div class="bt-afr-title">Engine RPM</div><div id="btAfrRpmValue" class="bt-afr-big">0</div><div class="bt-afr-meta"><span id="btAfrTrend" class="bt-tag">HOLD</span><span id="btAfrActiveBin" class="bt-tag">BIN --</span><span class="bt-tag">BLE SHARED WITH DYNO</span></div></section>
+ </div>
+</main>
+<main id="afrMap" class="page">
+ <div class="bt-map-shell">
+  <div><div class="bt-map-top"><div class="bt-map-kpi"><span>LIVE AFR</span><b id="btMapAfr" class="orange">--</b></div><div class="bt-map-kpi"><span>ENGINE RPM</span><b id="btMapRpm">0</b></div><div id="btMapWrite" class="bt-map-state">AUTO WRITE</div></div><div id="btAfrAnalysis" class="bt-analysis"><h3>AFR ANALYSIS</h3><div id="btAfrAnalysisSummary"></div><div id="btAfrBands" class="bt-band-grid"></div><div id="btAfrRule" style="margin-top:6px"></div></div></div>
+  <div class="bt-map-scroll"><table class="bt-map-table"><thead><tr><th>RPM</th><th>AFR</th><th>SAMPLES</th></tr></thead><tbody id="btAfrMapBody"></tbody></table></div>
+  <div class="bt-map-actions"><button id="btAfrClear">CLEAR TABLE</button><button id="btAfrAnalyze" class="hot">ANALYZE</button><button id="btAfrWriteToggle" class="hot">AUTO WRITE: ON</button><button id="btAfrScrollToggle">AUTO SCROLL: ON</button></div>
+ </div>
+</main>
 <main id="compare" class="page chartpage">
  <section class="chartbox compare-chart-box">
   <div class="charthead compare-head">
@@ -313,6 +372,8 @@ html.android-app #settings,body.android-app #settings{overflow-y:scroll!importan
    <label class="setline"><span>AFR min</span><input id="afrMin" type="number" step=".1" value="10"></label>
    <label class="setline"><span>Volt max</span><input id="afrVMax" type="number" step=".01" value="3.15"></label>
    <label class="setline"><span>AFR max</span><input id="afrMax" type="number" step=".1" value="20"></label>
+   <label class="setline"><span>Decel lock epsilon</span><input id="afrDecelEps" type="number" min="0" max="500" step="5" value="40"></label>
+   <p class="note">BT Speed AFR uses the same BLE stream and AFR calibration as Dyno. AFR/RPM map recording locks during RPM drop and unlocks after RPM is stable.</p>
   </section>
   <section class="card"><h3>ENGINE RPM</h3>
    <label class="setline"><span>Ignition cycle</span><select id="ignitionCycle"><option value="360">360° · 1 pulse/rev</option><option value="720">720° · 1 pulse/2 rev</option></select></label>
@@ -337,7 +398,7 @@ try{if(/[?&]android=1(?:&|$)/.test(location.search)){document.documentElement.cl
 var S={connected:false,recording:false,sim:false,auto:false,device:null,server:null,live:null,cmd:null,status:null,lineBuf:'',statusBuf:'',lastT:0,omegaF:0,ow:[],tw:[],rpm:0,rrpm:0,speed:0,afr:0,hp:0,tq:0,alpha:0,hpMax:0,tqMax:0,runPower:[],runRpm:[],liveRpmPts:[],lastSampleT:0,simT:0,run201:false,wait201:false,done201:false,d201:0,t2010:0,t201last:0,maxS201:0,maxR201:0,rollerCalcPrimed:false,rollerStartupSamplesRemaining:0,rollerGuardLastDistinctRpm:0,rollerGuardLastDistinctMs:0,lastPlotRpm:0,smoothingLevel:1};
 var BLE={service:'d7a10001-7c35-4a6d-9f0e-2ea3117f1000',live:'d7a10002-7c35-4a6d-9f0e-2ea3117f1000',cmd:'d7a10003-7c35-4a6d-9f0e-2ea3117f1000',status:'d7a10005-7c35-4a6d-9f0e-2ea3117f1000'};
 var $=function(id){return document.getElementById(id)},dec=new TextDecoder(),enc=new TextEncoder();
-var cfgIds=['rollerD','rollerJ','maxRpm','maxSpeed','afrVMin','afrMin','afrVMax','afrMax','ignitionCycle','rpmLockout','autoSpeed','autoHp','autoAlpha'];
+var cfgIds=['rollerD','rollerJ','maxRpm','maxSpeed','afrVMin','afrMin','afrVMax','afrMax','afrDecelEps','ignitionCycle','rpmLockout','autoSpeed','autoHp','autoAlpha'];
 var runHistory=[],selectedRunIndex=-1,RUN_HISTORY_KEY='dynotl_mobile_runs_v2',RUN_COUNTER_KEY='dynotl_mobile_run_counter_v2';
 var OMEGA_EMA_K=0.15,ALPHA_WINDOW_N=10,ROLLER_STARTUP_SKIP_SAMPLES=4;
 var ROLLER_DISTINCT_EPS_RPM=0.5,ROLLER_JUMP_MIN_RPM=250.0,ROLLER_JUMP_RATIO=0.55,ROLLER_JUMP_MAX_DT_MS=300.0,ROLLER_JUMP_COOLDOWN_SAMPLES=2;
@@ -447,6 +508,7 @@ function sample(t,rr,r,v){
 
  S.lastT=t;S.alpha=alpha;S.rpm=r;S.rrpm=rr;S.speed=speed;S.afr=afr;S.hp=hp;S.tq=tq;
  updateLive();
+ if(window.BT_AFR_UPDATE)window.BT_AFR_UPDATE(t,r,afr,v);
 
  if(!S.recording&&S.auto&&speed>=n('autoSpeed',10)&&(hpTorqueSampleValid&&(hp>=n('autoHp',1)||Math.abs(alpha)>=n('autoAlpha',10))))startRun();
 
