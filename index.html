@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="vi">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
@@ -14,7 +14,9 @@
 <title>BT Speed Dyno</title>
 <style>
 :root{--bg:#040506;--panel:#0b0d10;--line:#252a30;--red:#ff6a00;--orange:#ff9f1c;--green:#37d45a;--blue:#3488ff;--text:#f3f5f7;--muted:#89939d;--nav:40px;--ctl:44px}
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;background:var(--bg);color:var(--text);font-family:Arial,sans-serif;overflow:hidden;touch-action:manipulation}
+*{box-sizing:border-box;-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
+html,body{margin:0;width:100%;height:100%;background:var(--bg);color:var(--text);font-family:Arial,sans-serif;overflow:hidden;touch-action:manipulation}
+input,textarea,select{user-select:text;-webkit-user-select:text}
 button,input,select{font:inherit}button{color:var(--text)}
 #app{width:100%;height:100%;background:var(--bg);display:grid;grid-template-rows:var(--nav) 1fr}
 @media(orientation:portrait){body{position:fixed;left:0;top:0;width:100vh;height:100vw;transform-origin:top left;transform:rotate(90deg) translateY(-100%)}}
@@ -964,6 +966,24 @@ function bindRunHistoryUI(){
 function setSaveStatus(text,cls){var e=$('settingsSaveStatus');if(!e)return;e.textContent=text;e.className=cls||''}
 function save(showStatus){try{if(showStatus)setSaveStatus('SAVING...','saving');var o={};cfgIds.forEach(function(id){o[id]=$(id).value});o.auto=$('autoStart').checked;o.smoothingLevel=S.smoothingLevel;localStorage.setItem('dynotl_mobile_v1',JSON.stringify(o));if(showStatus){setSaveStatus('SAVED','saved');setTimeout(function(){setSaveStatus('AUTO-SAVE ON','')},1400)}return true}catch(e){if(showStatus)setSaveStatus('SAVE ERROR','error');return false}}
 function load(){try{var o=JSON.parse(localStorage.getItem('dynotl_mobile_v1')||'{}');cfgIds.forEach(function(id){if(o[id]!=null)$(id).value=o[id]});S.auto=!!o.auto;S.smoothingLevel=(o.smoothingLevel===0||o.smoothingLevel===1||o.smoothingLevel===2)?o.smoothingLevel:1;$('autoStart').checked=S.auto;$('ctlAuto').classList.toggle('on',S.auto);syncSmoothingButtons()}catch(e){}}
+// Kiosk hardening: keep the UI appliance-like instead of browser-like.
+document.addEventListener('contextmenu',function(e){e.preventDefault()});
+document.addEventListener('dragstart',function(e){e.preventDefault()});
+document.addEventListener('selectstart',function(e){
+ var t=e.target,tag=t&&t.tagName;
+ if(tag!=='INPUT'&&tag!=='TEXTAREA'&&tag!=='SELECT')e.preventDefault();
+});
+document.addEventListener('keydown',function(e){
+ var k=(e.key||'').toUpperCase(),ctrl=e.ctrlKey||e.metaKey,shift=e.shiftKey;
+ if(
+   k==='F12' ||
+   (ctrl&&shift&&(k==='I'||k==='J'||k==='C')) ||
+   (ctrl&&(k==='U'||k==='S'||k==='P'||k==='O'||k==='L'||k==='T'||k==='N'||k==='W'))
+ ){
+   e.preventDefault();e.stopPropagation();return false;
+ }
+},true);
+
 document.querySelectorAll('nav button').forEach(function(b){b.onclick=function(){document.querySelectorAll('nav button').forEach(function(x){x.classList.remove('on')});document.querySelectorAll('.page').forEach(function(x){x.classList.remove('on')});b.classList.add('on');$(b.dataset.page).classList.add('on');setTimeout(drawAll,30)}})
 $('bleTop').onclick=connectBle;$('ctlBle').onclick=connectBle;$('ctlRun').onclick=startRun;$('ctlStop').onclick=stopRun;$('ctlAuto').onclick=toggleAuto;$('ctlSim').onclick=toggleSim;if($('btnSaveSettings'))$('btnSaveSettings').onclick=function(){save(true)};document.querySelectorAll('[data-smooth]').forEach(function(b){b.onclick=function(){setSmoothingLevel(this.dataset.smooth,true)}});$('run201').onclick=function(){reset201();S.wait201=true;$('state201').textContent='Waiting ≥ 1 km/h'};$('reset201').onclick=reset201;$('autoStart').onchange=function(){S.auto=this.checked;$('ctlAuto').classList.toggle('on',S.auto);save()}
 cfgIds.forEach(function(id){$(id).addEventListener('change',function(){save(false);if(id==='rpmFilterUs')pushRpmFilter()});$(id).addEventListener('input',function(){save(false)})});window.addEventListener('resize',drawAll);document.addEventListener('visibilitychange',function(){if(!document.hidden)drawAll()});load();restoreRunHistory();renderRunHistoryUI();bindRunHistoryUI();bindPowerChartTouch();reset201();try{console.log('BT Speed Dyno build P12')}catch(e){};setBle(false);try{if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(function(){})}catch(e){};setTimeout(drawAll,100);
