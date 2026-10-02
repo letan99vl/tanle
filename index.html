@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#050607">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -276,7 +279,7 @@ nav button.on{border-color:#ff7a00;background:linear-gradient(180deg,#4a2107,#1a
 <body>
 <div id="app">
 <header>
- <div class="brand">BT <b>SPEED</b> DYNO</div>
+ <div class="brand">BT <b>SPEED</b> DYNO <small id="buildTag" style="font:700 7px Arial;color:#66584d;margin-left:4px">P12</small></div>
  <nav>
   <button data-page="live" class="on">LIVE</button>
   <button data-page="power">HP/TOR</button>
@@ -522,8 +525,10 @@ function sample(t,rr,r,v){
  if(S.recording){
    if(hpTorqueSampleValid){
      var peakRpm=(r>0)?r:0;
-     if(hp>S.hpMax){S.hpMax=hp;S.hpMaxRpm=peakRpm}
-     if(tq>S.tqMax){S.tqMax=tq;S.tqMaxRpm=peakRpm}
+     var peakChanged=false;
+     if(hp>S.hpMax){S.hpMax=hp;S.hpMaxRpm=peakRpm;peakChanged=true}
+     if(tq>S.tqMax){S.tqMax=tq;S.tqMaxRpm=peakRpm;peakChanged=true}
+     if(peakChanged)updatePowerPeakUI(S.hpMax,S.tqMax,S.hpMaxRpm,S.tqMaxRpm)
      var plotX=(r>0)?r:rr;
      if(plotX>=S.lastPlotRpm){
        S.runPower.push([plotX,hp,tq,r>0?r:0]);
@@ -761,7 +766,14 @@ function pairedPowerPeaks(data){
  return out;
 }
 function deriveSavedPeakInfo(run){
- return pairedPowerPeaks(run&&run.power||[]);
+ var curve=pairedPowerPeaks(run&&run.power||[]);
+ var hp=+run.hpMax||0,tq=+run.tqMax||0,hpRpm=+run.hpMaxRpm||0,tqRpm=+run.tqMaxRpm||0;
+ return{
+   hp:(hp>0&&hpRpm>0)?hp:curve.hp,
+   tq:(tq>0&&tqRpm>0)?tq:curve.tq,
+   hpRpm:(hp>0&&hpRpm>0)?hpRpm:curve.hpRpm,
+   tqRpm:(tq>0&&tqRpm>0)?tqRpm:curve.tqRpm
+ };
 }
 function updatePowerPeakUI(maxHp,maxTq,hpRpm,tqRpm){
  var hp=$('powerMaxHp'),tq=$('powerMaxTq'),hpR=$('powerMaxHpRpm'),tqR=$('powerMaxTqRpm'),vals=$('powerVals');
@@ -871,12 +883,15 @@ function bindPowerChartTouch(){
 }
 function drawPower(){
  var c=$('powerCanvas'),g=setupCanvas(c),run=getSelectedRun(),raw0=S.recording?S.runPower:(run?run.power:[]),raw=normalizePowerData(raw0),d=buildPowerDisplayData(raw);
- var axisIsEngine=powerRunHasEngineRpm(run,raw),pk=pairedPowerPeaks(raw);
+ var axisIsEngine=powerRunHasEngineRpm(run,raw),pk;
+ if(S.recording){
+   pk={hp:+S.hpMax||0,tq:+S.tqMax||0,hpRpm:+S.hpMaxRpm||0,tqRpm:+S.tqMaxRpm||0};
+ }else if(run){
+   pk=deriveSavedPeakInfo(run);
+ }else{
+   pk={hp:0,tq:0,hpRpm:0,tqRpm:0};
+ }
  var maxHp=pk.hp,maxTq=pk.tq,hpRpm=pk.hpRpm,tqRpm=pk.tqRpm;
-
- // Peak value and RPM are always taken from the exact same raw power
- // sample that feeds this chart. This preserves RAW peak values while
- // preventing a peak number from becoming detached from its RPM.
  updatePowerPeakUI(maxHp,maxTq,hpRpm,tqRpm);
  var xMin=d&&d.length?Math.min.apply(null,d.map(function(a){return+a[0]})):0,xMax=d&&d.length?Math.max.apply(null,d.map(function(a){return+a[0]})):1;if(xMax<=xMin)xMax=xMin+1;
  var hpY=niceMax(maxHp*1.1),tqY=niceMax(maxTq*1.1),P=chartFrame(g,{xMin:xMin,xMax:xMax,xLabel:axisIsEngine?'ENGINE RPM':'ROLLER RPM',yMax:hpY,yLabel:'HP',yColor:'#ff6a00',right:{max:tqY,label:'TORQUE (Nm)',shortLabel:'Nm',color:'#ff9f1c'}});
@@ -920,8 +935,12 @@ function saveCurrentRun(){
  if(!S.runPower||S.runPower.length<2||!S.runRpm||S.runRpm.length<2)return;
  var seq=parseInt(localStorage.getItem(RUN_COUNTER_KEY)||'0',10)+1;localStorage.setItem(RUN_COUNTER_KEY,String(seq));
  var rpmMax=0,speedMax=0;S.runRpm.forEach(function(a){rpmMax=Math.max(rpmMax,+a[1]||0);speedMax=Math.max(speedMax,+a[3]||0)});
- var fixedPower=normalizePowerData(S.runPower),pk=pairedPowerPeaks(fixedPower),hpPeak=pk.hp,tqPeak=pk.tq;
- var item={seq:seq,timestamp:new Date().toLocaleString('vi-VN',{hour12:false}),ignitionCycle:$('ignitionCycle')?$('ignitionCycle').value:'360',power:fixedPower.map(function(a){return a.slice()}),rpm:S.runRpm.map(function(a){return a.slice()}),hpMax:hpPeak,tqMax:tqPeak,hpMaxRpm:pk.hpRpm||0,tqMaxRpm:pk.tqRpm||0,rpmMax:rpmMax,speedMax:speedMax};
+ var fixedPower=normalizePowerData(S.runPower),curvePk=pairedPowerPeaks(fixedPower);
+ var hpPeak=(+S.hpMax||0)>0?(+S.hpMax):curvePk.hp;
+ var tqPeak=(+S.tqMax||0)>0?(+S.tqMax):curvePk.tq;
+ var hpPeakRpm=(+S.hpMaxRpm||0)>0?(+S.hpMaxRpm):curvePk.hpRpm;
+ var tqPeakRpm=(+S.tqMaxRpm||0)>0?(+S.tqMaxRpm):curvePk.tqRpm;
+ var item={seq:seq,timestamp:new Date().toLocaleString('vi-VN',{hour12:false}),ignitionCycle:$('ignitionCycle')?$('ignitionCycle').value:'360',power:fixedPower.map(function(a){return a.slice()}),rpm:S.runRpm.map(function(a){return a.slice()}),hpMax:hpPeak,tqMax:tqPeak,hpMaxRpm:hpPeakRpm||0,tqMaxRpm:tqPeakRpm||0,rpmMax:rpmMax,speedMax:speedMax};
  runHistory.push(item);if(runHistory.length>10)runHistory.shift();selectedRunIndex=runHistory.length-1;persistRunHistory();renderRunHistoryUI()
 }
 function persistRunHistory(){try{localStorage.setItem(RUN_HISTORY_KEY,JSON.stringify(runHistory))}catch(e){}}
@@ -947,7 +966,7 @@ function save(showStatus){try{if(showStatus)setSaveStatus('SAVING...','saving');
 function load(){try{var o=JSON.parse(localStorage.getItem('dynotl_mobile_v1')||'{}');cfgIds.forEach(function(id){if(o[id]!=null)$(id).value=o[id]});S.auto=!!o.auto;S.smoothingLevel=(o.smoothingLevel===0||o.smoothingLevel===1||o.smoothingLevel===2)?o.smoothingLevel:1;$('autoStart').checked=S.auto;$('ctlAuto').classList.toggle('on',S.auto);syncSmoothingButtons()}catch(e){}}
 document.querySelectorAll('nav button').forEach(function(b){b.onclick=function(){document.querySelectorAll('nav button').forEach(function(x){x.classList.remove('on')});document.querySelectorAll('.page').forEach(function(x){x.classList.remove('on')});b.classList.add('on');$(b.dataset.page).classList.add('on');setTimeout(drawAll,30)}})
 $('bleTop').onclick=connectBle;$('ctlBle').onclick=connectBle;$('ctlRun').onclick=startRun;$('ctlStop').onclick=stopRun;$('ctlAuto').onclick=toggleAuto;$('ctlSim').onclick=toggleSim;if($('btnSaveSettings'))$('btnSaveSettings').onclick=function(){save(true)};document.querySelectorAll('[data-smooth]').forEach(function(b){b.onclick=function(){setSmoothingLevel(this.dataset.smooth,true)}});$('run201').onclick=function(){reset201();S.wait201=true;$('state201').textContent='Waiting ≥ 1 km/h'};$('reset201').onclick=reset201;$('autoStart').onchange=function(){S.auto=this.checked;$('ctlAuto').classList.toggle('on',S.auto);save()}
-cfgIds.forEach(function(id){$(id).addEventListener('change',function(){save(false);if(id==='rpmFilterUs')pushRpmFilter()});$(id).addEventListener('input',function(){save(false)})});window.addEventListener('resize',drawAll);document.addEventListener('visibilitychange',function(){if(!document.hidden)drawAll()});load();restoreRunHistory();renderRunHistoryUI();bindRunHistoryUI();bindPowerChartTouch();reset201();setBle(false);try{if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(function(){})}catch(e){};setTimeout(drawAll,100);
+cfgIds.forEach(function(id){$(id).addEventListener('change',function(){save(false);if(id==='rpmFilterUs')pushRpmFilter()});$(id).addEventListener('input',function(){save(false)})});window.addEventListener('resize',drawAll);document.addEventListener('visibilitychange',function(){if(!document.hidden)drawAll()});load();restoreRunHistory();renderRunHistoryUI();bindRunHistoryUI();bindPowerChartTouch();reset201();try{console.log('BT Speed Dyno build P12')}catch(e){};setBle(false);try{if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(function(){})}catch(e){};setTimeout(drawAll,100);
 })();
 </script>
 <script id="bt-speed-afr-module">
