@@ -1,4 +1,4 @@
-name: Build DynoTL Mobile APK
+name: Build BT Speed Dyno APK
 
 on:
   workflow_dispatch:
@@ -52,18 +52,23 @@ jobs:
           python3 /tmp/patch_safe.py
           base64 -d android/immediate_chooser_patch.py.gz.b64 | gzip -d > /tmp/patch_immediate.py
           python3 /tmp/patch_immediate.py
+          # BT Speed Dyno identity and BLE target.
+          sed -i "s/applicationId 'vn.dynotl.mobile'/applicationId 'vn.btspeed.dyno'/" android-work/app/build.gradle || true
+          sed -i 's/android:label="DynoTL Mobile"/android:label="BT Speed Dyno"/' android-work/app/src/main/AndroidManifest.xml || true
+          grep -rlIl 'DynoTL-Mobile' android-work/app/src/main 2>/dev/null | xargs -r sed -i 's/DynoTL-Mobile/BT Speed Dyno/g'
+          grep -rlIl 'DynoTL Mobile' android-work/app/src/main 2>/dev/null | xargs -r sed -i 's/DynoTL Mobile/BT Speed Dyno/g'
 
       - name: Build release APK
         working-directory: android-work
         run: gradle --no-daemon :app:assembleRelease
 
       - name: Rename APK
-        run: cp android-work/app/build/outputs/apk/release/app-release.apk DynoTL-Mobile-Safe.apk
+        run: cp android-work/app/build/outputs/apk/release/app-release.apk BT-Speed-Dyno-Safe.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: DynoTL-Mobile-Safe-APK
-          path: DynoTL-Mobile-Safe.apk
+          name: BT-Speed-Dyno-Safe-APK
+          path: BT-Speed-Dyno-Safe.apk
           if-no-files-found: error
           retention-days: 30

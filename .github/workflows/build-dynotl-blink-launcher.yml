@@ -1,4 +1,4 @@
-name: Build DynoTL from Exact Blink Launcher
+name: Build BT Speed Dyno from Exact Blink Launcher
 
 on:
   workflow_dispatch:
@@ -59,18 +59,18 @@ jobs:
           # Keep the same cache/user-agent behavior as the working Blink APK v11.
           sed -i 's#https://letan99vl.github.io/tanle/?android=1#https://letan99vl.github.io/tanle/?android=1\&v=12#' "$SRC"
           sed -i 's/WebSettings.LOAD_DEFAULT/WebSettings.LOAD_NO_CACHE/' "$SRC"
-          sed -i 's/BLINK-REDLEO-ANDROID\/1.1/BLINK-REDLEO-ANDROID\/1.4-v12/' "$SRC"
+          sed -i 's/BLINK-REDLEO-ANDROID\/1.1/BT-SPEED-DYNO-ANDROID\/1.0/' "$SRC"
           sed -i '/s.setCacheMode(WebSettings.LOAD_NO_CACHE);/a\            try { webView.clearCache(true); webView.clearHistory(); } catch (Throwable ignored) {}' "$SRC"
 
           # Make Android WebView scroll nested CSS pages reliably.
           sed -i '/new WebView(this);/a\        webView.setVerticalScrollBarEnabled(true);\n        webView.setHorizontalScrollBarEnabled(false);\n        webView.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);\n        try { webView.setNestedScrollingEnabled(true); } catch (Throwable ignored) {}' "$SRC"
 
           # DynoTL app identity: install beside Blink, never overwrite it.
-          sed -i "s/applicationId 'vn.blinkredleo.app'/applicationId 'vn.dynotl.mobile'/" android-build/app/build.gradle
-          sed -i 's/android:label="BLINK REDLEO"/android:label="DynoTL Mobile"/' android-build/app/src/main/AndroidManifest.xml
+          sed -i "s/applicationId 'vn.blinkredleo.app'/applicationId 'vn.btspeed.dyno'/" android-build/app/build.gradle
+          sed -i 's/android:label="BLINK REDLEO"/android:label="BT Speed Dyno"/' android-build/app/src/main/AndroidManifest.xml
 
           # Keep Blink picker/scan logic, change only BLE target identity and UUIDs.
-          sed -i 's/BLINK-REDLEO/DynoTL/g' "$SRC"
+          sed -i 's/BLINK-REDLEO/BT Speed Dyno/g' "$SRC"
           sed -i 's/afaf0001-7c35-4a6d-9f0e-2ea3117f1000/d7a10001-7c35-4a6d-9f0e-2ea3117f1000/g' "$SRC"
           sed -i 's/afaf0002-7c35-4a6d-9f0e-2ea3117f1000/d7a10002-7c35-4a6d-9f0e-2ea3117f1000/g' "$SRC"
           sed -i 's/afaf0003-7c35-4a6d-9f0e-2ea3117f1000/d7a10003-7c35-4a6d-9f0e-2ea3117f1000/g' "$SRC"
@@ -105,15 +105,15 @@ jobs:
 
       - name: Prepare APK
         run: |
-          cp android-build/app/build/outputs/apk/release/app-release.apk DynoTL-BlinkLauncher.apk
-          sha256sum DynoTL-BlinkLauncher.apk | tee DynoTL-BlinkLauncher.apk.sha256
+          cp android-build/app/build/outputs/apk/release/app-release.apk BT-Speed-Dyno.apk
+          sha256sum BT-Speed-Dyno.apk | tee BT-Speed-Dyno.apk.sha256
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: DynoTL-Exact-Blink-Launcher
+          name: BT-Speed-Dyno-APK
           path: |
-            DynoTL-BlinkLauncher.apk
-            DynoTL-BlinkLauncher.apk.sha256
+            BT-Speed-Dyno.apk
+            BT-Speed-Dyno.apk.sha256
           if-no-files-found: error
           retention-days: 30
