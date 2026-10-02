@@ -113,7 +113,7 @@ jobs:
         with:
           name: BT-Speed-Dyno-APK
           path: |
-            DynoTL-BlinkLauncher.apk
-            DynoTL-BlinkLauncher.apk.sha256
+            BT-Speed-Dyno.apk
+            BT-Speed-Dyno.apk.sha256
           if-no-files-found: error
           retention-days: 30
