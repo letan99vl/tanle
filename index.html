@@ -377,8 +377,8 @@ nav button.on{border-color:#ff7a00;background:linear-gradient(180deg,#4a2107,#1a
   </section>
   <section class="card"><h3>ENGINE RPM</h3>
    <label class="setline"><span>Ignition cycle</span><select id="ignitionCycle"><option value="360">360° · 1 pulse/rev</option><option value="720">720° · 1 pulse/2 rev</option></select></label>
-   <label class="setline"><span>RPM lockout (us)</span><input id="rpmLockout" type="number" min="50" max="10000" step="50" value="3500"></label>
-   <p class="note">Use 720° when the RPM pickup sees one ignition pulse every two crank revolutions. RPM lockout rejects pickup pulses that arrive too soon; it is stored in the ESP32.</p>
+   <label class="setline"><span>RPM pulse filter (us)</span><input id="rpmFilterUs" type="number" min="50" max="10000" step="50" value="250"></label>
+   <p class="note">Use 720° when the RPM pickup sees one ignition pulse every two crank revolutions. RPM pulse filter is the VIP ENGINE_MIN_PERIOD_US value: 250 us is the original VIP setting; larger values reject closer pickup pulses. The value is stored in the ESP32.</p>
   </section>
   <section class="card"><h3>AUTO RUN</h3>
    <label class="setline"><span>Auto start</span><input id="autoStart" type="checkbox"></label>
@@ -398,7 +398,7 @@ try{if(/[?&]android=1(?:&|$)/.test(location.search)){document.documentElement.cl
 var S={connected:false,recording:false,sim:false,auto:false,device:null,server:null,live:null,cmd:null,status:null,lineBuf:'',statusBuf:'',lastT:0,omegaF:0,ow:[],tw:[],rpm:0,rrpm:0,speed:0,afr:0,hp:0,tq:0,alpha:0,hpMax:0,tqMax:0,runPower:[],runRpm:[],liveRpmPts:[],lastSampleT:0,simT:0,run201:false,wait201:false,done201:false,d201:0,t2010:0,t201last:0,maxS201:0,maxR201:0,rollerCalcPrimed:false,rollerStartupSamplesRemaining:0,rollerGuardLastDistinctRpm:0,rollerGuardLastDistinctMs:0,lastPlotRpm:0,smoothingLevel:1};
 var BLE={service:'d7a10001-7c35-4a6d-9f0e-2ea3117f1000',live:'d7a10002-7c35-4a6d-9f0e-2ea3117f1000',cmd:'d7a10003-7c35-4a6d-9f0e-2ea3117f1000',status:'d7a10005-7c35-4a6d-9f0e-2ea3117f1000'};
 var $=function(id){return document.getElementById(id)},dec=new TextDecoder(),enc=new TextEncoder();
-var cfgIds=['rollerD','rollerJ','maxRpm','maxSpeed','afrVMin','afrMin','afrVMax','afrMax','afrDecelEps','ignitionCycle','rpmLockout','autoSpeed','autoHp','autoAlpha'];
+var cfgIds=['rollerD','rollerJ','maxRpm','maxSpeed','afrVMin','afrMin','afrVMax','afrMax','afrDecelEps','ignitionCycle','rpmFilterUs','autoSpeed','autoHp','autoAlpha'];
 var runHistory=[],selectedRunIndex=-1,RUN_HISTORY_KEY='dynotl_mobile_runs_v2',RUN_COUNTER_KEY='dynotl_mobile_run_counter_v2';
 var OMEGA_EMA_K=0.15,ALPHA_WINDOW_N=10,ROLLER_STARTUP_SKIP_SAMPLES=4;
 var ROLLER_DISTINCT_EPS_RPM=0.5,ROLLER_JUMP_MIN_RPM=250.0,ROLLER_JUMP_RATIO=0.55,ROLLER_JUMP_MAX_DT_MS=300.0,ROLLER_JUMP_COOLDOWN_SAMPLES=2;
@@ -417,10 +417,10 @@ function n(id,d){var v=parseFloat($(id).value);return isFinite(v)?v:d}
 function afrFromV(v){var v0=n('afrVMin',0),v1=n('afrVMax',3.15),a0=n('afrMin',10),a1=n('afrMax',20);if(v1===v0)return a0;return a0+(v-v0)*(a1-a0)/(v1-v0)}
 function ignitionMultiplier(){var e=$('ignitionCycle');return e&&e.value==='720'?2:1}
 function correctEngineRpm(raw){raw=+raw||0;return raw*ignitionMultiplier()}
-function pushRpmLockout(){
- if(!S.connected||!S.cmd||!$('rpmLockout'))return;
- var v=parseInt($('rpmLockout').value,10);if(!isFinite(v))v=3500;v=Math.max(50,Math.min(10000,v));
- $('rpmLockout').value=String(v);save(false);writeCmd('RPMLOCK '+v)
+function pushRpmFilter(){
+ if(!S.connected||!S.cmd||!$('rpmFilterUs'))return;
+ var v=parseInt($('rpmFilterUs').value,10);if(!isFinite(v))v=250;v=Math.max(50,Math.min(10000,v));
+ $('rpmFilterUs').value=String(v);save(false);writeCmd('RPMFILTER '+v)
 }
 // PC J_DIV10 is the active torque mode in DynoTL Mobile.
 // HP/RPM torque helper intentionally removed to prevent accidental fallback.
@@ -435,14 +435,14 @@ function setBle(on,msg){S.connected=on;$('bleStatus').textContent=msg||(on?'BLE 
 async function connectBle(){if(S.connected){disconnectBle();return}if(!navigator.bluetooth){alert('Web Bluetooth unavailable. On iPhone open this HTTPS page in Bluefy or another Web Bluetooth compatible browser.');return}try{$('bleStatus').textContent='SCAN BLE';S.device=await navigator.bluetooth.requestDevice({
   acceptAllDevices:true,
   optionalServices:[BLE.service]
-});S.device.addEventListener('gattserverdisconnected',function(){setBle(false,'BLE LOST')});S.server=await S.device.gatt.connect();var sv=await S.server.getPrimaryService(BLE.service);S.live=await sv.getCharacteristic(BLE.live);S.cmd=await sv.getCharacteristic(BLE.cmd);S.status=await sv.getCharacteristic(BLE.status);await S.live.startNotifications();S.live.addEventListener('characteristicvaluechanged',onLive);await S.status.startNotifications();S.status.addEventListener('characteristicvaluechanged',onStatus);setBle(true,'BT Speed Dyno Hardware');writeCmd('STATUS');setTimeout(function(){writeCmd('RPMLOCK?')},80)}catch(e){if(!e||e.name!=='NotFoundError')alert('BLE error: '+(e&&e.message||e));setBle(false)}}
+});S.device.addEventListener('gattserverdisconnected',function(){setBle(false,'BLE LOST')});S.server=await S.device.gatt.connect();var sv=await S.server.getPrimaryService(BLE.service);S.live=await sv.getCharacteristic(BLE.live);S.cmd=await sv.getCharacteristic(BLE.cmd);S.status=await sv.getCharacteristic(BLE.status);await S.live.startNotifications();S.live.addEventListener('characteristicvaluechanged',onLive);await S.status.startNotifications();S.status.addEventListener('characteristicvaluechanged',onStatus);setBle(true,'BT Speed Dyno Hardware');writeCmd('STATUS');setTimeout(function(){writeCmd('RPMFILTER?')},80)}catch(e){if(!e||e.name!=='NotFoundError')alert('BLE error: '+(e&&e.message||e));setBle(false)}}
 function disconnectBle(){try{if(S.device&&S.device.gatt.connected)S.device.gatt.disconnect()}catch(e){}setBle(false)}
 async function writeCmd(t){if(!S.cmd)return;var b=enc.encode(t);if(S.cmd.writeValueWithoutResponse)await S.cmd.writeValueWithoutResponse(b);else await S.cmd.writeValue(b)}
 function onStatus(e){try{
  var d=e.target.value,txt=dec.decode(new Uint8Array(d.buffer,d.byteOffset,d.byteLength));S.statusBuf+=txt;var i;
  while((i=S.statusBuf.indexOf('\n'))>=0){
    var line=S.statusBuf.slice(0,i).replace(/\r/g,'').trim();S.statusBuf=S.statusBuf.slice(i+1);if(!line)continue;
-   var m=/RPMLOCK=(\d+)/i.exec(line);if(m&&$('rpmLockout')){$('rpmLockout').value=String(Math.max(50,Math.min(10000,+m[1]||3500)));save(false)}
+   var m=/RPM(?:FILTER|LOCK)=(\d+)/i.exec(line);if(m&&$('rpmFilterUs')){$('rpmFilterUs').value=String(Math.max(50,Math.min(10000,+m[1]||250)));save(false)}
    if(/BT SPEED DYNO READY/i.test(line))$('bleStatus').textContent='BT SPEED DYNO';else if(/ERR/i.test(line))$('bleStatus').textContent=line;
  }
 }catch(x){}}
@@ -821,7 +821,7 @@ function save(showStatus){try{if(showStatus)setSaveStatus('SAVING...','saving');
 function load(){try{var o=JSON.parse(localStorage.getItem('dynotl_mobile_v1')||'{}');cfgIds.forEach(function(id){if(o[id]!=null)$(id).value=o[id]});S.auto=!!o.auto;S.smoothingLevel=(o.smoothingLevel===0||o.smoothingLevel===1||o.smoothingLevel===2)?o.smoothingLevel:1;$('autoStart').checked=S.auto;$('ctlAuto').classList.toggle('on',S.auto);syncSmoothingButtons()}catch(e){}}
 document.querySelectorAll('nav button').forEach(function(b){b.onclick=function(){document.querySelectorAll('nav button').forEach(function(x){x.classList.remove('on')});document.querySelectorAll('.page').forEach(function(x){x.classList.remove('on')});b.classList.add('on');$(b.dataset.page).classList.add('on');setTimeout(drawAll,30)}})
 $('bleTop').onclick=connectBle;$('ctlBle').onclick=connectBle;$('ctlRun').onclick=startRun;$('ctlStop').onclick=stopRun;$('ctlAuto').onclick=toggleAuto;$('ctlSim').onclick=toggleSim;if($('btnSaveSettings'))$('btnSaveSettings').onclick=function(){save(true)};document.querySelectorAll('[data-smooth]').forEach(function(b){b.onclick=function(){setSmoothingLevel(this.dataset.smooth,true)}});$('run201').onclick=function(){reset201();S.wait201=true;$('state201').textContent='Waiting ≥ 1 km/h'};$('reset201').onclick=reset201;$('autoStart').onchange=function(){S.auto=this.checked;$('ctlAuto').classList.toggle('on',S.auto);save()}
-cfgIds.forEach(function(id){$(id).addEventListener('change',function(){save(false);if(id==='rpmLockout')pushRpmLockout()});$(id).addEventListener('input',function(){save(false)})});window.addEventListener('resize',drawAll);document.addEventListener('visibilitychange',function(){if(!document.hidden)drawAll()});load();restoreRunHistory();renderRunHistoryUI();bindRunHistoryUI();reset201();setBle(false);try{if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(function(){})}catch(e){};setTimeout(drawAll,100);
+cfgIds.forEach(function(id){$(id).addEventListener('change',function(){save(false);if(id==='rpmFilterUs')pushRpmFilter()});$(id).addEventListener('input',function(){save(false)})});window.addEventListener('resize',drawAll);document.addEventListener('visibilitychange',function(){if(!document.hidden)drawAll()});load();restoreRunHistory();renderRunHistoryUI();bindRunHistoryUI();reset201();setBle(false);try{if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(function(){})}catch(e){};setTimeout(drawAll,100);
 })();
 </script>
 <script id="bt-speed-afr-module">
