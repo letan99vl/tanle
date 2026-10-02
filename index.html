@@ -792,15 +792,67 @@ function drawPowerTouch(g,P,d,xMin,xMax,hpY,tqY,axisIsEngine){
  x.fillStyle='#ffc15a';x.fillText('TOR '+tq.toFixed(1)+' Nm',bx+8,by+41);
  x.restore();
 }
+function powerPointerLocalX(c,ev){
+ var cw=Math.max(1,c.clientWidth||1);
+
+ // Best path: project the viewport pointer onto the transformed
+ // canvas local X edge. This remains correct when the whole app
+ // is rotated 90 degrees in portrait mode.
+ try{
+   if(c.getBoxQuads){
+     var qs=c.getBoxQuads({box:'border'}),q=qs&&qs[0];
+     if(q){
+       var vx=q.p2.x-q.p1.x,vy=q.p2.y-q.p1.y,len2=vx*vx+vy*vy;
+       if(len2>0){
+         var t=((ev.clientX-q.p1.x)*vx+(ev.clientY-q.p1.y)*vy)/len2;
+         t=Math.max(0,Math.min(1,t));
+         return t*cw;
+       }
+     }
+   }
+ }catch(e){}
+
+ var r=c.getBoundingClientRect(),bodyTransform='none';
+ try{bodyTransform=getComputedStyle(document.body).transform||'none'}catch(e){}
+ var portrait=false;
+ try{portrait=!!(window.matchMedia&&window.matchMedia('(orientation: portrait)').matches)}catch(e){}
+
+ if(portrait&&bodyTransform!=='none'){
+   // body: rotate(90deg) translateY(-100%)
+   // local canvas X becomes viewport Y after the rotation.
+   var ty=(ev.clientY-r.top)/(r.height||1);
+   ty=Math.max(0,Math.min(1,ty));
+   return ty*cw;
+ }
+
+ var tx=(ev.clientX-r.left)/(r.width||1);
+ tx=Math.max(0,Math.min(1,tx));
+ return tx*cw;
+}
 function bindPowerChartTouch(){
  var c=$('powerCanvas');if(!c||c._btPowerBound)return;c._btPowerBound=true;
- c.addEventListener('pointerdown',function(ev){
+ var dragging=false;
+ function pick(ev){
    var h=S.powerHit;if(!h||!h.P||!(h.xMax>h.xMin))return;
-   var r=c.getBoundingClientRect(),px=ev.clientX-r.left;
+   var px=powerPointerLocalX(c,ev);
    px=Math.max(h.P.l,Math.min(h.P.r,px));
    S.powerPickX=h.xMin+(px-h.P.l)/h.P.w*(h.xMax-h.xMin);
    drawPower();
+ }
+ c.addEventListener('pointerdown',function(ev){
+   dragging=true;
+   try{c.setPointerCapture(ev.pointerId)}catch(e){}
+   pick(ev);
  });
+ c.addEventListener('pointermove',function(ev){
+   if(!dragging)return;
+   pick(ev);
+ });
+ c.addEventListener('pointerup',function(ev){
+   dragging=false;
+   try{c.releasePointerCapture(ev.pointerId)}catch(e){}
+ });
+ c.addEventListener('pointercancel',function(){dragging=false});
 }
 function drawPower(){
  var c=$('powerCanvas'),g=setupCanvas(c),run=getSelectedRun(),raw0=S.recording?S.runPower:(run?run.power:[]),raw=normalizePowerData(raw0),d=buildPowerDisplayData(raw);
