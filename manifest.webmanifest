@@ -1,9 +1,9 @@
 {
-  "name":"Dyno TL Mobile",
-  "short_name":"Dyno TL",
+  "name":"BT Speed Dyno",
+  "short_name":"BT Speed",
   "start_url":"./",
   "display":"fullscreen",
   "orientation":"landscape",
-  "background_color":"#040506",
-  "theme_color":"#040506"
+  "background_color":"#050505",
+  "theme_color":"#ff6a00"
 }
