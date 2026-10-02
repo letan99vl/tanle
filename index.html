@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <title>BT Speed Dyno</title>
 <style>
-:root{--bg:#040506;--panel:#0b0d10;--line:#252a30;--red:#ff3038;--orange:#ff9f1c;--green:#37d45a;--blue:#3488ff;--text:#f3f5f7;--muted:#89939d;--nav:40px;--ctl:44px}
+:root{--bg:#040506;--panel:#0b0d10;--line:#252a30;--red:#ff6a00;--orange:#ff9f1c;--green:#37d45a;--blue:#3488ff;--text:#f3f5f7;--muted:#89939d;--nav:40px;--ctl:44px}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;background:var(--bg);color:var(--text);font-family:Arial,sans-serif;overflow:hidden;touch-action:manipulation}
 button,input,select{font:inherit}button{color:var(--text)}
 #app{width:100%;height:100%;background:var(--bg);display:grid;grid-template-rows:var(--nav) 1fr}
@@ -25,14 +25,14 @@ main{display:none;min-height:0;overflow:hidden}.page.on{display:block;height:100
 #live{padding:6px 8px calc(var(--ctl) + 8px)}
 .livegrid{height:100%;display:grid;grid-template-columns:1fr minmax(170px,.55fr) 1fr;gap:7px;min-height:0}
 .gauge,.centerbox,.chartbox,.card{border:1px solid var(--line);background:linear-gradient(180deg,#0b0d10,#060709);border-radius:12px;min-height:0;position:relative;overflow:hidden}
-.gauge{display:flex;flex-direction:column;align-items:center;justify-content:center}.gauge h3{margin:0 0 6px;font-size:14px;color:#9ca6b0}.big{font-size:clamp(54px,11vh,112px);line-height:.9;font-weight:900;text-shadow:0 0 18px #ff303844}.unit{margin-top:8px;color:#8390a0;font-size:15px}.scale{position:absolute;left:8%;right:8%;bottom:10%;height:7px;border-radius:99px;background:#171b20;overflow:hidden}.scale i{display:block;height:100%;width:0;background:linear-gradient(90deg,#772025,var(--red));transition:width .08s linear}
+.gauge{display:flex;flex-direction:column;align-items:center;justify-content:center}.gauge h3{margin:0 0 6px;font-size:14px;color:#9ca6b0}.big{font-size:clamp(54px,11vh,112px);line-height:.9;font-weight:900;text-shadow:0 0 18px #ff6a0044}.unit{margin-top:8px;color:#8390a0;font-size:15px}.scale{position:absolute;left:8%;right:8%;bottom:10%;height:7px;border-radius:99px;background:#171b20;overflow:hidden}.scale i{display:block;height:100%;width:0;background:linear-gradient(90deg,#772025,var(--red));transition:width .08s linear}
 .centerbox{display:grid;grid-template-rows:1fr 1fr 1fr}.kpi{display:flex;flex-direction:column;align-items:center;justify-content:center;border-bottom:1px solid #191d21}.kpi:last-child{border:0}.kpi label{font-size:11px;color:#8d98a4;font-weight:800}.kpi strong{font-size:clamp(29px,6vh,58px);line-height:1;margin-top:3px}.kpi.hp strong{color:var(--red)}.kpi.tq strong{color:var(--orange)}.kpi.afr strong{color:#fff}
 .controls{position:fixed;left:50%;bottom:4px;transform:translateX(-50%);width:min(620px,calc(100% - 12px));height:var(--ctl);padding:4px;display:flex;gap:4px;border:1px solid #272d33;border-radius:12px;background:#090b0dee;backdrop-filter:blur(10px);z-index:20}
 .controls button{flex:1;min-width:0;border:1px solid #313840;border-radius:8px;background:#111419;font-size:10px;font-weight:900}.controls .go{border-color:#7d2a30;background:#251013}.controls .stop{color:#ff6c73;border-color:#6d282d}.controls .auto.on{color:#ffc56b;border-color:#80521c;background:#22170a}
 .chartpage{padding:6px}.chartbox{height:100%;display:grid;grid-template-rows:34px 1fr;padding:4px 6px 6px}.charthead{display:flex;align-items:center;justify-content:space-between;gap:6px;color:#9aa4ae;font-size:10px;font-weight:900;letter-spacing:.5px}.charthead .vals{font-size:9px;color:#c4cad0;font-weight:700}.chartwrap{min-height:0;position:relative}canvas{width:100%!important;height:100%!important;display:block}
 #test201,#settings{overflow:auto;padding:6px}.twocol{display:grid;grid-template-columns:1fr 1fr;gap:6px}.card{padding:10px}.card h2{font-size:13px;margin:0 0 8px}.metricgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.metric{border:1px solid #252a30;border-radius:9px;background:#080a0c;padding:8px}.metric span{display:block;color:#84909a;font-size:9px}.metric b{display:block;font-size:20px;margin-top:4px}
 .row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:6px 0}.row label{font-size:10px;color:#b5bdc5}.row input,.row select{height:30px;border:1px solid #303840;border-radius:6px;background:#0b0e11;color:#fff;padding:0 7px;max-width:110px}.row button{height:32px;border:1px solid #343b43;border-radius:7px;background:#101419;padding:0 10px;font-size:10px;font-weight:800}
-.settingsgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.settingsgrid .card{overflow:auto}.settingsgrid h3{font-size:11px;margin:0 0 7px;color:#ff555c}.setline{display:grid;grid-template-columns:1fr 88px;gap:7px;align-items:center;margin:6px 0;font-size:10px;color:#aab4bd}.setline input,.setline select{width:100%;height:29px;border:1px solid #303840;border-radius:6px;background:#0b0e11;color:#fff;padding:0 6px}
+.settingsgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.settingsgrid .card{overflow:auto}.settingsgrid h3{font-size:11px;margin:0 0 7px;color:#ff8126}.setline{display:grid;grid-template-columns:1fr 88px;gap:7px;align-items:center;margin:6px 0;font-size:10px;color:#aab4bd}.setline input,.setline select{width:100%;height:29px;border:1px solid #303840;border-radius:6px;background:#0b0e11;color:#fff;padding:0 6px}
 .note{font-size:9px;color:#77828c;line-height:1.4}.good{color:#7de195}.bad{color:#ff7078}
 @media(max-height:430px){:root{--nav:36px;--ctl:40px}nav button{height:28px;min-width:61px;font-size:9px}.brand{font-size:10px}.pill{height:26px}.mini{height:28px}.big{font-size:clamp(44px,10vh,82px)}.gauge h3{font-size:11px}.unit{font-size:12px}.kpi strong{font-size:clamp(24px,5.5vh,44px)}.controls button{font-size:9px}.settingsgrid{grid-template-columns:repeat(3,1fr)}}
 </style>
@@ -133,7 +133,7 @@ main{display:none;min-height:0;overflow:hidden}.page.on{display:block;height:100
 .mobile-chart-legend{height:22px;display:flex;align-items:center;justify-content:center;gap:11px;border-top:1px solid #11161a;border-bottom:1px solid #11161a;background:#07090b;overflow:hidden;white-space:nowrap}
 .mobile-chart-legend .lg{position:relative;padding-left:15px;font:700 7px Arial,sans-serif;color:#adb5bd;letter-spacing:.2px}
 .mobile-chart-legend .lg:before{content:"";position:absolute;left:0;top:50%;width:11px;height:2px;transform:translateY(-50%);border-radius:2px}
-.mobile-chart-legend .hp:before,.mobile-chart-legend .erpm:before{background:#ff3038}
+.mobile-chart-legend .hp:before,.mobile-chart-legend .erpm:before{background:#ff6a00}
 .mobile-chart-legend .tq:before{background:#ff9f1c}
 .mobile-chart-legend .rrpm:before{background:#37d45a}
 .mobile-chart-legend .spd:before{background:#d3d6da}
@@ -162,7 +162,7 @@ main{display:none;min-height:0;overflow:hidden}.page.on{display:block;height:100
 }
 </style>
 <style id="compare-run-colors-v3">
-.compare-run-chip{--run:#ff4d57}
+.compare-run-chip{--run:#ff7a00}
 .compare-run-chip:nth-child(2){--run:#40c4ff}
 .compare-run-chip:nth-child(3){--run:#ffd740}
 .compare-run-chip:nth-child(4){--run:#69f0ae}
@@ -208,7 +208,7 @@ main{display:none;min-height:0;overflow:hidden}.page.on{display:block;height:100
 .power-peak span{font:800 7px Arial,sans-serif;letter-spacing:.55px;color:#79838d;white-space:nowrap}
 .power-peak b{font:900 17px Arial,sans-serif;line-height:1;color:#f3f5f7;white-space:nowrap}
 .power-peak em{font:800 7px Arial,sans-serif;color:#7c858e;font-style:normal}
-.hp-peak{border-color:#4d1b1e}.hp-peak b{color:#ff444c}
+.hp-peak{border-color:#4d1b1e}.hp-peak b{color:#ff7a00}
 .tq-peak{border-color:#4c3518}.tq-peak b{color:#ffad36}
 @media(max-height:430px){
  #power .power-chart-box{grid-template-rows:27px 25px 19px minmax(0,1fr)!important}
@@ -754,17 +754,17 @@ function drawPower(){
  if(!S.recording&&run){if((+run.hpMax||0)>maxHp)maxHp=+run.hpMax||0;if((+run.tqMax||0)>maxTq)maxTq=+run.tqMax||0}
  updatePowerPeakUI(maxHp,maxTq);
  var xMin=d&&d.length?Math.min.apply(null,d.map(function(a){return+a[0]})):0,xMax=d&&d.length?Math.max.apply(null,d.map(function(a){return+a[0]})):1;if(xMax<=xMin)xMax=xMin+1;
- var hpY=niceMax(maxHp*1.1),tqY=niceMax(maxTq*1.1),P=chartFrame(g,{xMin:xMin,xMax:xMax,xLabel:'ENGINE RPM / ROLLER RPM',yMax:hpY,yLabel:'HP',yColor:'#ff3038',right:{max:tqY,label:'TORQUE (Nm)',shortLabel:'Nm',color:'#ff9f1c'}});
+ var hpY=niceMax(maxHp*1.1),tqY=niceMax(maxTq*1.1),P=chartFrame(g,{xMin:xMin,xMax:xMax,xLabel:'ENGINE RPM / ROLLER RPM',yMax:hpY,yLabel:'HP',yColor:'#ff6a00',right:{max:tqY,label:'TORQUE (Nm)',shortLabel:'Nm',color:'#ff9f1c'}});
  if(!d||d.length<2){chartEmpty(g,'NO SAVED RUN DATA');return}
- plotSeries(g,P,d,function(a){return+a[0]},function(a){return+a[1]},xMin,xMax,0,hpY,'#ff3038',1.8);plotSeries(g,P,d,function(a){return+a[0]},function(a){return+a[2]},xMin,xMax,0,tqY,'#ff9f1c',1.8)
+ plotSeries(g,P,d,function(a){return+a[0]},function(a){return+a[1]},xMin,xMax,0,hpY,'#ff6a00',1.8);plotSeries(g,P,d,function(a){return+a[0]},function(a){return+a[2]},xMin,xMax,0,tqY,'#ff9f1c',1.8)
 }
 function drawRpm(){
  var c=$('rpmCanvas'),g=setupCanvas(c),run=getSelectedRun(),d=S.recording?S.runRpm:(run?run.rpm:[]);
- if(!d||!d.length){var P0=chartFrame(g,{xMin:0,xMax:1,xLabel:'TIME (s)',yMax:n('maxRpm',16000),yLabel:'RPM',yColor:'#ff4c52',right:{max:n('maxSpeed',160),label:'SPEED km/h',shortLabel:'km/h',color:'#d3d6da'},right2:{min:10,max:20,label:'AFR',shortLabel:'AFR',color:'#3488ff'}});chartEmpty(g,'NO SAVED RUN DATA');return}
+ if(!d||!d.length){var P0=chartFrame(g,{xMin:0,xMax:1,xLabel:'TIME (s)',yMax:n('maxRpm',16000),yLabel:'RPM',yColor:'#ff7a00',right:{max:n('maxSpeed',160),label:'SPEED km/h',shortLabel:'km/h',color:'#d3d6da'},right2:{min:10,max:20,label:'AFR',shortLabel:'AFR',color:'#3488ff'}});chartEmpty(g,'NO SAVED RUN DATA');return}
  var t0=+d[0][0],td=d.map(function(a){return[(+a[0]-t0),+a[1],+a[2],+a[3],+a[4]]}),xMax=Math.max(1,td[td.length-1][0]),rpmY=niceMax(Math.max(1000,Math.max.apply(null,td.map(function(a){return Math.max(a[1]||0,a[2]||0)})))*1.05),speedY=niceMax(Math.max(20,Math.max.apply(null,td.map(function(a){return a[3]||0})))*1.08);
- var P=chartFrame(g,{xMin:0,xMax:xMax,xLabel:'TIME (s)',xFmt:function(v){return v.toFixed(v<10?1:0)},yMax:rpmY,yLabel:'RPM',yColor:'#ff4c52',right:{max:speedY,label:'SPEED km/h',shortLabel:'km/h',color:'#d3d6da'},right2:{min:10,max:20,label:'AFR',shortLabel:'AFR',color:'#3488ff'}});
+ var P=chartFrame(g,{xMin:0,xMax:xMax,xLabel:'TIME (s)',xFmt:function(v){return v.toFixed(v<10?1:0)},yMax:rpmY,yLabel:'RPM',yColor:'#ff7a00',right:{max:speedY,label:'SPEED km/h',shortLabel:'km/h',color:'#d3d6da'},right2:{min:10,max:20,label:'AFR',shortLabel:'AFR',color:'#3488ff'}});
 
- plotSeries(g,P,td,function(a){return a[0]},function(a){return a[1]},0,xMax,0,rpmY,'#ff4c52',1.7);
+ plotSeries(g,P,td,function(a){return a[0]},function(a){return a[1]},0,xMax,0,rpmY,'#ff7a00',1.7);
  plotSeries(g,P,td,function(a){return a[0]},function(a){return a[2]},0,xMax,0,rpmY,'#37d45a',1.4);
  plotSeries(g,P,td,function(a){return a[0]},function(a){return a[3]},0,xMax,0,speedY,'#d3d6da',1.4);
  plotSeries(g,P,td,function(a){return a[0]},function(a){return a[4]},0,xMax,10,20,'#3488ff',1.7)
@@ -779,11 +779,11 @@ function compareSeriesFor(run,metric){
 function drawCompare(){
  var c=$('compareCanvas');if(!c)return;var g=setupCanvas(c),idxs=getCompareIndices(),metric=$('compareMetric')?$('compareMetric').value:'hp',sets=[],all=[];
  idxs.forEach(function(idx){var r=runHistory[idx];if(!r)return;var d=compareSeriesFor(r,metric);sets.push({run:r,data:d});all=all.concat(d)});
- var yLabel=metric==='hp'?'POWER (HP)':metric==='tq'?'TORQUE (Nm)':metric==='speed'?'SPEED (km/h)':'AFR',yColor=metric==='tq'?'#ff9f1c':metric==='afr'?'#3488ff':metric==='speed'?'#d3d6da':'#ff3038';
+ var yLabel=metric==='hp'?'POWER (HP)':metric==='tq'?'TORQUE (Nm)':metric==='speed'?'SPEED (km/h)':'AFR',yColor=metric==='tq'?'#ff9f1c':metric==='afr'?'#3488ff':metric==='speed'?'#d3d6da':'#ff6a00';
  var xMin=all.length?Math.min.apply(null,all.map(function(a){return a[0]})):0,xMax=all.length?Math.max.apply(null,all.map(function(a){return a[0]})):1;if(xMax<=xMin)xMax=xMin+1;
  var yMin=metric==='afr'?10:0,yMax=metric==='afr'?20:niceMax(Math.max(1,all.length?Math.max.apply(null,all.map(function(a){return a[1]})):1)*1.1);
  var P=chartFrame(g,{xMin:xMin,xMax:xMax,xLabel:'ENGINE RPM / ROLLER RPM',yMin:yMin,yMax:yMax,yLabel:yLabel,yColor:yColor});
- var pal=['#ff4d57','#40c4ff','#ffd740','#69f0ae','#b388ff'];
+ var pal=['#ff7a00','#40c4ff','#ffd740','#69f0ae','#b388ff'];
  if(sets.length<2){chartEmpty(g,'SELECT 2–5 SAVED RUNS');return}
  sets.forEach(function(s,i){plotSeries(g,P,s.data,function(a){return a[0]},function(a){return a[1]},xMin,xMax,yMin,yMax,pal[i%pal.length],1.8)})
 }
