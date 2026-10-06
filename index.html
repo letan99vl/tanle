@@ -138,8 +138,8 @@ main{display:none;min-height:0;overflow:hidden}.page.on{display:block;height:100
 .mobile-chart-legend{height:22px;display:flex;align-items:center;justify-content:center;gap:11px;border-top:1px solid #11161a;border-bottom:1px solid #11161a;background:#07090b;overflow:hidden;white-space:nowrap}
 .mobile-chart-legend .lg{position:relative;padding-left:15px;font:700 7px Arial,sans-serif;color:#adb5bd;letter-spacing:.2px}
 .mobile-chart-legend .lg:before{content:"";position:absolute;left:0;top:50%;width:11px;height:2px;transform:translateY(-50%);border-radius:2px}
-.mobile-chart-legend .hp:before,.mobile-chart-legend .erpm:before{background:#ff6a00}
-.mobile-chart-legend .tq:before{background:#ff9f1c}
+.mobile-chart-legend .hp:before,.mobile-chart-legend .erpm:before{background:#ff3b30}
+.mobile-chart-legend .tq:before{background:#ffd400}
 .mobile-chart-legend .rrpm:before{background:#37d45a}
 .mobile-chart-legend .spd:before{background:#d3d6da}
 .mobile-chart-legend .afr:before{background:#3488ff}
@@ -214,8 +214,8 @@ main{display:none;min-height:0;overflow:hidden}.page.on{display:block;height:100
 .power-peak b{font:900 17px Arial,sans-serif;line-height:1;color:#f3f5f7;white-space:nowrap;align-self:end}
 .power-peak em{font:800 7px Arial,sans-serif;color:#7c858e;font-style:normal;align-self:end}
 .power-peak .peak-rpm{grid-column:1/-1;display:block;width:100%;min-width:88px;text-align:center;font:900 8px Arial,sans-serif;color:#d7dce1;letter-spacing:.3px;white-space:nowrap;line-height:1.1;overflow:visible}
-.hp-peak{border-color:#4d1b1e}.hp-peak b{color:#ff7a00}
-.tq-peak{border-color:#4c3518}.tq-peak b{color:#ffad36}
+.hp-peak{border-color:#4d1b1e}.hp-peak b{color:#ff3b30}
+.tq-peak{border-color:#4c3518}.tq-peak b{color:#ffd400}
 @media(max-height:430px){
  #power .power-chart-box{grid-template-rows:27px 33px 19px minmax(0,1fr)!important}
  .power-peak-strip{height:33px;padding:1px 3px}
@@ -234,15 +234,15 @@ html.android-app #settings,body.android-app #settings{overflow-y:scroll!importan
 html,body,#app{background:#050505}
 body{background:radial-gradient(circle at 50% -30%,rgba(255,106,0,.16),transparent 45%),linear-gradient(180deg,#050505,#090704)}
 header{border-bottom-color:#342114;background:linear-gradient(180deg,#0b0907,#060606)}
-.brand{font-style:italic;letter-spacing:1.1px}.brand b{color:#ff7a00}
+.brand{font-style:italic;letter-spacing:1.1px}.brand b{color:#ff3b30}
 nav{overflow-x:auto;justify-content:flex-start;scrollbar-width:none}nav::-webkit-scrollbar{display:none}
 nav button{min-width:58px;border-color:#33271f;background:#0d0b09}
-nav button.on{border-color:#ff7a00;background:linear-gradient(180deg,#4a2107,#1a0d04);box-shadow:0 0 18px rgba(255,106,0,.16)}
+nav button.on{border-color:#ff3b30;background:linear-gradient(180deg,#4a2107,#1a0d04);box-shadow:0 0 18px rgba(255,106,0,.16)}
 .pill.ok{color:#ffbd7e;border-color:#8a430f}.mini.red,.controls .stop{color:#ff9d62;border-color:#6f330c}
 .gauge,.centerbox,.chartbox,.card{border-color:#302117;background:linear-gradient(180deg,#0d0c0b,#070707)}
 .scale i{background:linear-gradient(90deg,#6c2a00,#ff6a00)}
 .controls{border-color:#392619;background:#090705ee}.controls .go{border-color:#8d430e;background:#261205}.controls .auto.on{color:#ffd19e;border-color:#8b4c14;background:#211005}
-.settingsgrid h3{color:#ff8126}.hp-peak{border-color:#6e3510}.hp-peak b{color:#ff7a00}.tq-peak{border-color:#5c461e}.tq-peak b{color:#ffc15a}
+.settingsgrid h3{color:#ff8126}.hp-peak{border-color:#6e3510}.hp-peak b{color:#ff3b30}.tq-peak{border-color:#5c461e}.tq-peak b{color:#ffc15a}
 #live .live-title-banner span{color:#fff5eb}
 #live .live-monitor-head{border-color:#4a2915;background:linear-gradient(105deg,#0f0b08,#060606 50%,#100b07)}
 #live .live-head-slashes{background:repeating-linear-gradient(130deg,transparent 0 3px,#ff6a00 3px 5px)}
@@ -289,7 +289,7 @@ input[type="number"][data-app-numpad="1"]::-webkit-inner-spin-button{
   margin:0;
 }
 input[type="number"][data-app-numpad="1"].app-num-active{
-  border-color:#ff7a00!important;
+  border-color:#ff3b30!important;
   box-shadow:0 0 0 1px #ff7a00,0 0 16px rgba(255,106,0,.18)!important;
 }
 #appNumPad{
@@ -1155,8 +1155,8 @@ function drawPowerTouch(g,P,d,xMin,xMax,hpY,tqY,axisIsEngine){
  var x=g.x;
  x.save();
  x.setLineDash([3,3]);x.strokeStyle='#8c5a2c';x.lineWidth=1;x.beginPath();x.moveTo(px,P.t);x.lineTo(px,P.b);x.stroke();x.setLineDash([]);
- x.fillStyle='#ff6a00';x.beginPath();x.arc(px,pyHp,3.5,0,Math.PI*2);x.fill();
- x.fillStyle='#ffc15a';x.beginPath();x.arc(px,pyTq,3.5,0,Math.PI*2);x.fill();
+ x.fillStyle='#ff3b30';x.beginPath();x.arc(px,pyHp,3.5,0,Math.PI*2);x.fill();
+ x.fillStyle='#ffd400';x.beginPath();x.arc(px,pyTq,3.5,0,Math.PI*2);x.fill();
  var bw=126,bh=51,bx=px+9,by=Math.max(P.t+4,Math.min(P.b-bh-4,Math.min(pyHp,pyTq)-bh/2));
  if(bx+bw>P.r-4)bx=px-bw-9;if(bx<P.l+4)bx=P.l+4;
  x.fillStyle='rgba(7,7,7,.94)';x.strokeStyle='#70411c';x.lineWidth=1;x.beginPath();
@@ -1165,7 +1165,7 @@ function drawPowerTouch(g,P,d,xMin,xMax,hpY,tqY,axisIsEngine){
  x.font='800 9px Arial';x.textAlign='left';x.textBaseline='middle';
  x.fillStyle='#d7dce1';x.fillText((axisIsEngine?'RPM ':'ROLLER RPM ')+Math.round(rpm),bx+8,by+11);
  x.fillStyle='#ff7a00';x.fillText('HP '+hp.toFixed(1),bx+8,by+26);
- x.fillStyle='#ffc15a';x.fillText('TOR '+tq.toFixed(1)+' Nm',bx+8,by+41);
+ x.fillStyle='#ffd400';x.fillText('TOR '+tq.toFixed(1)+' Nm',bx+8,by+41);
  x.restore();
 }
 function powerPointerLocalX(c,ev){
@@ -1241,11 +1241,11 @@ function drawPower(){
  var maxHp=pk.hp,maxTq=pk.tq,hpRpm=pk.hpRpm,tqRpm=pk.tqRpm;
  updatePowerPeakUI(maxHp,maxTq,hpRpm,tqRpm);
  var xMin=d&&d.length?Math.min.apply(null,d.map(function(a){return+a[0]})):0,xMax=d&&d.length?Math.max.apply(null,d.map(function(a){return+a[0]})):1;if(xMax<=xMin)xMax=xMin+1;
- var hpY=niceMax(maxHp*1.1),tqY=niceMax(maxTq*1.1),P=chartFrame(g,{xMin:xMin,xMax:xMax,xLabel:axisIsEngine?'ENGINE RPM':'ROLLER RPM',yMax:hpY,yLabel:'HP',yColor:'#ff6a00',right:{max:tqY,label:'TORQUE (Nm)',shortLabel:'Nm',color:'#ff9f1c'}});
+ var hpY=niceMax(maxHp*1.1),tqY=niceMax(maxTq*1.1),P=chartFrame(g,{xMin:xMin,xMax:xMax,xLabel:axisIsEngine?'ENGINE RPM':'ROLLER RPM',yMax:hpY,yLabel:'HP',yColor:'#ff3b30',right:{max:tqY,label:'TORQUE (Nm)',shortLabel:'Nm',color:'#ffd400'}});
  S.powerHit={P:P,d:d,xMin:xMin,xMax:xMax,hpY:hpY,tqY:tqY,axisIsEngine:axisIsEngine};
  if(!d||d.length<2){chartEmpty(g,'NO SAVED RUN DATA');return}
- plotSeries(g,P,d,function(a){return+a[0]},function(a){return+a[1]},xMin,xMax,0,hpY,'#ff6a00',1.8);
- plotSeries(g,P,d,function(a){return+a[0]},function(a){return+a[2]},xMin,xMax,0,tqY,'#ff9f1c',1.8);
+ plotSeries(g,P,d,function(a){return+a[0]},function(a){return+a[1]},xMin,xMax,0,hpY,'#ff3b30',1.8);
+ plotSeries(g,P,d,function(a){return+a[0]},function(a){return+a[2]},xMin,xMax,0,tqY,'#ffd400',1.8);
  drawPowerTouch(g,P,d,xMin,xMax,hpY,tqY,axisIsEngine)
 }
 function drawRpm(){
@@ -1268,7 +1268,7 @@ function compareSeriesFor(run,metric){
 function drawCompare(){
  var c=$('compareCanvas');if(!c)return;var g=setupCanvas(c),idxs=getCompareIndices(),metric=$('compareMetric')?$('compareMetric').value:'hp',sets=[],all=[];
  idxs.forEach(function(idx){var r=runHistory[idx];if(!r)return;var d=compareSeriesFor(r,metric);sets.push({run:r,data:d});all=all.concat(d)});
- var yLabel=metric==='hp'?'POWER (HP)':metric==='tq'?'TORQUE (Nm)':metric==='speed'?'SPEED (km/h)':'AFR',yColor=metric==='tq'?'#ff9f1c':metric==='afr'?'#3488ff':metric==='speed'?'#d3d6da':'#ff6a00';
+ var yLabel=metric==='hp'?'POWER (HP)':metric==='tq'?'TORQUE (Nm)':metric==='speed'?'SPEED (km/h)':'AFR',yColor=metric==='tq'?'#ffd400':metric==='afr'?'#3488ff':metric==='speed'?'#d3d6da':'#ff3b30';
  var xMin=all.length?Math.min.apply(null,all.map(function(a){return a[0]})):0,xMax=all.length?Math.max.apply(null,all.map(function(a){return a[0]})):1;if(xMax<=xMin)xMax=xMin+1;
  var yMin=metric==='afr'?10:0,yMax=metric==='afr'?20:niceMax(Math.max(1,all.length?Math.max.apply(null,all.map(function(a){return a[1]})):1)*1.1);
  var P=chartFrame(g,{xMin:xMin,xMax:xMax,xLabel:'ENGINE RPM / ROLLER RPM',yMin:yMin,yMax:yMax,yLabel:yLabel,yColor:yColor});
