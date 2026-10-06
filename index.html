@@ -214,14 +214,14 @@ main{display:none;min-height:0;overflow:hidden}.page.on{display:block;height:100
 .power-peak span{font:800 7px Arial,sans-serif;letter-spacing:.55px;color:#79838d;white-space:nowrap;align-self:end}
 .power-peak b{font:900 17px Arial,sans-serif;line-height:1;color:#f3f5f7;white-space:nowrap;align-self:end}
 .power-peak em{font:800 7px Arial,sans-serif;color:#7c858e;font-style:normal;align-self:end}
-.power-peak .peak-rpm{grid-column:1/-1;display:block;width:100%;min-width:88px;text-align:center;font:900 8px Arial,sans-serif;color:#d7dce1;letter-spacing:.3px;white-space:nowrap;line-height:1.1;overflow:visible}
-.hp-peak{border-color:#4d1b1e}.hp-peak b{color:#ff7a00}
-.tq-peak{border-color:#4c3518}.tq-peak b{color:#ffad36}
+.power-peak .peak-rpm{grid-column:1/-1;display:block;width:100%;min-width:88px;text-align:center;font:900 11px Arial,sans-serif;color:#f3f5f7;letter-spacing:.35px;white-space:nowrap;line-height:1.15;overflow:visible}
+.hp-peak{border-color:#4d1b1e}.hp-peak b{color:#ff3b30}
+.tq-peak{border-color:#4c3518}.tq-peak b{color:#ffd400}
 @media(max-height:430px){
  #power .power-chart-box{grid-template-rows:27px 33px 19px minmax(0,1fr)!important}
  .power-peak-strip{height:33px;padding:1px 3px}
  .power-peak{padding:1px 5px;column-gap:4px;row-gap:0}
- .power-peak span{font-size:6px}.power-peak b{font-size:14px}.power-peak em{font-size:6px}.power-peak .peak-rpm{grid-column:1/-1;display:block;width:100%;min-width:88px;text-align:center;font:900 8px Arial,sans-serif;color:#d7dce1;letter-spacing:.3px;white-space:nowrap;line-height:1.1;overflow:visible}
+ .power-peak span{font-size:6px}.power-peak b{font-size:14px}.power-peak em{font-size:6px}.power-peak .peak-rpm{grid-column:1/-1;display:block;width:100%;min-width:88px;text-align:center;font:900 11px Arial,sans-serif;color:#f3f5f7;letter-spacing:.35px;white-space:nowrap;line-height:1.15;overflow:visible}
 }
 </style>
 <style id="android-settings-scroll-v6">
@@ -243,7 +243,7 @@ nav button.on{border-color:#ff7a00;background:linear-gradient(180deg,#4a2107,#1a
 .gauge,.centerbox,.chartbox,.card{border-color:#302117;background:linear-gradient(180deg,#0d0c0b,#070707)}
 .scale i{background:linear-gradient(90deg,#6c2a00,#ff6a00)}
 .controls{border-color:#392619;background:#090705ee}.controls .go{border-color:#8d430e;background:#261205}.controls .auto.on{color:#ffd19e;border-color:#8b4c14;background:#211005}
-.settingsgrid h3{color:#ff8126}.hp-peak{border-color:#6e3510}.hp-peak b{color:#ff7a00}.tq-peak{border-color:#5c461e}.tq-peak b{color:#ffc15a}
+.settingsgrid h3{color:#ff8126}.hp-peak{border-color:#6e3510}.hp-peak b{color:#ff3b30}.tq-peak{border-color:#5c461e}.tq-peak b{color:#ffd400}
 #live .live-title-banner span{color:#fff5eb}
 #live .live-monitor-head{border-color:#4a2915;background:linear-gradient(105deg,#0f0b08,#060606 50%,#100b07)}
 #live .live-head-slashes{background:repeating-linear-gradient(130deg,transparent 0 3px,#ff6a00 3px 5px)}
@@ -274,9 +274,9 @@ nav button.on{border-color:#ff7a00;background:linear-gradient(180deg,#4a2107,#1a
 </style>
 
 <style id="power-touch-readout-v1">
-.power-peak .peak-rpm{grid-column:1/-1;display:block;width:100%;min-width:88px;text-align:center;font:900 8px Arial,sans-serif;color:#d7dce1;letter-spacing:.3px;white-space:nowrap;line-height:1.1;overflow:visible}
+.power-peak .peak-rpm{grid-column:1/-1;display:block;width:100%;min-width:88px;text-align:center;font:900 11px Arial,sans-serif;color:#f3f5f7;letter-spacing:.35px;white-space:nowrap;line-height:1.15;overflow:visible}
 #powerCanvas{cursor:crosshair;touch-action:manipulation}
-@media(max-height:430px){.power-peak .peak-rpm{grid-column:1/-1;display:block;width:100%;min-width:88px;text-align:center;font:900 8px Arial,sans-serif;color:#d7dce1;letter-spacing:.3px;white-space:nowrap;line-height:1.1;overflow:visible}}
+@media(max-height:430px){.power-peak .peak-rpm{grid-column:1/-1;display:block;width:100%;min-width:88px;text-align:center;font:900 11px Arial,sans-serif;color:#f3f5f7;letter-spacing:.35px;white-space:nowrap;line-height:1.15;overflow:visible}}
 </style>
 <style id="app-number-keypad-v1">
 input[type="number"][data-app-numpad="1"]{
@@ -391,7 +391,7 @@ body.app-numpad-open #settings{
 <body>
 <div id="app">
 <header>
- <div class="brand">BT <b>SPEED</b> DYNO <small id="buildTag" style="font:700 7px Arial;color:#66584d;margin-left:4px">P15</small></div>
+ <div class="brand">BT <b>SPEED</b> DYNO <small id="buildTag" style="font:700 7px Arial;color:#66584d;margin-left:4px">P16</small></div>
  <nav>
   <button data-page="live" class="on">LIVE</button>
   <button data-page="power">HP/TOR</button>
@@ -1165,7 +1165,7 @@ function drawPowerTouch(g,P,d,xMin,xMax,hpY,tqY,axisIsEngine){
  x.fill();x.stroke();
  x.font='800 9px Arial';x.textAlign='left';x.textBaseline='middle';
  x.fillStyle='#d7dce1';x.fillText((axisIsEngine?'RPM ':'ROLLER RPM ')+Math.round(rpm),bx+8,by+11);
- x.fillStyle='#ff7a00';x.fillText('HP '+hp.toFixed(1),bx+8,by+26);
+ x.fillStyle='#ff3b30';x.fillText('HP '+hp.toFixed(1),bx+8,by+26);
  x.fillStyle='#ffd400';x.fillText('TOR '+tq.toFixed(1)+' Nm',bx+8,by+41);
  x.restore();
 }
