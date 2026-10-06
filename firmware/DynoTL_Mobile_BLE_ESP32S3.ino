@@ -62,6 +62,7 @@ float cfgAutoSpeed = 10.0f;
 float cfgAutoHp = 1.0f;
 float cfgAutoAlpha = 10.0f;
 bool cfgAutoStart = false;
+bool cfgAutoEndRun = true;
 uint8_t cfgSmoothingLevel = 1;
 
 const uint32_t ROLLER_ABS_MIN_PERIOD_US = 6000;
@@ -181,6 +182,7 @@ static void loadFullConfigFromPrefs() {
   if (isfinite(f) && f >= 0.0f && f <= 10000.0f) cfgAutoAlpha = f;
 
   cfgAutoStart = prefs.getBool("autoStart", cfgAutoStart);
+  cfgAutoEndRun = prefs.getBool("autoEnd", cfgAutoEndRun);
 
   u = prefs.getUInt("smooth", cfgSmoothingLevel);
   if (u <= 2) cfgSmoothingLevel = (uint8_t)u;
@@ -202,6 +204,7 @@ static bool persistConfigKey(const String &key) {
   if (key == "HP") return prefs.putFloat("autoHp", cfgAutoHp) > 0;
   if (key == "AA") return prefs.putFloat("autoAlpha", cfgAutoAlpha) > 0;
   if (key == "AS") return prefs.putBool("autoStart", cfgAutoStart) > 0;
+  if (key == "AE") return prefs.putBool("autoEnd", cfgAutoEndRun) > 0;
   if (key == "SM") return prefs.putUInt("smooth", cfgSmoothingLevel) > 0;
   return false;
 }
@@ -222,6 +225,7 @@ static void saveFullConfigToPrefs() {
   prefs.putFloat("autoHp", cfgAutoHp);
   prefs.putFloat("autoAlpha", cfgAutoAlpha);
   prefs.putBool("autoStart", cfgAutoStart);
+  prefs.putBool("autoEnd", cfgAutoEndRun);
   prefs.putUInt("smooth", cfgSmoothingLevel);
 
   // Write version last so a brand-new migration is only considered complete
@@ -281,6 +285,9 @@ static bool setConfigValue(const String &key, const String &value) {
   } else if (key == "AS") {
     if (!parseLongStrict(value, n) || (n != 0 && n != 1)) return false;
     cfgAutoStart = (n == 1);
+  } else if (key == "AE") {
+    if (!parseLongStrict(value, n) || (n != 0 && n != 1)) return false;
+    cfgAutoEndRun = (n == 1);
   } else if (key == "SM") {
     if (!parseLongStrict(value, n) || n < 0 || n > 2) return false;
     cfgSmoothingLevel = (uint8_t)n;
@@ -339,7 +346,7 @@ static void notifyFullConfig() {
       sizeof(out),
       "CFG;WD=%.3f;IJ=%.4f;MR=%lu;MS=%.3f;"
       "V0=%.3f;A0=%.3f;V1=%.3f;A1=%.3f;DE=%.3f;"
-      "IC=%u;RF=%lu;AS=%u;SP=%.3f;HP=%.3f;AA=%.3f;SM=%u\n",
+      "IC=%u;RF=%lu;AS=%u;AE=%u;SP=%.3f;HP=%.3f;AA=%.3f;SM=%u\n",
       cfgWheelDiameterMm,
       cfgVehicleInertiaJ,
       (unsigned long)cfgMaxRpmDisplay,
@@ -352,6 +359,7 @@ static void notifyFullConfig() {
       (unsigned int)cfgIgnitionCycle,
       (unsigned long)engineFilterUs,
       cfgAutoStart ? 1U : 0U,
+      cfgAutoEndRun ? 1U : 0U,
       cfgAutoSpeed,
       cfgAutoHp,
       cfgAutoAlpha,
