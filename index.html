@@ -879,7 +879,7 @@ function autoEndRunToPower(){
  showPage('power')
 }
 function updateAutoEndRun(t,rr){
- if(!S.recording||!isFinite(t)||!isFinite(rr)||rr<=0)return false;
+ if(!S.recording||!isFinite(t)||!isFinite(rr)||rr<0)return false;
  if(rr>S.runPeakRollerRpm){S.runPeakRollerRpm=rr;S.runDeclineSinceMs=0;return false}
  if(!(S.runPeakRollerRpm>0))return false;
  var drop=Math.max(AUTO_END_DROP_MIN_RPM,S.runPeakRollerRpm*AUTO_END_DROP_RATIO);
