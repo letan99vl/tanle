@@ -40,6 +40,30 @@ const uint32_t ENGINE_FILTER_MIN_US = 50;
 const uint32_t ENGINE_FILTER_MAX_US = 10000;
 volatile uint32_t engineFilterUs = DEFAULT_ENGINE_FILTER_US;
 Preferences prefs;
+
+// Full app configuration stored in ESP32-S3 NVS.
+// Web localStorage remains a fallback/cache, but the S3 becomes the source of truth
+// after the first migration from an existing web installation.
+const uint8_t FULL_CONFIG_VERSION = 1;
+bool fullConfigInitialized = false;
+bool configBatchMode = false;
+
+float cfgWheelDiameterMm = 240.0f;
+float cfgVehicleInertiaJ = 1.73f;
+uint32_t cfgMaxRpmDisplay = 16000;
+float cfgMaxSpeedDisplay = 160.0f;
+float cfgAfrVMin = 0.0f;
+float cfgAfrMin = 10.0f;
+float cfgAfrVMax = 3.15f;
+float cfgAfrMax = 20.0f;
+float cfgAfrDecelEps = 40.0f;
+uint16_t cfgIgnitionCycle = 360;
+float cfgAutoSpeed = 10.0f;
+float cfgAutoHp = 1.0f;
+float cfgAutoAlpha = 10.0f;
+bool cfgAutoStart = false;
+uint8_t cfgSmoothingLevel = 1;
+
 const uint32_t ROLLER_ABS_MIN_PERIOD_US = 6000;
 const uint32_t ROLLER_EARLY_GATE_PERCENT = 45;
 
@@ -85,6 +109,188 @@ static float medianSmallFloat(const float *src, uint8_t count) {
   return (v[mid - 1] + v[mid]) * 0.5f;
 }
 
+
+static bool parseFloatStrict(const String &s, float &out) {
+  char *end = nullptr;
+  out = strtof(s.c_str(), &end);
+  return end != nullptr &&
+         end != s.c_str() &&
+         *end == '\0' &&
+         isfinite(out);
+}
+
+static bool parseLongStrict(const String &s, long &out) {
+  char *end = nullptr;
+  out = strtol(s.c_str(), &end, 10);
+  return end != nullptr &&
+         end != s.c_str() &&
+         *end == '\0';
+}
+
+static void loadFullConfigFromPrefs() {
+  fullConfigInitialized =
+      prefs.getUChar("cfgVer", 0) == FULL_CONFIG_VERSION;
+
+  if (!fullConfigInitialized) return;
+
+  float f = 0.0f;
+  uint32_t u = 0;
+
+  f = prefs.getFloat("rollerD", cfgWheelDiameterMm);
+  if (isfinite(f) && f >= 50.0f && f <= 2000.0f) cfgWheelDiameterMm = f;
+
+  f = prefs.getFloat("rollerJ", cfgVehicleInertiaJ);
+  if (isfinite(f) && f >= 0.01f && f <= 1000.0f) cfgVehicleInertiaJ = f;
+
+  u = prefs.getUInt("maxRpm", cfgMaxRpmDisplay);
+  if (u >= 1000 && u <= 50000) cfgMaxRpmDisplay = u;
+
+  f = prefs.getFloat("maxSpeed", cfgMaxSpeedDisplay);
+  if (isfinite(f) && f >= 1.0f && f <= 1000.0f) cfgMaxSpeedDisplay = f;
+
+  f = prefs.getFloat("afrVMin", cfgAfrVMin);
+  if (isfinite(f) && f >= 0.0f && f <= 5.0f) cfgAfrVMin = f;
+
+  f = prefs.getFloat("afrMin", cfgAfrMin);
+  if (isfinite(f) && f >= 5.0f && f <= 30.0f) cfgAfrMin = f;
+
+  f = prefs.getFloat("afrVMax", cfgAfrVMax);
+  if (isfinite(f) && f >= 0.0f && f <= 5.0f) cfgAfrVMax = f;
+
+  f = prefs.getFloat("afrMax", cfgAfrMax);
+  if (isfinite(f) && f >= 5.0f && f <= 30.0f) cfgAfrMax = f;
+
+  f = prefs.getFloat("afrDecel", cfgAfrDecelEps);
+  if (isfinite(f) && f >= 0.0f && f <= 500.0f) cfgAfrDecelEps = f;
+
+  u = prefs.getUInt("ignCycle", cfgIgnitionCycle);
+  if (u == 360 || u == 720) cfgIgnitionCycle = (uint16_t)u;
+
+  u = prefs.getUInt("rpmFiltUs", engineFilterUs);
+  if (u >= ENGINE_FILTER_MIN_US && u <= ENGINE_FILTER_MAX_US) {
+    engineFilterUs = u;
+  }
+
+  f = prefs.getFloat("autoSpeed", cfgAutoSpeed);
+  if (isfinite(f) && f >= 0.0f && f <= 500.0f) cfgAutoSpeed = f;
+
+  f = prefs.getFloat("autoHp", cfgAutoHp);
+  if (isfinite(f) && f >= 0.0f && f <= 1000.0f) cfgAutoHp = f;
+
+  f = prefs.getFloat("autoAlpha", cfgAutoAlpha);
+  if (isfinite(f) && f >= 0.0f && f <= 10000.0f) cfgAutoAlpha = f;
+
+  cfgAutoStart = prefs.getBool("autoStart", cfgAutoStart);
+
+  u = prefs.getUInt("smooth", cfgSmoothingLevel);
+  if (u <= 2) cfgSmoothingLevel = (uint8_t)u;
+}
+
+static bool persistConfigKey(const String &key) {
+  if (key == "WD") return prefs.putFloat("rollerD", cfgWheelDiameterMm) > 0;
+  if (key == "IJ") return prefs.putFloat("rollerJ", cfgVehicleInertiaJ) > 0;
+  if (key == "MR") return prefs.putUInt("maxRpm", cfgMaxRpmDisplay) > 0;
+  if (key == "MS") return prefs.putFloat("maxSpeed", cfgMaxSpeedDisplay) > 0;
+  if (key == "V0") return prefs.putFloat("afrVMin", cfgAfrVMin) > 0;
+  if (key == "A0") return prefs.putFloat("afrMin", cfgAfrMin) > 0;
+  if (key == "V1") return prefs.putFloat("afrVMax", cfgAfrVMax) > 0;
+  if (key == "A1") return prefs.putFloat("afrMax", cfgAfrMax) > 0;
+  if (key == "DE") return prefs.putFloat("afrDecel", cfgAfrDecelEps) > 0;
+  if (key == "IC") return prefs.putUInt("ignCycle", cfgIgnitionCycle) > 0;
+  if (key == "RF") return prefs.putUInt("rpmFiltUs", engineFilterUs) > 0;
+  if (key == "SP") return prefs.putFloat("autoSpeed", cfgAutoSpeed) > 0;
+  if (key == "HP") return prefs.putFloat("autoHp", cfgAutoHp) > 0;
+  if (key == "AA") return prefs.putFloat("autoAlpha", cfgAutoAlpha) > 0;
+  if (key == "AS") return prefs.putBool("autoStart", cfgAutoStart) > 0;
+  if (key == "SM") return prefs.putUInt("smooth", cfgSmoothingLevel) > 0;
+  return false;
+}
+
+static void saveFullConfigToPrefs() {
+  prefs.putFloat("rollerD", cfgWheelDiameterMm);
+  prefs.putFloat("rollerJ", cfgVehicleInertiaJ);
+  prefs.putUInt("maxRpm", cfgMaxRpmDisplay);
+  prefs.putFloat("maxSpeed", cfgMaxSpeedDisplay);
+  prefs.putFloat("afrVMin", cfgAfrVMin);
+  prefs.putFloat("afrMin", cfgAfrMin);
+  prefs.putFloat("afrVMax", cfgAfrVMax);
+  prefs.putFloat("afrMax", cfgAfrMax);
+  prefs.putFloat("afrDecel", cfgAfrDecelEps);
+  prefs.putUInt("ignCycle", cfgIgnitionCycle);
+  prefs.putUInt("rpmFiltUs", engineFilterUs);
+  prefs.putFloat("autoSpeed", cfgAutoSpeed);
+  prefs.putFloat("autoHp", cfgAutoHp);
+  prefs.putFloat("autoAlpha", cfgAutoAlpha);
+  prefs.putBool("autoStart", cfgAutoStart);
+  prefs.putUInt("smooth", cfgSmoothingLevel);
+
+  // Write version last so a brand-new migration is only considered complete
+  // after every config field has been stored.
+  prefs.putUChar("cfgVer", FULL_CONFIG_VERSION);
+  fullConfigInitialized = true;
+}
+
+static bool setConfigValue(const String &key, const String &value) {
+  float f = 0.0f;
+  long n = 0;
+
+  if (key == "WD") {
+    if (!parseFloatStrict(value, f) || f < 50.0f || f > 2000.0f) return false;
+    cfgWheelDiameterMm = f;
+  } else if (key == "IJ") {
+    if (!parseFloatStrict(value, f) || f < 0.01f || f > 1000.0f) return false;
+    cfgVehicleInertiaJ = f;
+  } else if (key == "MR") {
+    if (!parseLongStrict(value, n) || n < 1000 || n > 50000) return false;
+    cfgMaxRpmDisplay = (uint32_t)n;
+  } else if (key == "MS") {
+    if (!parseFloatStrict(value, f) || f < 1.0f || f > 1000.0f) return false;
+    cfgMaxSpeedDisplay = f;
+  } else if (key == "V0") {
+    if (!parseFloatStrict(value, f) || f < 0.0f || f > 5.0f) return false;
+    cfgAfrVMin = f;
+  } else if (key == "A0") {
+    if (!parseFloatStrict(value, f) || f < 5.0f || f > 30.0f) return false;
+    cfgAfrMin = f;
+  } else if (key == "V1") {
+    if (!parseFloatStrict(value, f) || f < 0.0f || f > 5.0f) return false;
+    cfgAfrVMax = f;
+  } else if (key == "A1") {
+    if (!parseFloatStrict(value, f) || f < 5.0f || f > 30.0f) return false;
+    cfgAfrMax = f;
+  } else if (key == "DE") {
+    if (!parseFloatStrict(value, f) || f < 0.0f || f > 500.0f) return false;
+    cfgAfrDecelEps = f;
+  } else if (key == "IC") {
+    if (!parseLongStrict(value, n) || (n != 360 && n != 720)) return false;
+    cfgIgnitionCycle = (uint16_t)n;
+  } else if (key == "RF") {
+    if (!parseLongStrict(value, n) ||
+        n < (long)ENGINE_FILTER_MIN_US ||
+        n > (long)ENGINE_FILTER_MAX_US) return false;
+    engineFilterUs = (uint32_t)n;
+  } else if (key == "SP") {
+    if (!parseFloatStrict(value, f) || f < 0.0f || f > 500.0f) return false;
+    cfgAutoSpeed = f;
+  } else if (key == "HP") {
+    if (!parseFloatStrict(value, f) || f < 0.0f || f > 1000.0f) return false;
+    cfgAutoHp = f;
+  } else if (key == "AA") {
+    if (!parseFloatStrict(value, f) || f < 0.0f || f > 10000.0f) return false;
+    cfgAutoAlpha = f;
+  } else if (key == "AS") {
+    if (!parseLongStrict(value, n) || (n != 0 && n != 1)) return false;
+    cfgAutoStart = (n == 1);
+  } else if (key == "SM") {
+    if (!parseLongStrict(value, n) || n < 0 || n > 2) return false;
+    cfgSmoothingLevel = (uint8_t)n;
+  } else {
+    return false;
+  }
+
+  return true;
+}
+
 // ============================================================================
 // DYNOTL MOBILE BLE
 // ============================================================================
@@ -112,6 +318,46 @@ static void bleNotifyChunks(BLECharacteristic *ch, const char *s) {
     ch->notify();
     delay(2);
   }
+}
+
+static void notifyFullConfig() {
+  if (!fullConfigInitialized) {
+    char out[64];
+    snprintf(
+        out,
+        sizeof(out),
+        "CFGEMPTY;RF=%lu\n",
+        (unsigned long)engineFilterUs
+    );
+    bleNotifyChunks(statusChar, out);
+    return;
+  }
+
+  char out[320];
+  snprintf(
+      out,
+      sizeof(out),
+      "CFG;WD=%.3f;IJ=%.4f;MR=%lu;MS=%.3f;"
+      "V0=%.3f;A0=%.3f;V1=%.3f;A1=%.3f;DE=%.3f;"
+      "IC=%u;RF=%lu;AS=%u;SP=%.3f;HP=%.3f;AA=%.3f;SM=%u\n",
+      cfgWheelDiameterMm,
+      cfgVehicleInertiaJ,
+      (unsigned long)cfgMaxRpmDisplay,
+      cfgMaxSpeedDisplay,
+      cfgAfrVMin,
+      cfgAfrMin,
+      cfgAfrVMax,
+      cfgAfrMax,
+      cfgAfrDecelEps,
+      (unsigned int)cfgIgnitionCycle,
+      (unsigned long)engineFilterUs,
+      cfgAutoStart ? 1U : 0U,
+      cfgAutoSpeed,
+      cfgAutoHp,
+      cfgAutoAlpha,
+      (unsigned int)cfgSmoothingLevel
+  );
+  bleNotifyChunks(statusChar, out);
 }
 
 void dynoPublishSample(
@@ -153,6 +399,55 @@ class DynoBleCommandCallbacks : public BLECharacteristicCallbacks {
   void onWrite(BLECharacteristic *characteristic) override {
     String cmd = characteristic->getValue().c_str();
     cmd.trim();
+
+    if (cmd.equalsIgnoreCase("CONFIG?")) {
+      notifyFullConfig();
+      return;
+    }
+
+    if (cmd.equalsIgnoreCase("CFGINIT")) {
+      configBatchMode = true;
+      bleNotifyChunks(statusChar, "CFGINIT OK\n");
+      return;
+    }
+
+    if (cmd.equalsIgnoreCase("CFGSAVE")) {
+      saveFullConfigToPrefs();
+      configBatchMode = false;
+      bleNotifyChunks(statusChar, "CFGSAVED\n");
+      return;
+    }
+
+    if (cmd.startsWith("CFG ")) {
+      int split = cmd.indexOf(' ', 4);
+      if (split <= 4) {
+        bleNotifyChunks(statusChar, "ERR CFG FORMAT\n");
+        return;
+      }
+
+      String key = cmd.substring(4, split);
+      String value = cmd.substring(split + 1);
+      key.trim();
+      value.trim();
+      key.toUpperCase();
+
+      if (!setConfigValue(key, value)) {
+        bleNotifyChunks(statusChar, "ERR CFG VALUE\n");
+        return;
+      }
+
+      if (fullConfigInitialized && !configBatchMode) {
+        if (!persistConfigKey(key)) {
+          bleNotifyChunks(statusChar, "ERR CFG SAVE\n");
+          return;
+        }
+      }
+
+      char ack[40];
+      snprintf(ack, sizeof(ack), "CFGACK %s\n", key.c_str());
+      bleNotifyChunks(statusChar, ack);
+      return;
+    }
 
     if (cmd.equalsIgnoreCase("PING")) {
       bleNotifyChunks(statusChar, "PONG\n");
@@ -581,6 +876,7 @@ void setup() {
     savedFilter = DEFAULT_ENGINE_FILTER_US;
   }
   engineFilterUs = savedFilter;
+  loadFullConfigFromPrefs();
 
   Serial.println();
   Serial.println("========================================");
@@ -590,6 +886,10 @@ void setup() {
   Serial.printf(
       "[BOOT] Engine RPM pulse filter = %lu us\n",
       (unsigned long)engineFilterUs
+  );
+  Serial.printf(
+      "[BOOT] Settings source = %s\n",
+      fullConfigInitialized ? "ESP32-S3 NVS" : "legacy/local migration pending"
   );
   Serial.println("========================================");
   Serial.flush();
