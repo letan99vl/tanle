@@ -138,7 +138,8 @@ main{display:none;min-height:0;overflow:hidden}.page.on{display:block;height:100
 .mobile-chart-legend{height:22px;display:flex;align-items:center;justify-content:center;gap:11px;border-top:1px solid #11161a;border-bottom:1px solid #11161a;background:#07090b;overflow:hidden;white-space:nowrap}
 .mobile-chart-legend .lg{position:relative;padding-left:15px;font:700 7px Arial,sans-serif;color:#adb5bd;letter-spacing:.2px}
 .mobile-chart-legend .lg:before{content:"";position:absolute;left:0;top:50%;width:11px;height:2px;transform:translateY(-50%);border-radius:2px}
-.mobile-chart-legend .hp:before,.mobile-chart-legend .erpm:before{background:#ff3b30}
+.mobile-chart-legend .hp:before{background:#ff3b30}
+.mobile-chart-legend .erpm:before{background:#ff6a00}
 .mobile-chart-legend .tq:before{background:#ffd400}
 .mobile-chart-legend .rrpm:before{background:#37d45a}
 .mobile-chart-legend .spd:before{background:#d3d6da}
@@ -214,8 +215,8 @@ main{display:none;min-height:0;overflow:hidden}.page.on{display:block;height:100
 .power-peak b{font:900 17px Arial,sans-serif;line-height:1;color:#f3f5f7;white-space:nowrap;align-self:end}
 .power-peak em{font:800 7px Arial,sans-serif;color:#7c858e;font-style:normal;align-self:end}
 .power-peak .peak-rpm{grid-column:1/-1;display:block;width:100%;min-width:88px;text-align:center;font:900 8px Arial,sans-serif;color:#d7dce1;letter-spacing:.3px;white-space:nowrap;line-height:1.1;overflow:visible}
-.hp-peak{border-color:#4d1b1e}.hp-peak b{color:#ff3b30}
-.tq-peak{border-color:#4c3518}.tq-peak b{color:#ffd400}
+.hp-peak{border-color:#4d1b1e}.hp-peak b{color:#ff7a00}
+.tq-peak{border-color:#4c3518}.tq-peak b{color:#ffad36}
 @media(max-height:430px){
  #power .power-chart-box{grid-template-rows:27px 33px 19px minmax(0,1fr)!important}
  .power-peak-strip{height:33px;padding:1px 3px}
@@ -234,15 +235,15 @@ html.android-app #settings,body.android-app #settings{overflow-y:scroll!importan
 html,body,#app{background:#050505}
 body{background:radial-gradient(circle at 50% -30%,rgba(255,106,0,.16),transparent 45%),linear-gradient(180deg,#050505,#090704)}
 header{border-bottom-color:#342114;background:linear-gradient(180deg,#0b0907,#060606)}
-.brand{font-style:italic;letter-spacing:1.1px}.brand b{color:#ff3b30}
+.brand{font-style:italic;letter-spacing:1.1px}.brand b{color:#ff7a00}
 nav{overflow-x:auto;justify-content:flex-start;scrollbar-width:none}nav::-webkit-scrollbar{display:none}
 nav button{min-width:58px;border-color:#33271f;background:#0d0b09}
-nav button.on{border-color:#ff3b30;background:linear-gradient(180deg,#4a2107,#1a0d04);box-shadow:0 0 18px rgba(255,106,0,.16)}
+nav button.on{border-color:#ff7a00;background:linear-gradient(180deg,#4a2107,#1a0d04);box-shadow:0 0 18px rgba(255,106,0,.16)}
 .pill.ok{color:#ffbd7e;border-color:#8a430f}.mini.red,.controls .stop{color:#ff9d62;border-color:#6f330c}
 .gauge,.centerbox,.chartbox,.card{border-color:#302117;background:linear-gradient(180deg,#0d0c0b,#070707)}
 .scale i{background:linear-gradient(90deg,#6c2a00,#ff6a00)}
 .controls{border-color:#392619;background:#090705ee}.controls .go{border-color:#8d430e;background:#261205}.controls .auto.on{color:#ffd19e;border-color:#8b4c14;background:#211005}
-.settingsgrid h3{color:#ff8126}.hp-peak{border-color:#6e3510}.hp-peak b{color:#ff3b30}.tq-peak{border-color:#5c461e}.tq-peak b{color:#ffc15a}
+.settingsgrid h3{color:#ff8126}.hp-peak{border-color:#6e3510}.hp-peak b{color:#ff7a00}.tq-peak{border-color:#5c461e}.tq-peak b{color:#ffc15a}
 #live .live-title-banner span{color:#fff5eb}
 #live .live-monitor-head{border-color:#4a2915;background:linear-gradient(105deg,#0f0b08,#060606 50%,#100b07)}
 #live .live-head-slashes{background:repeating-linear-gradient(130deg,transparent 0 3px,#ff6a00 3px 5px)}
@@ -289,7 +290,7 @@ input[type="number"][data-app-numpad="1"]::-webkit-inner-spin-button{
   margin:0;
 }
 input[type="number"][data-app-numpad="1"].app-num-active{
-  border-color:#ff3b30!important;
+  border-color:#ff7a00!important;
   box-shadow:0 0 0 1px #ff7a00,0 0 16px rgba(255,106,0,.18)!important;
 }
 #appNumPad{
