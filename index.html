@@ -391,7 +391,7 @@ body.app-numpad-open #settings{
 <body>
 <div id="app">
 <header>
- <div class="brand">BT <b>SPEED</b> DYNO <small id="buildTag" style="font:700 7px Arial;color:#66584d;margin-left:4px">P16</small></div>
+ <div class="brand">BT <b>SPEED</b> DYNO <small id="buildTag" style="font:700 7px Arial;color:#66584d;margin-left:4px">P17</small></div>
  <nav>
   <button data-page="live" class="on">LIVE</button>
   <button data-page="power">HP/TOR</button>
@@ -504,6 +504,7 @@ body.app-numpad-open #settings{
   </section>
   <section class="card"><h3>AUTO RUN</h3>
    <label class="setline"><span>Auto start</span><input id="autoStart" type="checkbox"></label>
+   <label class="setline"><span>Auto end run (3s decline)</span><input id="autoEndRun" type="checkbox" checked></label>
    <label class="setline"><span>Min speed km/h</span><input id="autoSpeed" type="number" value="10"></label>
    <label class="setline"><span>Min HP</span><input id="autoHp" type="number" step=".1" value="1"></label>
    <label class="setline"><span>Min alpha rad/s²</span><input id="autoAlpha" type="number" value="10"></label>
@@ -545,7 +546,7 @@ body.app-numpad-open #settings{
 (function(){
 'use strict';
 try{if(/[?&]android=1(?:&|$)/.test(location.search)){document.documentElement.classList.add('android-app');document.body&&document.body.classList.add('android-app')}}catch(e){}
-var S={connected:false,recording:false,sim:false,auto:false,device:null,server:null,live:null,cmd:null,status:null,lineBuf:'',statusBuf:'',cfgState:'unknown',cfgMigrating:false,lastT:0,omegaF:0,ow:[],tw:[],rpm:0,rrpm:0,speed:0,afr:0,hp:0,tq:0,alpha:0,hpMax:0,tqMax:0,hpMaxRpm:0,tqMaxRpm:0,runPower:[],runRpm:[],liveRpmPts:[],lastSampleT:0,simT:0,run201:false,wait201:false,done201:false,d201:0,t2010:0,t201last:0,maxS201:0,maxR201:0,rollerCalcPrimed:false,rollerStartupSamplesRemaining:0,rollerGuardLastDistinctRpm:0,rollerGuardLastDistinctMs:0,lastPlotRpm:0,runPeakRollerRpm:0,runDeclineSinceMs:0,smoothingLevel:1,powerPickX:null,powerHit:null};
+var S={connected:false,recording:false,sim:false,auto:false,autoEndRun:true,device:null,server:null,live:null,cmd:null,status:null,lineBuf:'',statusBuf:'',cfgState:'unknown',cfgMigrating:false,lastT:0,omegaF:0,ow:[],tw:[],rpm:0,rrpm:0,speed:0,afr:0,hp:0,tq:0,alpha:0,hpMax:0,tqMax:0,hpMaxRpm:0,tqMaxRpm:0,runPower:[],runRpm:[],liveRpmPts:[],lastSampleT:0,simT:0,run201:false,wait201:false,done201:false,d201:0,t2010:0,t201last:0,maxS201:0,maxR201:0,rollerCalcPrimed:false,rollerStartupSamplesRemaining:0,rollerGuardLastDistinctRpm:0,rollerGuardLastDistinctMs:0,lastPlotRpm:0,runPeakRollerRpm:0,runDeclineSinceMs:0,smoothingLevel:1,powerPickX:null,powerHit:null};
 var BLE={service:'d7a10001-7c35-4a6d-9f0e-2ea3117f1000',live:'d7a10002-7c35-4a6d-9f0e-2ea3117f1000',cmd:'d7a10003-7c35-4a6d-9f0e-2ea3117f1000',status:'d7a10005-7c35-4a6d-9f0e-2ea3117f1000'};
 var $=function(id){return document.getElementById(id)},dec=new TextDecoder(),enc=new TextEncoder();
 var cfgIds=['rollerD','rollerJ','maxRpm','maxSpeed','afrVMin','afrMin','afrVMax','afrMax','afrDecelEps','ignitionCycle','rpmFilterUs','autoSpeed','autoHp','autoAlpha'];
@@ -697,12 +698,13 @@ function pushRpmFilter(){
 }
 function cfgValueForId(id){
  if(id==='autoStart')return $('autoStart').checked?'1':'0';
+ if(id==='autoEndRun')return $('autoEndRun').checked?'1':'0';
  if(id==='smoothingLevel')return String(S.smoothingLevel);
  var e=$(id);return e?String(e.value):''
 }
 async function pushConfigKey(id){
  if(!S.connected||!S.cmd||S.cfgState!=='ready')return;
- var key=id==='autoStart'?'AS':(id==='smoothingLevel'?'SM':cfgBleKeys[id]);
+ var key=id==='autoStart'?'AS':(id==='autoEndRun'?'AE':(id==='smoothingLevel'?'SM':cfgBleKeys[id]));
  if(!key)return;
  try{await writeCmd('CFG '+key+' '+cfgValueForId(id))}catch(e){}
 }
@@ -716,6 +718,7 @@ async function pushAllConfigToS3(isMigration){
      if(key)await writeCmd('CFG '+key+' '+cfgValueForId(id));
    }
    await writeCmd('CFG AS '+cfgValueForId('autoStart'));
+   await writeCmd('CFG AE '+cfgValueForId('autoEndRun'));
    await writeCmd('CFG SM '+cfgValueForId('smoothingLevel'));
    if(isMigration)await writeCmd('CFGSAVE');
    else await writeCmd('CFGSAVE');
@@ -739,6 +742,7 @@ function applyConfigLine(line){
    var e=$(cfgBleIds[k]);if(e)e.value=m[k];
  });
  if(m.AS!=null){S.auto=m.AS==='1';$('autoStart').checked=S.auto;$('ctlAuto').classList.toggle('on',S.auto)}
+ if(m.AE!=null){S.autoEndRun=m.AE==='1';$('autoEndRun').checked=S.autoEndRun}
  if(m.SM!=null){var sm=parseInt(m.SM,10);S.smoothingLevel=(sm===0||sm===1||sm===2)?sm:1;syncSmoothingButtons()}
  S.cfgState='ready';
  save(false);
@@ -880,6 +884,7 @@ function autoEndRunToPower(){
  showPage('power')
 }
 function updateAutoEndRun(t,rr){
+ if(!S.autoEndRun){S.runDeclineSinceMs=0;return false}
  if(!S.recording||!isFinite(t)||!isFinite(rr)||rr<0)return false;
  if(rr>S.runPeakRollerRpm){S.runPeakRollerRpm=rr;S.runDeclineSinceMs=0;return false}
  if(!(S.runPeakRollerRpm>0))return false;
@@ -1310,8 +1315,8 @@ function bindRunHistoryUI(){
  if($('compareMetric'))$('compareMetric').addEventListener('change',drawCompare)
 }
 function setSaveStatus(text,cls){var e=$('settingsSaveStatus');if(!e)return;e.textContent=text;e.className=cls||''}
-function save(showStatus){try{if(showStatus)setSaveStatus('SAVING...','saving');var o={};cfgIds.forEach(function(id){o[id]=$(id).value});o.auto=$('autoStart').checked;o.smoothingLevel=S.smoothingLevel;localStorage.setItem('dynotl_mobile_v1',JSON.stringify(o));if(showStatus){setSaveStatus('SAVED','saved');setTimeout(function(){setSaveStatus('AUTO-SAVE ON','')},1400)}return true}catch(e){if(showStatus)setSaveStatus('SAVE ERROR','error');return false}}
-function load(){try{var o=JSON.parse(localStorage.getItem('dynotl_mobile_v1')||'{}');cfgIds.forEach(function(id){if(o[id]!=null)$(id).value=o[id]});S.auto=!!o.auto;S.smoothingLevel=(o.smoothingLevel===0||o.smoothingLevel===1||o.smoothingLevel===2)?o.smoothingLevel:1;$('autoStart').checked=S.auto;$('ctlAuto').classList.toggle('on',S.auto);syncSmoothingButtons()}catch(e){}}
+function save(showStatus){try{if(showStatus)setSaveStatus('SAVING...','saving');var o={};cfgIds.forEach(function(id){o[id]=$(id).value});o.auto=$('autoStart').checked;o.autoEndRun=$('autoEndRun').checked;o.smoothingLevel=S.smoothingLevel;localStorage.setItem('dynotl_mobile_v1',JSON.stringify(o));if(showStatus){setSaveStatus('SAVED','saved');setTimeout(function(){setSaveStatus('AUTO-SAVE ON','')},1400)}return true}catch(e){if(showStatus)setSaveStatus('SAVE ERROR','error');return false}}
+function load(){try{var o=JSON.parse(localStorage.getItem('dynotl_mobile_v1')||'{}');cfgIds.forEach(function(id){if(o[id]!=null)$(id).value=o[id]});S.auto=!!o.auto;S.autoEndRun=o.autoEndRun==null?true:!!o.autoEndRun;S.smoothingLevel=(o.smoothingLevel===0||o.smoothingLevel===1||o.smoothingLevel===2)?o.smoothingLevel:1;$('autoStart').checked=S.auto;$('autoEndRun').checked=S.autoEndRun;$('ctlAuto').classList.toggle('on',S.auto);syncSmoothingButtons()}catch(e){}}
 // Kiosk hardening: keep the UI appliance-like instead of browser-like.
 document.addEventListener('contextmenu',function(e){e.preventDefault()});
 document.addEventListener('dragstart',function(e){e.preventDefault()});
@@ -1331,8 +1336,8 @@ document.addEventListener('keydown',function(e){
 },true);
 
 document.querySelectorAll('nav button').forEach(function(b){b.onclick=function(){showPage(b.dataset.page)}})
-$('bleTop').onclick=connectBle;$('ctlBle').onclick=connectBle;$('ctlRun').onclick=startRun;$('ctlStop').onclick=stopRun;$('ctlAuto').onclick=toggleAuto;$('ctlSim').onclick=toggleSim;if($('btnSaveSettings'))$('btnSaveSettings').onclick=function(){save(true);if(S.connected&&S.cmd)pushAllConfigToS3(S.cfgState!=='ready')};document.querySelectorAll('[data-smooth]').forEach(function(b){b.onclick=function(){setSmoothingLevel(this.dataset.smooth,true)}});$('run201').onclick=function(){reset201();S.wait201=true;$('state201').textContent='Waiting ≥ 1 km/h'};$('reset201').onclick=reset201;$('autoStart').onchange=function(){S.auto=this.checked;$('ctlAuto').classList.toggle('on',S.auto);save();pushConfigKey('autoStart')}
-cfgIds.forEach(function(id){$(id).addEventListener('change',function(){save(false);if(id==='rpmFilterUs')pushRpmFilter();pushConfigKey(id)});$(id).addEventListener('input',function(){save(false)})});window.addEventListener('resize',drawAll);document.addEventListener('visibilitychange',function(){if(!document.hidden)drawAll()});load();initAppNumPad();restoreRunHistory();renderRunHistoryUI();bindRunHistoryUI();bindPowerChartTouch();reset201();try{console.log('BT Speed Dyno build P15 - auto end run on 3s roller decline')}catch(e){};setBle(false);try{if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(function(){})}catch(e){};setTimeout(drawAll,100);
+$('bleTop').onclick=connectBle;$('ctlBle').onclick=connectBle;$('ctlRun').onclick=startRun;$('ctlStop').onclick=stopRun;$('ctlAuto').onclick=toggleAuto;$('ctlSim').onclick=toggleSim;if($('btnSaveSettings'))$('btnSaveSettings').onclick=function(){save(true);if(S.connected&&S.cmd)pushAllConfigToS3(S.cfgState!=='ready')};document.querySelectorAll('[data-smooth]').forEach(function(b){b.onclick=function(){setSmoothingLevel(this.dataset.smooth,true)}});$('run201').onclick=function(){reset201();S.wait201=true;$('state201').textContent='Waiting ≥ 1 km/h'};$('reset201').onclick=reset201;$('autoStart').onchange=function(){S.auto=this.checked;$('ctlAuto').classList.toggle('on',S.auto);save();pushConfigKey('autoStart')};$('autoEndRun').onchange=function(){S.autoEndRun=this.checked;S.runDeclineSinceMs=0;save();pushConfigKey('autoEndRun')}
+cfgIds.forEach(function(id){$(id).addEventListener('change',function(){save(false);if(id==='rpmFilterUs')pushRpmFilter();pushConfigKey(id)});$(id).addEventListener('input',function(){save(false)})});window.addEventListener('resize',drawAll);document.addEventListener('visibilitychange',function(){if(!document.hidden)drawAll()});load();initAppNumPad();restoreRunHistory();renderRunHistoryUI();bindRunHistoryUI();bindPowerChartTouch();reset201();try{console.log('BT Speed Dyno build P17 - auto end run toggle')}catch(e){};setBle(false);try{if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(function(){})}catch(e){};setTimeout(drawAll,100);
 })();
 </script>
 <script id="bt-speed-afr-module">
