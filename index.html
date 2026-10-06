@@ -277,11 +277,120 @@ nav button.on{border-color:#ff7a00;background:linear-gradient(180deg,#4a2107,#1a
 #powerCanvas{cursor:crosshair;touch-action:manipulation}
 @media(max-height:430px){.power-peak .peak-rpm{grid-column:1/-1;display:block;width:100%;min-width:88px;text-align:center;font:900 8px Arial,sans-serif;color:#d7dce1;letter-spacing:.3px;white-space:nowrap;line-height:1.1;overflow:visible}}
 </style>
+<style id="app-number-keypad-v1">
+input[type="number"][data-app-numpad="1"]{
+  cursor:pointer;
+  caret-color:transparent;
+  -moz-appearance:textfield;
+}
+input[type="number"][data-app-numpad="1"]::-webkit-outer-spin-button,
+input[type="number"][data-app-numpad="1"]::-webkit-inner-spin-button{
+  -webkit-appearance:none;
+  margin:0;
+}
+input[type="number"][data-app-numpad="1"].app-num-active{
+  border-color:#ff7a00!important;
+  box-shadow:0 0 0 1px #ff7a00,0 0 16px rgba(255,106,0,.18)!important;
+}
+#appNumPad{
+  position:fixed;
+  left:50%;
+  bottom:7px;
+  z-index:9999;
+  width:min(520px,calc(100% - 14px));
+  transform:translate(-50%,115%);
+  opacity:0;
+  pointer-events:none;
+  transition:transform .16s ease,opacity .14s ease;
+  border:1px solid #4c2b18;
+  border-radius:12px;
+  background:linear-gradient(180deg,#12100e,#080706);
+  box-shadow:0 16px 50px rgba(0,0,0,.68),0 0 24px rgba(255,106,0,.10);
+  padding:7px;
+}
+#appNumPad.show{
+  transform:translate(-50%,0);
+  opacity:1;
+  pointer-events:auto;
+}
+.app-np-head{
+  height:31px;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:8px;
+  padding:0 4px 5px;
+}
+.app-np-meta{min-width:0}
+#appNumPadLabel{
+  display:block;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:#91867d;
+  font:800 7px Arial,sans-serif;
+  letter-spacing:.7px;
+  text-transform:uppercase;
+}
+#appNumPadValue{
+  display:block;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:#fff;
+  font:900 15px Arial,sans-serif;
+  font-variant-numeric:tabular-nums;
+}
+#appNumPadHideTop{
+  width:42px;
+  height:27px;
+  border:1px solid #38312c;
+  border-radius:6px;
+  background:#111;
+  color:#c9c2bc;
+  font:900 13px Arial,sans-serif;
+}
+.app-np-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:5px;
+}
+.app-np-key{
+  height:38px;
+  border:1px solid #3b3028;
+  border-radius:7px;
+  background:linear-gradient(180deg,#1b1815,#0e0d0c);
+  color:#fff;
+  font:900 15px Arial,sans-serif;
+  touch-action:manipulation;
+}
+.app-np-key:active{transform:translateY(1px);background:#24170e}
+.app-np-key.fn{font-size:10px;color:#ffc08d}
+.app-np-key.clear{color:#ff7878}
+.app-np-key.hide{color:#d7d7d7}
+.app-np-key.save{
+  border-color:#a94f12;
+  background:linear-gradient(180deg,#5a2607,#2b1204);
+  color:#fff1e5;
+  font-size:11px;
+}
+body.app-numpad-open #settings{
+  padding-bottom:210px!important;
+}
+@media(max-height:430px){
+ #appNumPad{width:min(470px,calc(100% - 10px));bottom:4px;padding:5px}
+ .app-np-head{height:26px;padding-bottom:3px}
+ #appNumPadValue{font-size:12px}
+ .app-np-key{height:30px;font-size:12px}
+ .app-np-key.fn,.app-np-key.save{font-size:8px}
+ body.app-numpad-open #settings{padding-bottom:168px!important}
+}
+</style>
 </head>
 <body>
 <div id="app">
 <header>
- <div class="brand">BT <b>SPEED</b> DYNO <small id="buildTag" style="font:700 7px Arial;color:#66584d;margin-left:4px">P13</small></div>
+ <div class="brand">BT <b>SPEED</b> DYNO <small id="buildTag" style="font:700 7px Arial;color:#66584d;margin-left:4px">P14</small></div>
  <nav>
   <button data-page="live" class="on">LIVE</button>
   <button data-page="power">HP/TOR</button>
@@ -403,6 +512,34 @@ nav button.on{border-color:#ff7a00;background:linear-gradient(180deg,#4a2107,#1a
 </main>
 </div>
 
+<div id="appNumPad" aria-hidden="true">
+ <div class="app-np-head">
+  <div class="app-np-meta"><span id="appNumPadLabel">NUMBER INPUT</span><b id="appNumPadValue">0</b></div>
+  <button id="appNumPadHideTop" type="button" aria-label="Hide keypad">⌄</button>
+ </div>
+ <div class="app-np-grid">
+  <button class="app-np-key" type="button" data-np="7">7</button>
+  <button class="app-np-key" type="button" data-np="8">8</button>
+  <button class="app-np-key" type="button" data-np="9">9</button>
+  <button class="app-np-key fn" type="button" data-np="back">⌫</button>
+
+  <button class="app-np-key" type="button" data-np="4">4</button>
+  <button class="app-np-key" type="button" data-np="5">5</button>
+  <button class="app-np-key" type="button" data-np="6">6</button>
+  <button class="app-np-key fn clear" type="button" data-np="clear">C</button>
+
+  <button class="app-np-key" type="button" data-np="1">1</button>
+  <button class="app-np-key" type="button" data-np="2">2</button>
+  <button class="app-np-key" type="button" data-np="3">3</button>
+  <button class="app-np-key fn hide" type="button" data-np="hide">HIDE</button>
+
+  <button class="app-np-key" type="button" data-np="0">0</button>
+  <button class="app-np-key" type="button" data-np="00">00</button>
+  <button class="app-np-key" type="button" data-np=".">.</button>
+  <button class="app-np-key save" type="button" data-np="save">SAVE</button>
+ </div>
+</div>
+
 <script>
 (function(){
 'use strict';
@@ -435,6 +572,118 @@ var SIM={
 };
 var SIM_SAMPLE_MS=25,SIM_ROLLER_TIMEOUT_MS=1000,SIM_ABS_MIN_PERIOD_US=6000;
 var SIM_EARLY_GATE_PERCENT=45,SIM_PERIOD_ALPHA=0.40,SIM_OUTPUT_ALPHA=0.18,SIM_AFR_ALPHA=0.20;
+var APP_NUMPAD={input:null,replaceNext:false};
+
+function appNumPadLabelFor(input){
+ var lab=input&&input.closest?input.closest('label'):null;
+ var span=lab&&lab.querySelector?lab.querySelector('span'):null;
+ return span&&span.textContent?span.textContent.trim():(input&&input.id?input.id:'NUMBER INPUT')
+}
+function appNumPadRefresh(){
+ var pad=$('appNumPad'),val=$('appNumPadValue'),lab=$('appNumPadLabel');
+ if(!pad)return;
+ if(lab)lab.textContent=APP_NUMPAD.input?appNumPadLabelFor(APP_NUMPAD.input):'NUMBER INPUT';
+ if(val)val.textContent=APP_NUMPAD.input&&APP_NUMPAD.input.value!==''?APP_NUMPAD.input.value:'--'
+}
+function appNumPadOpen(input){
+ if(!input||input.type!=='number')return;
+ if(APP_NUMPAD.input&&APP_NUMPAD.input!==input)APP_NUMPAD.input.classList.remove('app-num-active');
+ APP_NUMPAD.input=input;APP_NUMPAD.replaceNext=true;
+ input.classList.add('app-num-active');
+ var pad=$('appNumPad');if(pad){pad.classList.add('show');pad.setAttribute('aria-hidden','false')}
+ document.body.classList.add('app-numpad-open');
+ try{input.blur()}catch(e){}
+ appNumPadRefresh();
+ setTimeout(function(){try{input.scrollIntoView({block:'center',behavior:'smooth'})}catch(e){}},30)
+}
+function appNumPadHide(){
+ if(APP_NUMPAD.input)APP_NUMPAD.input.classList.remove('app-num-active');
+ APP_NUMPAD.input=null;APP_NUMPAD.replaceNext=false;
+ var pad=$('appNumPad');if(pad){pad.classList.remove('show');pad.setAttribute('aria-hidden','true')}
+ document.body.classList.remove('app-numpad-open')
+}
+function appNumPadEmitInput(input){
+ if(!input)return;
+ try{input.dispatchEvent(new Event('input',{bubbles:true}))}catch(e){}
+ appNumPadRefresh()
+}
+function appNumPadAppend(token){
+ var input=APP_NUMPAD.input;if(!input)return;
+ var v=String(input.value||'');
+ if(token==='back'){
+   APP_NUMPAD.replaceNext=false;
+   input.value=v.slice(0,-1);
+   appNumPadEmitInput(input);return
+ }
+ if(token==='clear'){
+   APP_NUMPAD.replaceNext=false;
+   input.value='';
+   appNumPadEmitInput(input);return
+ }
+ if(token==='.'){
+   if(APP_NUMPAD.replaceNext){v='0';APP_NUMPAD.replaceNext=false}
+   if(v.indexOf('.')<0)v=(v||'0')+'.';
+   input.value=v;appNumPadEmitInput(input);return
+ }
+ if(APP_NUMPAD.replaceNext){v='';APP_NUMPAD.replaceNext=false}
+ if(v==='0'&&token!=='00')v='';
+ input.value=v+token;
+ appNumPadEmitInput(input)
+}
+function appNumPadNormalize(input){
+ if(!input)return;
+ var raw=String(input.value||'').trim();
+ if(raw===''||raw==='.'||raw==='-.')raw='0';
+ var v=Number(raw);if(!isFinite(v))v=0;
+ var mn=input.getAttribute('min'),mx=input.getAttribute('max');
+ if(mn!==null&&mn!==''&&isFinite(+mn))v=Math.max(+mn,v);
+ if(mx!==null&&mx!==''&&isFinite(+mx))v=Math.min(+mx,v);
+ input.value=String(v);
+ appNumPadEmitInput(input)
+}
+function appNumPadSave(){
+ var input=APP_NUMPAD.input;
+ if(input)appNumPadNormalize(input);
+ save(true);
+ if(S.connected&&S.cmd)pushAllConfigToS3(S.cfgState!=='ready');
+ appNumPadHide()
+}
+function bindAppNumPadInput(input){
+ if(!input||input.type!=='number'||input.dataset.appNumpad==='1')return;
+ input.dataset.appNumpad='1';
+ input.setAttribute('inputmode','none');
+ input.setAttribute('readonly','readonly');
+ input.setAttribute('autocomplete','off');
+ input.setAttribute('enterkeyhint','done');
+ input.addEventListener('pointerdown',function(e){e.preventDefault();appNumPadOpen(input)});
+ input.addEventListener('click',function(e){e.preventDefault();appNumPadOpen(input)});
+ input.addEventListener('focus',function(){try{input.blur()}catch(e){};appNumPadOpen(input)});
+ input.addEventListener('keydown',function(e){e.preventDefault()})
+}
+function initAppNumPad(){
+ document.querySelectorAll('input[type="number"]').forEach(bindAppNumPadInput);
+ var pad=$('appNumPad');if(pad){
+   pad.addEventListener('pointerdown',function(e){e.stopPropagation()});
+   pad.querySelectorAll('[data-np]').forEach(function(b){
+     b.addEventListener('click',function(){
+       var k=this.dataset.np;
+       if(k==='hide'){appNumPadHide();return}
+       if(k==='save'){appNumPadSave();return}
+       appNumPadAppend(k)
+     })
+   })
+ }
+ var hide=$('appNumPadHideTop');if(hide)hide.onclick=appNumPadHide;
+ try{
+   new MutationObserver(function(ms){
+     ms.forEach(function(m){Array.prototype.forEach.call(m.addedNodes||[],function(n){
+       if(!n||n.nodeType!==1)return;
+       if(n.matches&&n.matches('input[type="number"]'))bindAppNumPadInput(n);
+       if(n.querySelectorAll)n.querySelectorAll('input[type="number"]').forEach(bindAppNumPadInput)
+     })})
+   }).observe(document.body,{childList:true,subtree:true})
+ }catch(e){}
+}
 function n(id,d){var v=parseFloat($(id).value);return isFinite(v)?v:d}
 function afrFromV(v){var v0=n('afrVMin',0),v1=n('afrVMax',3.15),a0=n('afrMin',10),a1=n('afrMax',20);if(v1===v0)return a0;return a0+(v-v0)*(a1-a0)/(v1-v0)}
 function ignitionMultiplier(){var e=$('ignitionCycle');return e&&e.value==='720'?2:1}
@@ -1054,7 +1303,7 @@ document.addEventListener('keydown',function(e){
 
 document.querySelectorAll('nav button').forEach(function(b){b.onclick=function(){document.querySelectorAll('nav button').forEach(function(x){x.classList.remove('on')});document.querySelectorAll('.page').forEach(function(x){x.classList.remove('on')});b.classList.add('on');$(b.dataset.page).classList.add('on');setTimeout(drawAll,30)}})
 $('bleTop').onclick=connectBle;$('ctlBle').onclick=connectBle;$('ctlRun').onclick=startRun;$('ctlStop').onclick=stopRun;$('ctlAuto').onclick=toggleAuto;$('ctlSim').onclick=toggleSim;if($('btnSaveSettings'))$('btnSaveSettings').onclick=function(){save(true);if(S.connected&&S.cmd)pushAllConfigToS3(S.cfgState!=='ready')};document.querySelectorAll('[data-smooth]').forEach(function(b){b.onclick=function(){setSmoothingLevel(this.dataset.smooth,true)}});$('run201').onclick=function(){reset201();S.wait201=true;$('state201').textContent='Waiting ≥ 1 km/h'};$('reset201').onclick=reset201;$('autoStart').onchange=function(){S.auto=this.checked;$('ctlAuto').classList.toggle('on',S.auto);save();pushConfigKey('autoStart')}
-cfgIds.forEach(function(id){$(id).addEventListener('change',function(){save(false);if(id==='rpmFilterUs')pushRpmFilter();pushConfigKey(id)});$(id).addEventListener('input',function(){save(false)})});window.addEventListener('resize',drawAll);document.addEventListener('visibilitychange',function(){if(!document.hidden)drawAll()});load();restoreRunHistory();renderRunHistoryUI();bindRunHistoryUI();bindPowerChartTouch();reset201();try{console.log('BT Speed Dyno build P13 - ESP32 settings sync')}catch(e){};setBle(false);try{if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(function(){})}catch(e){};setTimeout(drawAll,100);
+cfgIds.forEach(function(id){$(id).addEventListener('change',function(){save(false);if(id==='rpmFilterUs')pushRpmFilter();pushConfigKey(id)});$(id).addEventListener('input',function(){save(false)})});window.addEventListener('resize',drawAll);document.addEventListener('visibilitychange',function(){if(!document.hidden)drawAll()});load();initAppNumPad();restoreRunHistory();renderRunHistoryUI();bindRunHistoryUI();bindPowerChartTouch();reset201();try{console.log('BT Speed Dyno build P14 - app numeric keypad')}catch(e){};setBle(false);try{if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(function(){})}catch(e){};setTimeout(drawAll,100);
 })();
 </script>
 <script id="bt-speed-afr-module">
