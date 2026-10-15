@@ -186,6 +186,7 @@ main{display:none;min-height:0;overflow:hidden}.page.on{display:block;height:100
 #settings .setline{grid-template-columns:minmax(0,1fr) minmax(68px,84px);min-width:0}
 #settings .setline span{min-width:0;overflow-wrap:anywhere}
 #settings .setline input,#settings .setline select{min-width:0;max-width:100%;box-sizing:border-box}
+#settings .afr-live-voltage output{font:900 12px Arial,sans-serif;color:#ff9f1c;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 .settings-actions{position:sticky;left:0;right:0;bottom:0;z-index:8;display:flex;align-items:center;justify-content:center;gap:8px;min-height:42px;margin-top:6px;padding:5px 8px;border:1px solid #292f35;border-radius:9px;background:#080b0eef;backdrop-filter:blur(8px)}
 #btnSaveSettings{height:31px;min-width:132px;border:1px solid #8f252b;border-radius:7px;background:#321114;color:#fff;font:900 9px Arial,sans-serif;letter-spacing:.7px}
 #btnSaveSettings:active{transform:translateY(1px)}
@@ -447,7 +448,7 @@ body.app-numpad-open #settings{
 
 <main id="afrLive" class="page bt-afr-page">
  <div class="bt-afr-live-grid">
-  <section class="bt-afr-panel"><div class="bt-afr-title">BT Speed AFR · Live AFR</div><div id="btAfrLiveValue" class="bt-afr-big orange">--</div><div class="bt-afr-meta"><span id="btAfrState" class="bt-tag">WAITING</span><span id="btAfrWriteState" class="bt-tag">WRITE AUTO</span><span id="btAfrVoltage" class="bt-tag">0.000 V</span></div></section>
+  <section class="bt-afr-panel"><div class="bt-afr-title">BT Speed AFR · Live AFR</div><div id="btAfrLiveValue" class="bt-afr-big orange">--</div><div class="bt-afr-meta"><span id="btAfrState" class="bt-tag">WAITING</span><span id="btAfrWriteState" class="bt-tag">WRITE AUTO</span><span id="btAfrVoltage" class="bt-tag">-- V</span></div></section>
   <section class="bt-afr-panel"><div class="bt-afr-title">Engine RPM</div><div id="btAfrRpmValue" class="bt-afr-big">0</div><div class="bt-afr-meta"><span id="btAfrTrend" class="bt-tag">HOLD</span><span id="btAfrActiveBin" class="bt-tag">BIN --</span><span class="bt-tag">BLE SHARED WITH DYNO</span></div></section>
  </div>
 </main>
@@ -490,6 +491,7 @@ body.app-numpad-open #settings{
    <label class="setline"><span>Max speed display</span><input id="maxSpeed" type="number" value="160"></label>
   </section>
   <section class="card"><h3>AFR</h3>
+   <div class="setline afr-live-voltage"><span>AFR voltage (LIVE)</span><output id="afrSettingsLiveVoltage">-- V</output></div>
    <label class="setline"><span>Volt min</span><input id="afrVMin" type="number" step=".01" value="0"></label>
    <label class="setline"><span>AFR min</span><input id="afrMin" type="number" step=".1" value="10"></label>
    <label class="setline"><span>Volt max</span><input id="afrVMax" type="number" step=".01" value="3.15"></label>
@@ -575,7 +577,7 @@ var SIM={
 };
 var SIM_SAMPLE_MS=25,SIM_ROLLER_TIMEOUT_MS=1000,SIM_ABS_MIN_PERIOD_US=6000;
 var SIM_EARLY_GATE_PERCENT=45,SIM_PERIOD_ALPHA=0.40,SIM_OUTPUT_ALPHA=0.18,SIM_AFR_ALPHA=0.20;
-var APP_NUMPAD={input:null,replaceNext:false};
+var APP_NUMPAD={input:null,replaceNext:false,draft:''};
 
 function appNumPadLabelFor(input){
  var lab=input&&input.closest?input.closest('label'):null;
@@ -586,12 +588,14 @@ function appNumPadRefresh(){
  var pad=$('appNumPad'),val=$('appNumPadValue'),lab=$('appNumPadLabel');
  if(!pad)return;
  if(lab)lab.textContent=APP_NUMPAD.input?appNumPadLabelFor(APP_NUMPAD.input):'NUMBER INPUT';
- if(val)val.textContent=APP_NUMPAD.input&&APP_NUMPAD.input.value!==''?APP_NUMPAD.input.value:'--'
+ if(val)val.textContent=APP_NUMPAD.input&&APP_NUMPAD.draft!==''?APP_NUMPAD.draft:'--'
 }
 function appNumPadOpen(input){
  if(!input||input.type!=='number')return;
- if(APP_NUMPAD.input&&APP_NUMPAD.input!==input)APP_NUMPAD.input.classList.remove('app-num-active');
- APP_NUMPAD.input=input;APP_NUMPAD.replaceNext=true;
+ if(APP_NUMPAD.input!==input){
+  if(APP_NUMPAD.input)APP_NUMPAD.input.classList.remove('app-num-active');
+  APP_NUMPAD.input=input;APP_NUMPAD.draft=String(input.value||'');APP_NUMPAD.replaceNext=true;
+ }
  input.classList.add('app-num-active');
  var pad=$('appNumPad');if(pad){pad.classList.add('show');pad.setAttribute('aria-hidden','false')}
  document.body.classList.add('app-numpad-open');
@@ -601,47 +605,54 @@ function appNumPadOpen(input){
 }
 function appNumPadHide(){
  if(APP_NUMPAD.input)APP_NUMPAD.input.classList.remove('app-num-active');
- APP_NUMPAD.input=null;APP_NUMPAD.replaceNext=false;
+ APP_NUMPAD.input=null;APP_NUMPAD.replaceNext=false;APP_NUMPAD.draft='';
  var pad=$('appNumPad');if(pad){pad.classList.remove('show');pad.setAttribute('aria-hidden','true')}
  document.body.classList.remove('app-numpad-open')
 }
 function appNumPadEmitInput(input){
  if(!input)return;
- try{input.dispatchEvent(new Event('input',{bubbles:true}))}catch(e){}
+ // Preserve an in-progress decimal (e.g. "2.") outside the numeric input.
+ var raw=APP_NUMPAD.input===input?APP_NUMPAD.draft:String(input.value||'');
+ var committed=raw.endsWith('.')?raw.slice(0,-1):raw;
+ if(committed===''||/^-?\d+(?:\.\d+)?$/.test(committed)){
+  input.value=committed;
+  try{input.dispatchEvent(new Event('input',{bubbles:true}))}catch(e){}
+ }
  appNumPadRefresh()
 }
 function appNumPadAppend(token){
  var input=APP_NUMPAD.input;if(!input)return;
- var v=String(input.value||'');
+ var v=APP_NUMPAD.draft;
  if(token==='back'){
-   APP_NUMPAD.replaceNext=false;
-   input.value=v.slice(0,-1);
-   appNumPadEmitInput(input);return
+  APP_NUMPAD.replaceNext=false;
+  APP_NUMPAD.draft=v.slice(0,-1);
+  appNumPadEmitInput(input);return
  }
  if(token==='clear'){
-   APP_NUMPAD.replaceNext=false;
-   input.value='';
-   appNumPadEmitInput(input);return
+  APP_NUMPAD.replaceNext=false;
+  APP_NUMPAD.draft='';
+  appNumPadEmitInput(input);return
  }
  if(token==='.'){
-   if(APP_NUMPAD.replaceNext){v='0';APP_NUMPAD.replaceNext=false}
-   if(v.indexOf('.')<0)v=(v||'0')+'.';
-   input.value=v;appNumPadEmitInput(input);return
+  if(APP_NUMPAD.replaceNext){v='0';APP_NUMPAD.replaceNext=false}
+  if(v.indexOf('.')<0)v=(v||'0')+'.';
+  APP_NUMPAD.draft=v;appNumPadEmitInput(input);return
  }
  if(APP_NUMPAD.replaceNext){v='';APP_NUMPAD.replaceNext=false}
  if(v==='0'&&token!=='00')v='';
- input.value=v+token;
+ APP_NUMPAD.draft=v+token;
  appNumPadEmitInput(input)
 }
 function appNumPadNormalize(input){
  if(!input)return;
- var raw=String(input.value||'').trim();
+ var raw=String(APP_NUMPAD.input===input?APP_NUMPAD.draft:(input.value||'')).trim();
  if(raw===''||raw==='.'||raw==='-.')raw='0';
  var v=Number(raw);if(!isFinite(v))v=0;
  var mn=input.getAttribute('min'),mx=input.getAttribute('max');
  if(mn!==null&&mn!==''&&isFinite(+mn))v=Math.max(+mn,v);
  if(mx!==null&&mx!==''&&isFinite(+mx))v=Math.min(+mx,v);
  input.value=String(v);
+ if(APP_NUMPAD.input===input)APP_NUMPAD.draft=input.value;
  appNumPadEmitInput(input)
 }
 function appNumPadSave(){
@@ -758,7 +769,7 @@ function normalizePowerData(data){
    return[rpm,hp,tq,engineRpm]
  })
 }
-function setBle(on,msg){S.connected=on;$('bleStatus').textContent=msg||(on?'BLE OK':'BLE OFF');$('bleStatus').classList.toggle('ok',on);$('ctlBle').textContent=on?'OFF':'BLE';$('bleTop').textContent=on?'OFF':'BLE'}
+function setBle(on,msg){S.connected=on;$('bleStatus').textContent=msg||(on?'BLE OK':'BLE OFF');$('bleStatus').classList.toggle('ok',on);$('ctlBle').textContent=on?'OFF':'BLE';$('bleTop').textContent=on?'OFF':'BLE';if(!on&&!S.sim){var v=$('afrSettingsLiveVoltage');if(v)v.textContent='-- V';v=$('btAfrVoltage');if(v)v.textContent='-- V'}}
 async function connectBle(){if(S.connected){disconnectBle();return}if(!navigator.bluetooth){alert('Web Bluetooth unavailable. On iPhone open this HTTPS page in Bluefy or another Web Bluetooth compatible browser.');return}try{$('bleStatus').textContent='SCAN BLE';S.device=await navigator.bluetooth.requestDevice({
   acceptAllDevices:true,
   optionalServices:[BLE.service]
@@ -1363,7 +1374,7 @@ function renderRow(bin){var tr=document.querySelector('#btAfrMapBody tr[data-rpm
 function buildTable(){var body=document.getElementById('btAfrMapBody');if(!body)return;body.innerHTML='';rpmList.forEach(function(bin){var tr=document.createElement('tr');tr.dataset.rpm=String(bin);tr.innerHTML='<td>'+bin+'</td><td class="afr-v">--</td><td class="sample-v">0</td>';body.appendChild(tr);renderRow(bin)})}
 function setActive(bin){document.querySelectorAll('#btAfrMapBody tr.active').forEach(function(x){x.classList.remove('active')});if(bin==null)return;var tr=document.querySelector('#btAfrMapBody tr[data-rpm="'+bin+'"]');if(!tr)return;tr.classList.add('active');if(set.autoScroll){var now=Date.now();if(lastScrollBin===null||Math.abs(bin-lastScrollBin)>=400||(now-lastScrollTs)>1800){tr.scrollIntoView({block:'nearest',behavior:'smooth'});lastScrollBin=bin;lastScrollTs=now}}}
 function updateButtons(){var a=document.getElementById('btAfrWriteToggle'),b=document.getElementById('btAfrScrollToggle');if(a){a.textContent='AUTO WRITE: '+(set.autoWrite?'ON':'OFF');a.classList.toggle('hot',set.autoWrite)}if(b){b.textContent='AUTO SCROLL: '+(set.autoScroll?'ON':'OFF');b.classList.toggle('hot',set.autoScroll)}}
-function setLiveUi(afr,rpm,v,trend,bin){latestAfr=afr;latestRpm=rpm;var st=liveState(afr),e=document.getElementById('btAfrLiveValue');if(e)e.textContent=Number.isFinite(afr)?afr.toFixed(2):'--';e=document.getElementById('btAfrRpmValue');if(e)e.textContent=Number.isFinite(rpm)?Math.round(rpm):'0';e=document.getElementById('btAfrVoltage');if(e)e.textContent=(Number.isFinite(v)?v.toFixed(3):'0.000')+' V';e=document.getElementById('btAfrTrend');if(e)e.textContent=trend;e=document.getElementById('btAfrActiveBin');if(e)e.textContent='BIN '+(bin==null?'--':bin);e=document.getElementById('btAfrState');if(e){e.textContent=st.toUpperCase();e.className='bt-tag '+(st==='waiting'?'':st)};e=document.getElementById('btAfrWriteState');if(e)e.textContent=set.autoWrite?(decelLock?'WRITE LOCKED':'WRITE AUTO'):'WRITE OFF';e=document.getElementById('btMapAfr');if(e)e.textContent=Number.isFinite(afr)?afr.toFixed(2):'--';e=document.getElementById('btMapRpm');if(e)e.textContent=Number.isFinite(rpm)?Math.round(rpm):'0';e=document.getElementById('btMapWrite');if(e)e.textContent=set.autoWrite?(decelLock?'DECEL LOCK':'AUTO WRITE'):'WRITE OFF'}
+function setLiveUi(afr,rpm,v,trend,bin){latestAfr=afr;latestRpm=rpm;var st=liveState(afr),e=document.getElementById('btAfrLiveValue');if(e)e.textContent=Number.isFinite(afr)?afr.toFixed(2):'--';e=document.getElementById('btAfrRpmValue');if(e)e.textContent=Number.isFinite(rpm)?Math.round(rpm):'0';var liveVoltage=Number.isFinite(v)?v.toFixed(3)+' V':'-- V';e=document.getElementById('btAfrVoltage');if(e)e.textContent=liveVoltage;e=document.getElementById('afrSettingsLiveVoltage');if(e)e.textContent=liveVoltage;e=document.getElementById('btAfrTrend');if(e)e.textContent=trend;e=document.getElementById('btAfrActiveBin');if(e)e.textContent='BIN '+(bin==null?'--':bin);e=document.getElementById('btAfrState');if(e){e.textContent=st.toUpperCase();e.className='bt-tag '+(st==='waiting'?'':st)};e=document.getElementById('btAfrWriteState');if(e)e.textContent=set.autoWrite?(decelLock?'WRITE LOCKED':'WRITE AUTO'):'WRITE OFF';e=document.getElementById('btMapAfr');if(e)e.textContent=Number.isFinite(afr)?afr.toFixed(2):'--';e=document.getElementById('btMapRpm');if(e)e.textContent=Number.isFinite(rpm)?Math.round(rpm):'0';e=document.getElementById('btMapWrite');if(e)e.textContent=set.autoWrite?(decelLock?'DECEL LOCK':'AUTO WRITE'):'WRITE OFF'}
 function collectBand(min,max){var a=[];rpmList.forEach(function(r){if(r<min||r>max)return;var v=Number(bins[r]&&bins[r].afr);if(Number.isFinite(v))a.push({rpm:r,afr:v,state:classify(v,r)})});return a}
 function resolveBand(samples){if(!samples.length)return{state:null,reason:'No data in this band.'};var c={rich:0,target:0,lean:0},sum=0;samples.forEach(function(x){c[x.state]++;sum+=x.afr});var sorted=Object.entries(c).sort(function(a,b){return b[1]-a[1]});if(sorted[0][1]>sorted[1][1])return{state:sorted[0][0],counts:c,avg:sum/samples.length,reason:'Most samples are '+sorted[0][0]+'.'};var tied=sorted.filter(function(x){return x[1]===sorted[0][1]&&x[1]>0}).map(function(x){return x[0]});if(tied.length===2&&tied.indexOf('rich')>=0&&tied.indexOf('target')>=0)return{state:'target',counts:c,avg:sum/samples.length,reason:'Tie rich/target -> target.'};if(tied.length===2&&tied.indexOf('target')>=0&&tied.indexOf('lean')>=0)return{state:'lean',counts:c,avg:sum/samples.length,reason:'Tie target/lean -> lean.'};var avg=sum/samples.length;return{state:classify(avg),counts:c,avg:avg,reason:'Tie resolved by average AFR '+avg.toFixed(2)+'.'}}
 function bandAnalysis(){return[{key:'g1',name:'Band 1',min:1500,max:3499,label:'1500-3500 rpm'},{key:'g2',name:'Band 2',min:3500,max:4999,label:'3500-5000 rpm'},{key:'g3',name:'Band 3',min:5000,max:7499,label:'5000-7500 rpm'},{key:'g4',name:'Final band',min:7500,max:10000,label:'7500-10000 rpm'}].map(function(d){var samples=collectBand(d.min,d.max),r=resolveBand(samples);return Object.assign({},d,r,{samples:samples})})}
