@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.webmanifest">
-<title>BT Speed Dyno P18</title>
+<title>BT Speed Dyno P19</title>
 <style>
 :root{--bg:#040506;--panel:#0b0d10;--line:#252a30;--red:#ff6a00;--orange:#ff9f1c;--green:#37d45a;--blue:#3488ff;--text:#f3f5f7;--muted:#89939d;--nav:40px;--ctl:44px}
 *{box-sizing:border-box;-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
@@ -392,7 +392,7 @@ body.app-numpad-open #settings{
 <body>
 <div id="app">
 <header>
- <div class="brand">BT <b>SPEED</b> DYNO <small id="buildTag" style="font:900 9px Arial;color:#2dff8a;margin-left:4px">P18</small></div>
+ <div class="brand">BT <b>SPEED</b> DYNO <small id="buildTag" style="font:900 9px Arial;color:#2dff8a;margin-left:4px">P19</small></div>
  <nav>
   <button data-page="live" class="on">LIVE</button>
   <button data-page="power">HP/TOR</button>
@@ -492,6 +492,7 @@ body.app-numpad-open #settings{
   </section>
   <section class="card"><h3>AFR</h3>
    <div class="setline afr-live-voltage"><span>AFR voltage (LIVE)</span><output id="afrSettingsLiveVoltage">-- V</output></div>
+   <div class="setline afr-live-voltage"><span>BLE packet errors</span><output id="afrRxRejectCount" title="Dropped malformed/invalid BLE samples">0</output></div>
    <label class="setline"><span>Volt min</span><input id="afrVMin" type="number" step=".01" value="0"></label>
    <label class="setline"><span>AFR min</span><input id="afrMin" type="number" step=".1" value="10"></label>
    <label class="setline"><span>Volt max</span><input id="afrVMax" type="number" step=".01" value="3.15"></label>
@@ -548,7 +549,7 @@ body.app-numpad-open #settings{
 (function(){
 'use strict';
 try{if(/[?&]android=1(?:&|$)/.test(location.search)){document.documentElement.classList.add('android-app');document.body&&document.body.classList.add('android-app')}}catch(e){}
-var S={connected:false,recording:false,sim:false,auto:false,autoEndRun:true,device:null,server:null,live:null,cmd:null,status:null,lineBuf:'',statusBuf:'',cfgState:'unknown',cfgMigrating:false,lastT:0,omegaF:0,ow:[],tw:[],rpm:0,rrpm:0,speed:0,afr:0,hp:0,tq:0,alpha:0,hpMax:0,tqMax:0,hpMaxRpm:0,tqMaxRpm:0,runPower:[],runRpm:[],liveRpmPts:[],lastSampleT:0,simT:0,run201:false,wait201:false,done201:false,d201:0,t2010:0,t201last:0,maxS201:0,maxR201:0,rollerCalcPrimed:false,rollerStartupSamplesRemaining:0,rollerGuardLastDistinctRpm:0,rollerGuardLastDistinctMs:0,lastPlotRpm:0,runPeakRollerRpm:0,runDeclineSinceMs:0,smoothingLevel:1,powerPickX:null,powerHit:null};
+var S={badLiveFrames:0,lastBadLiveFrame:'',connected:false,recording:false,sim:false,auto:false,autoEndRun:true,device:null,server:null,live:null,cmd:null,status:null,lineBuf:'',statusBuf:'',cfgState:'unknown',cfgMigrating:false,lastT:0,omegaF:0,ow:[],tw:[],rpm:0,rrpm:0,speed:0,afr:0,hp:0,tq:0,alpha:0,hpMax:0,tqMax:0,hpMaxRpm:0,tqMaxRpm:0,runPower:[],runRpm:[],liveRpmPts:[],lastSampleT:0,simT:0,run201:false,wait201:false,done201:false,d201:0,t2010:0,t201last:0,maxS201:0,maxR201:0,rollerCalcPrimed:false,rollerStartupSamplesRemaining:0,rollerGuardLastDistinctRpm:0,rollerGuardLastDistinctMs:0,lastPlotRpm:0,runPeakRollerRpm:0,runDeclineSinceMs:0,smoothingLevel:1,powerPickX:null,powerHit:null};
 var BLE={service:'d7a10001-7c35-4a6d-9f0e-2ea3117f1000',live:'d7a10002-7c35-4a6d-9f0e-2ea3117f1000',cmd:'d7a10003-7c35-4a6d-9f0e-2ea3117f1000',status:'d7a10005-7c35-4a6d-9f0e-2ea3117f1000'};
 var $=function(id){return document.getElementById(id)},dec=new TextDecoder(),enc=new TextEncoder();
 var cfgIds=['rollerD','rollerJ','maxRpm','maxSpeed','afrVMin','afrMin','afrVMax','afrMax','afrDecelEps','ignitionCycle','rpmFilterUs','autoSpeed','autoHp','autoAlpha'];
@@ -768,7 +769,7 @@ function normalizePowerData(data){
    return[rpm,hp,tq,engineRpm]
  })
 }
-function setBle(on,msg){S.connected=on;$('bleStatus').textContent=msg||(on?'BLE OK':'BLE OFF');$('bleStatus').classList.toggle('ok',on);$('ctlBle').textContent=on?'OFF':'BLE';$('bleTop').textContent=on?'OFF':'BLE';if(!on&&!S.sim){var v=$('afrSettingsLiveVoltage');if(v)v.textContent='-- V';v=$('btAfrVoltage');if(v)v.textContent='-- V'}}
+function setBle(on,msg){if(!on){S.lineBuf='';S.statusBuf=''}S.connected=on;$('bleStatus').textContent=msg||(on?'BLE OK':'BLE OFF');$('bleStatus').classList.toggle('ok',on);$('ctlBle').textContent=on?'OFF':'BLE';$('bleTop').textContent=on?'OFF':'BLE';if(!on&&!S.sim){var v=$('afrSettingsLiveVoltage');if(v)v.textContent='-- V';v=$('btAfrVoltage');if(v)v.textContent='-- V'}}
 async function connectBle(){if(S.connected){disconnectBle();return}if(!navigator.bluetooth){alert('Web Bluetooth unavailable. On iPhone open this HTTPS page in Bluefy or another Web Bluetooth compatible browser.');return}try{$('bleStatus').textContent='SCAN BLE';S.device=await navigator.bluetooth.requestDevice({
   acceptAllDevices:true,
   optionalServices:[BLE.service]
@@ -791,10 +792,54 @@ function onStatus(e){try{
    if(/BT SPEED DYNO READY/i.test(line))$('bleStatus').textContent='BT SPEED DYNO';else if(/ERR/i.test(line))$('bleStatus').textContent=line;
  }
 }catch(x){}}
-function onLive(e){var d=e.target.value,txt=dec.decode(new Uint8Array(d.buffer,d.byteOffset,d.byteLength));S.lineBuf+=txt;var i;while((i=S.lineBuf.indexOf('\n'))>=0){var line=S.lineBuf.slice(0,i).replace(/\r/g,'').trim();S.lineBuf=S.lineBuf.slice(i+1);handleLine(line)}}
-function handleLine(line){if(!line||line.charAt(0)!=='D')return;var p=line.split(',');if(p.length<5)return;sample(+p[1],+p[2],correctEngineRpm(+p[3]),+p[4])}
+// The ESP32-S3 firmware limits ADC AFR voltage to 0.000..3.300 V.
+// A huge value here means the received text frame is damaged/invalid.
+var DYNO_AFR_RX_MAX_V=3.35,DYNO_LIVE_MAX_LINE=112,DYNO_LIVE_MAX_PENDING=256;
+function dropBadLiveFrame(reason,line){
+ S.badLiveFrames=(S.badLiveFrames||0)+1;
+ S.lastBadLiveFrame=reason+': '+String(line||'').slice(0,120);
+ var el=$('afrRxRejectCount');
+ if(el){el.textContent=String(S.badLiveFrames);el.title=S.lastBadLiveFrame}
+ if(S.badLiveFrames<=3||S.badLiveFrames%50===0){
+  try{console.warn('BT Speed: dropped invalid BLE live frame ('+reason+'):',String(line||'').slice(0,120))}catch(e){}
+ }
+}
+function onLive(e){
+ var d=e.target.value,txt=dec.decode(new Uint8Array(d.buffer,d.byteOffset,d.byteLength));
+ S.lineBuf+=txt;
+ var i;
+ while((i=S.lineBuf.indexOf('\n'))>=0){
+  var line=S.lineBuf.slice(0,i).replace(/\r/g,'').trim();
+  S.lineBuf=S.lineBuf.slice(i+1);
+  handleLine(line);
+ }
+ // Missing BLE fragments must never create an unbounded receive buffer.
+ if(S.lineBuf.length>DYNO_LIVE_MAX_PENDING){
+  dropBadLiveFrame('unterminated frame',S.lineBuf);
+  var lastStart=S.lineBuf.lastIndexOf('D,');
+  S.lineBuf=lastStart>=0?S.lineBuf.slice(lastStart):'';
+  if(S.lineBuf.length>DYNO_LIVE_MAX_LINE)S.lineBuf='';
+ }
+}
+function handleLine(line){
+ if(!line)return;
+ if(line.length>DYNO_LIVE_MAX_LINE){dropBadLiveFrame('oversize frame',line);return}
+ var p=line.split(',');
+ if(p.length!==5||p[0]!=='D'){dropBadLiveFrame('broken CSV frame',line);return}
+ // Reject missing digits, concatenated packets, junk, Infinity, NaN and exponent text.
+ var decimal=/^\d+(?:\.\d+)?$/;
+ if(!/^\d{1,10}$/.test(p[1])||!decimal.test(p[2])||!decimal.test(p[3])||!decimal.test(p[4])){
+  dropBadLiveFrame('malformed numeric field',line);return
+ }
+ var t=Number(p[1]),rr=Number(p[2]),r=Number(p[3]),v=Number(p[4]);
+ if(!Number.isFinite(t)||!Number.isFinite(rr)||!Number.isFinite(r)||!Number.isFinite(v)
+    ||rr>30000||r>30000||v<0||v>DYNO_AFR_RX_MAX_V){
+  dropBadLiveFrame('out-of-range sensor value',line);return
+ }
+ sample(t,rr,correctEngineRpm(r),v)
+}
 function sample(t,rr,r,v){
- if(!isFinite(t)||!isFinite(rr)||!isFinite(r)||!isFinite(v))return;
+ if(!isFinite(t)||!isFinite(rr)||!isFinite(r)||!isFinite(v)||v<0||v>DYNO_AFR_RX_MAX_V)return;
  var D=n('rollerD',240)/1000,J=n('rollerJ',1.73);
  var speed=rr*Math.PI*D/60*3.6,afr=afrFromV(v),omega=rr*2*Math.PI/60;
  var rollerForceBaselineReset=false,hpTorqueSampleValid=false;
@@ -1348,7 +1393,7 @@ document.addEventListener('keydown',function(e){
 
 document.querySelectorAll('nav button').forEach(function(b){b.onclick=function(){showPage(b.dataset.page)}})
 $('bleTop').onclick=connectBle;$('ctlBle').onclick=connectBle;$('ctlRun').onclick=startRun;$('ctlStop').onclick=stopRun;$('ctlAuto').onclick=toggleAuto;$('ctlSim').onclick=toggleSim;if($('btnSaveSettings'))$('btnSaveSettings').onclick=function(){save(true);if(S.connected&&S.cmd)pushAllConfigToS3(S.cfgState!=='ready')};document.querySelectorAll('[data-smooth]').forEach(function(b){b.onclick=function(){setSmoothingLevel(this.dataset.smooth,true)}});$('run201').onclick=function(){reset201();S.wait201=true;$('state201').textContent='Waiting ≥ 1 km/h'};$('reset201').onclick=reset201;$('autoStart').onchange=function(){S.auto=this.checked;$('ctlAuto').classList.toggle('on',S.auto);save();pushConfigKey('autoStart')};$('autoEndRun').onchange=function(){S.autoEndRun=this.checked;S.runDeclineSinceMs=0;save();pushConfigKey('autoEndRun')}
-cfgIds.forEach(function(id){$(id).addEventListener('change',function(){save(false);if(id==='rpmFilterUs')pushRpmFilter();pushConfigKey(id)});$(id).addEventListener('input',function(){save(false)})});window.addEventListener('resize',drawAll);document.addEventListener('visibilitychange',function(){if(!document.hidden)drawAll()});load();initAppNumPad();restoreRunHistory();renderRunHistoryUI();bindRunHistoryUI();bindPowerChartTouch();reset201();try{console.log('BT Speed Dyno build P17 - auto end run toggle')}catch(e){};setBle(false);try{if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(function(){})}catch(e){};setTimeout(drawAll,100);
+cfgIds.forEach(function(id){$(id).addEventListener('change',function(){save(false);if(id==='rpmFilterUs')pushRpmFilter();pushConfigKey(id)});$(id).addEventListener('input',function(){save(false)})});window.addEventListener('resize',drawAll);document.addEventListener('visibilitychange',function(){if(!document.hidden)drawAll()});load();initAppNumPad();restoreRunHistory();renderRunHistoryUI();bindRunHistoryUI();bindPowerChartTouch();reset201();try{console.log('BT Speed Dyno build P19 - AFR BLE voltage frame guard')}catch(e){};setBle(false);try{if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(function(){})}catch(e){};setTimeout(drawAll,100);
 })();
 </script>
 <script id="bt-speed-afr-module">
