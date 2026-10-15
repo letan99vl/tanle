@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.webmanifest">
-<title>BT Speed Dyno</title>
+<title>BT Speed Dyno P18</title>
 <style>
 :root{--bg:#040506;--panel:#0b0d10;--line:#252a30;--red:#ff6a00;--orange:#ff9f1c;--green:#37d45a;--blue:#3488ff;--text:#f3f5f7;--muted:#89939d;--nav:40px;--ctl:44px}
 *{box-sizing:border-box;-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
@@ -280,17 +280,17 @@ nav button.on{border-color:#ff7a00;background:linear-gradient(180deg,#4a2107,#1a
 @media(max-height:430px){.power-peak .peak-rpm{grid-column:1/-1;display:block;width:100%;min-width:88px;text-align:center;font:900 11px Arial,sans-serif;color:#f3f5f7;letter-spacing:.35px;white-space:nowrap;line-height:1.15;overflow:visible}}
 </style>
 <style id="app-number-keypad-v1">
-input[type="number"][data-app-numpad="1"]{
+input[data-app-numpad="1"]{
   cursor:pointer;
   caret-color:transparent;
   -moz-appearance:textfield;
 }
-input[type="number"][data-app-numpad="1"]::-webkit-outer-spin-button,
-input[type="number"][data-app-numpad="1"]::-webkit-inner-spin-button{
+input[data-app-numpad="1"]::-webkit-outer-spin-button,
+input[data-app-numpad="1"]::-webkit-inner-spin-button{
   -webkit-appearance:none;
   margin:0;
 }
-input[type="number"][data-app-numpad="1"].app-num-active{
+input[data-app-numpad="1"].app-num-active{
   border-color:#ff7a00!important;
   box-shadow:0 0 0 1px #ff7a00,0 0 16px rgba(255,106,0,.18)!important;
 }
@@ -392,7 +392,7 @@ body.app-numpad-open #settings{
 <body>
 <div id="app">
 <header>
- <div class="brand">BT <b>SPEED</b> DYNO <small id="buildTag" style="font:700 7px Arial;color:#66584d;margin-left:4px">P17</small></div>
+ <div class="brand">BT <b>SPEED</b> DYNO <small id="buildTag" style="font:900 9px Arial;color:#2dff8a;margin-left:4px">P18</small></div>
  <nav>
   <button data-page="live" class="on">LIVE</button>
   <button data-page="power">HP/TOR</button>
@@ -591,7 +591,7 @@ function appNumPadRefresh(){
  if(val)val.textContent=APP_NUMPAD.input&&APP_NUMPAD.draft!==''?APP_NUMPAD.draft:'--'
 }
 function appNumPadOpen(input){
- if(!input||input.type!=='number')return;
+ if(!input||input.dataset.appNumpad!=='1')return;
  if(APP_NUMPAD.input!==input){
   if(APP_NUMPAD.input)APP_NUMPAD.input.classList.remove('app-num-active');
   APP_NUMPAD.input=input;APP_NUMPAD.draft=String(input.value||'');APP_NUMPAD.replaceNext=true;
@@ -611,13 +611,9 @@ function appNumPadHide(){
 }
 function appNumPadEmitInput(input){
  if(!input)return;
- // Preserve an in-progress decimal (e.g. "2.") outside the numeric input.
- var raw=APP_NUMPAD.input===input?APP_NUMPAD.draft:String(input.value||'');
- var committed=raw.endsWith('.')?raw.slice(0,-1):raw;
- if(committed===''||/^-?\d+(?:\.\d+)?$/.test(committed)){
-  input.value=committed;
-  try{input.dispatchEvent(new Event('input',{bubbles:true}))}catch(e){}
- }
+ // App number fields use text so unfinished decimals (e.g. "2.") remain visible.
+ input.value=APP_NUMPAD.input===input?APP_NUMPAD.draft:String(input.value||'');
+ try{input.dispatchEvent(new Event('input',{bubbles:true}))}catch(e){}
  appNumPadRefresh()
 }
 function appNumPadAppend(token){
@@ -665,6 +661,9 @@ function appNumPadSave(){
 function bindAppNumPadInput(input){
  if(!input||input.type!=='number'||input.dataset.appNumpad==='1')return;
  input.dataset.appNumpad='1';
+ // Native number inputs sanitize trailing decimal points on phones.
+ // The app validates numeric ranges when Save is pressed.
+ input.type='text';
  input.setAttribute('inputmode','none');
  input.setAttribute('readonly','readonly');
  input.setAttribute('autocomplete','off');
@@ -853,6 +852,7 @@ function sample(t,rr,r,v){
  if(!isFinite(tq)||tq<0)tq=0;
 
  S.lastT=t;S.alpha=alpha;S.rpm=r;S.rrpm=rr;S.speed=speed;S.afr=afr;S.hp=hp;S.tq=tq;
+ var liveAfrVoltEl=$('afrSettingsLiveVoltage');if(liveAfrVoltEl)liveAfrVoltEl.textContent=v.toFixed(3)+' V';
  updateLive();
  if(window.BT_AFR_UPDATE)window.BT_AFR_UPDATE(t,r,afr,v);
 
