@@ -21,22 +21,37 @@ jobs:
       - name: Checkout current main branch
         uses: actions/checkout@v4
 
-      - name: Verify app files
+      - name: Verify public runtime files
         run: |
           test -f index.html
           test -f .nojekyll
+          test -f manifest.webmanifest
+          test -f live/head.html
+          test -f live/info.html
+          test -f live/kpis.html
+          test -f live/rpm.html
+          test -f live/speed.html
           grep -q 'id="buildTag"' index.html
           grep -q 'id="afrSettingsLiveVoltage"' index.html
+
+      - name: Stage runtime allowlist only
+        run: |
+          set -euo pipefail
+          mkdir -p public-runtime/live
+          cp index.html manifest.webmanifest .nojekyll public-runtime/
+          cp live/head.html live/info.html live/kpis.html live/rpm.html live/speed.html public-runtime/live/
+          test ! -e public-runtime/android
+          test ! -e public-runtime/firmware
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
         with:
           enablement: true
 
-      - name: Upload Pages artifact
+      - name: Upload ONLY public runtime
         uses: actions/upload-pages-artifact@v4
         with:
-          path: .
+          path: public-runtime
 
   deploy:
     needs: build
