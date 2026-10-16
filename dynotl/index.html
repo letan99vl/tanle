@@ -1,0 +1,849 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#050607">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Dyno TL Mobile</title>
+<style>
+:root{--bg:#040506;--panel:#0b0d10;--line:#252a30;--red:#ff3038;--orange:#ff9f1c;--green:#37d45a;--blue:#3488ff;--text:#f3f5f7;--muted:#89939d;--nav:40px;--ctl:44px}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;background:var(--bg);color:var(--text);font-family:Arial,sans-serif;overflow:hidden;touch-action:manipulation}
+button,input,select{font:inherit}button{color:var(--text)}
+#app{width:100%;height:100%;background:var(--bg);display:grid;grid-template-rows:var(--nav) 1fr}
+@media(orientation:portrait){body{position:fixed;left:0;top:0;width:100vh;height:100vw;transform-origin:top left;transform:rotate(90deg) translateY(-100%)}}
+header{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:6px;padding:4px 6px;border-bottom:1px solid #191d21;background:#080a0c}
+.brand{font-size:12px;font-weight:900;letter-spacing:.8px;white-space:nowrap}.brand b{color:var(--red)}
+nav{display:flex;justify-content:center;gap:3px;min-width:0}nav button{height:31px;min-width:68px;padding:0 8px;border:1px solid #242930;border-radius:7px;background:#0d1013;font-size:10px;font-weight:800;white-space:nowrap}
+nav button.on{border-color:#8d252b;background:#251013;color:#fff}
+.headright{display:flex;align-items:center;gap:4px}.pill{height:28px;display:flex;align-items:center;padding:0 8px;border:1px solid #2b3036;border-radius:999px;color:var(--muted);font-size:9px;white-space:nowrap}.pill.ok{color:#86ef9e;border-color:#255f33}
+.mini{height:30px;padding:0 9px;border:1px solid #383f47;border-radius:7px;background:#111419;font-size:10px;font-weight:800}.mini.red{border-color:#7b272c;color:#ff7279}
+main{display:none;min-height:0;overflow:hidden}.page.on{display:block;height:100%}
+#live{padding:6px 8px calc(var(--ctl) + 8px)}
+.livegrid{height:100%;display:grid;grid-template-columns:1fr minmax(170px,.55fr) 1fr;gap:7px;min-height:0}
+.gauge,.centerbox,.chartbox,.card{border:1px solid var(--line);background:linear-gradient(180deg,#0b0d10,#060709);border-radius:12px;min-height:0;position:relative;overflow:hidden}
+.gauge{display:flex;flex-direction:column;align-items:center;justify-content:center}.gauge h3{margin:0 0 6px;font-size:14px;color:#9ca6b0}.big{font-size:clamp(54px,11vh,112px);line-height:.9;font-weight:900;text-shadow:0 0 18px #ff303844}.unit{margin-top:8px;color:#8390a0;font-size:15px}.scale{position:absolute;left:8%;right:8%;bottom:10%;height:7px;border-radius:99px;background:#171b20;overflow:hidden}.scale i{display:block;height:100%;width:0;background:linear-gradient(90deg,#772025,var(--red));transition:width .08s linear}
+.centerbox{display:grid;grid-template-rows:1fr 1fr 1fr}.kpi{display:flex;flex-direction:column;align-items:center;justify-content:center;border-bottom:1px solid #191d21}.kpi:last-child{border:0}.kpi label{font-size:11px;color:#8d98a4;font-weight:800}.kpi strong{font-size:clamp(29px,6vh,58px);line-height:1;margin-top:3px}.kpi.hp strong{color:var(--red)}.kpi.tq strong{color:var(--orange)}.kpi.afr strong{color:#fff}
+.controls{position:fixed;left:50%;bottom:4px;transform:translateX(-50%);width:min(620px,calc(100% - 12px));height:var(--ctl);padding:4px;display:flex;gap:4px;border:1px solid #272d33;border-radius:12px;background:#090b0dee;backdrop-filter:blur(10px);z-index:20}
+.controls button{flex:1;min-width:0;border:1px solid #313840;border-radius:8px;background:#111419;font-size:10px;font-weight:900}.controls .go{border-color:#7d2a30;background:#251013}.controls .stop{color:#ff6c73;border-color:#6d282d}.controls .auto.on{color:#ffc56b;border-color:#80521c;background:#22170a}
+.chartpage{padding:6px}.chartbox{height:100%;display:grid;grid-template-rows:34px 1fr;padding:4px 6px 6px}.charthead{display:flex;align-items:center;justify-content:space-between;gap:6px;color:#9aa4ae;font-size:10px;font-weight:900;letter-spacing:.5px}.charthead .vals{font-size:9px;color:#c4cad0;font-weight:700}.chartwrap{min-height:0;position:relative}canvas{width:100%!important;height:100%!important;display:block}
+#test201,#settings{overflow:auto;padding:6px}.twocol{display:grid;grid-template-columns:1fr 1fr;gap:6px}.card{padding:10px}.card h2{font-size:13px;margin:0 0 8px}.metricgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.metric{border:1px solid #252a30;border-radius:9px;background:#080a0c;padding:8px}.metric span{display:block;color:#84909a;font-size:9px}.metric b{display:block;font-size:20px;margin-top:4px}
+.row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:6px 0}.row label{font-size:10px;color:#b5bdc5}.row input,.row select{height:30px;border:1px solid #303840;border-radius:6px;background:#0b0e11;color:#fff;padding:0 7px;max-width:110px}.row button{height:32px;border:1px solid #343b43;border-radius:7px;background:#101419;padding:0 10px;font-size:10px;font-weight:800}
+.settingsgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.settingsgrid .card{overflow:auto}.settingsgrid h3{font-size:11px;margin:0 0 7px;color:#ff555c}.setline{display:grid;grid-template-columns:1fr 88px;gap:7px;align-items:center;margin:6px 0;font-size:10px;color:#aab4bd}.setline input,.setline select{width:100%;height:29px;border:1px solid #303840;border-radius:6px;background:#0b0e11;color:#fff;padding:0 6px}
+.note{font-size:9px;color:#77828c;line-height:1.4}.good{color:#7de195}.bad{color:#ff7078}
+@media(max-height:430px){:root{--nav:36px;--ctl:40px}nav button{height:28px;min-width:61px;font-size:9px}.brand{font-size:10px}.pill{height:26px}.mini{height:28px}.big{font-size:clamp(44px,10vh,82px)}.gauge h3{font-size:11px}.unit{font-size:12px}.kpi strong{font-size:clamp(24px,5.5vh,44px)}.controls button{font-size:9px}.settingsgrid{grid-template-columns:repeat(3,1fr)}}
+</style>
+
+
+
+<style id="original-pc-live-mobile">
+#live{padding:5px 7px calc(var(--ctl) + 5px)!important;background:#030304;color:#f4f4f5;overflow:hidden}
+#live .legacy-live-values{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;opacity:0!important;pointer-events:none!important}
+#live .pc-original-shell{height:100%;min-height:0;display:grid;grid-template-rows:34px minmax(0,1fr) 32px;gap:5px}
+#live .pc-live-loading{display:grid;place-items:center;grid-row:1/-1;color:#737d87;font:700 11px Arial;letter-spacing:1.3px}
+#live .live-monitor-head{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;min-width:0;padding:0 12px;border:1px solid #301414;border-radius:7px;background:linear-gradient(105deg,#0c0c0d,#060607 50%,#0c0b0c)}
+#live .live-head-box{min-width:0}
+#live .live-monitor-title{font:600 9px Arial,sans-serif;letter-spacing:1.5px;color:#949ca5}
+#live .live-monitor-sub{font:600 6px Arial,sans-serif;letter-spacing:1.3px;color:#646b74;margin-top:2px}
+#live .live-title-banner{position:relative;width:min(32vw,280px);height:34px;display:grid;place-items:center;isolation:isolate}
+#live .live-title-banner svg{position:absolute;inset:0;width:100%;height:100%;z-index:-1}
+#live .live-title-banner span{font:700 14px Arial,sans-serif;color:#f5f5f7;white-space:nowrap}
+#live .live-head-right{display:flex;justify-content:flex-end;align-items:center;gap:7px;min-width:0}
+#live .live-badge{font:600 8px Arial,sans-serif;letter-spacing:1px;color:#9299a3;display:flex;gap:6px;align-items:center;white-space:nowrap}
+#live .live-dot{height:6px;width:6px;border-radius:50%;background:#515158}
+#live[data-source="ble"] .live-dot{background:#ff3338;box-shadow:0 0 8px #e6222860}
+#live[data-source="sim"] .live-dot{background:#ff9a30;box-shadow:0 0 8px #ff9a3055}
+#live .live-head-slashes{width:18px;height:10px;opacity:.5;background:repeating-linear-gradient(130deg,transparent 0 3px,#ee161d 3px 5px)}
+#live .live-gauge-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(112px,.51fr) minmax(0,1fr);gap:7px;min-height:0}
+#live .live-arc-card{position:relative;min-width:0;min-height:0;overflow:hidden}
+#live .led-gauge{height:100%;width:100%}
+#live .led-gauge-svg{display:block;width:100%;height:100%;overflow:hidden}
+#live .led-scale{font:500 20px Arial,sans-serif;fill:#f3f4f7;text-anchor:middle;dominant-baseline:middle}
+#live .led-title{font:700 26px Arial,sans-serif;fill:#838b96;text-anchor:middle;dominant-baseline:middle}
+#live .led-unit{font:600 23px Arial,sans-serif;fill:#727b87;text-anchor:middle;dominant-baseline:middle}
+#live .led-digital{fill:#fcfcff}
+#live .led-accessible-value{fill:transparent;font:700 64px Arial;text-anchor:middle;pointer-events:none}
+#live .led-overrange{fill:#ff7979;font:600 11px Arial;text-anchor:middle;letter-spacing:2px}
+#live .live-kpi-stack{display:grid;grid-template-rows:1.30fr 1fr 1fr;gap:6px;padding:2px 0;min-width:0;min-height:0}
+#live .live-kpi{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;min-height:0;isolation:isolate;padding:3px 7px}
+#live .led-panel-frame{position:absolute;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none}
+#live .live-kpi-label{font:700 clamp(8px,1.5vh,14px) Arial,sans-serif;color:#7c8692;margin:0}
+#live .live-kpi-afr .live-kpi-label{font-size:clamp(10px,2vh,18px)}
+#live .live-kpi-value{font:700 clamp(21px,5.7vh,50px)/1 Arial,sans-serif;letter-spacing:-1px;margin-top:2px;color:#f8f9fa;font-variant-numeric:tabular-nums;white-space:nowrap}
+#live .live-kpi-value.afr{font-size:clamp(30px,8vh,70px);color:#ff292d!important;text-shadow:0 0 7px #ff28283d,0 0 18px #ff00003b!important;margin-top:0}
+#live .live-kpi-unit{font:500 clamp(7px,1.3vh,11px) Arial,sans-serif;color:#818993;margin-top:2px}
+#live .live-info-strip{position:relative;isolation:isolate;display:flex;align-items:center;min-width:0;padding:0 12px;gap:14px;color:#727d89;overflow:hidden}
+#live .live-info-strip>div{white-space:nowrap;font:9px Arial,sans-serif;min-width:0}
+#live .live-info-strip b{font-weight:400;color:#c7ccd3;margin-left:4px;font-variant-numeric:tabular-nums}
+#live .live-info-strip .live-recording{padding-right:12px;border-right:1px solid #2b2d30;display:flex;align-items:center;gap:5px}
+#live .live-record-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#53565c}
+#live .live-record-dot.on{background:#ff3035;box-shadow:0 0 9px #ff27279c}
+#live .live-env-first{margin-left:auto}
+#live .pc-controls{height:34px!important;width:min(420px,calc(100% - 14px))!important;padding:3px!important;gap:3px!important;border-radius:9px!important;background:#080a0cee!important}
+#live .pc-controls button{font-size:8px!important;letter-spacing:.4px!important;min-height:0!important;padding:0 5px!important;border-radius:6px!important}
+@media(max-height:430px){
+ #live{padding-top:3px!important}
+ #live .pc-original-shell{grid-template-rows:28px minmax(0,1fr) 27px;gap:3px}
+ #live .live-monitor-head{padding:0 8px}
+ #live .live-title-banner{height:28px;width:min(30vw,240px)}
+ #live .live-title-banner span{font-size:11px}
+ #live .live-monitor-title{font-size:8px}.live-monitor-sub{font-size:5px}
+ #live .live-gauge-grid{gap:4px;grid-template-columns:minmax(0,1fr) minmax(96px,.48fr) minmax(0,1fr)}
+ #live .live-kpi-stack{gap:4px}
+ #live .live-info-strip{gap:8px;padding:0 8px}
+ #live .live-info-strip>div{font-size:7px}
+ #live .live-env-first,#live .live-info-strip>div:nth-last-child(-n+3){display:none}
+ #live .pc-controls{height:31px!important}
+}
+</style>
+<style id="run-history-mobile-v2">
+.chart-runbar,.compare-tools{display:flex;align-items:center;gap:6px;min-width:0}
+.chart-runbar>span:first-child,.compare-tools label{font-size:8px;color:#727d88;letter-spacing:.8px;font-weight:800;white-space:nowrap}
+.chart-runbar select,.compare-tools select{height:25px;max-width:190px;border:1px solid #30363d;border-radius:6px;background:#0a0d10;color:#eef2f6;padding:0 7px;font-size:9px;font-weight:700}
+.stored-chart-box .charthead{min-height:34px}
+.compare-chart-box{grid-template-rows:34px 34px 1fr!important}
+.compare-run-list-mobile{display:flex;align-items:center;gap:5px;overflow-x:auto;overflow-y:hidden;padding:3px 2px;scrollbar-width:none}
+.compare-run-list-mobile::-webkit-scrollbar{display:none}
+.compare-run-chip{height:27px;display:flex;align-items:center;gap:5px;flex:0 0 auto;padding:0 8px;border:1px solid #2b3137;border-radius:7px;background:#090c0f;color:#aab3bc;font-size:8px;font-weight:800;white-space:nowrap}
+.compare-run-chip input{width:13px;height:13px;margin:0;accent-color:#ff343b}
+.compare-run-chip.checked{border-color:#7f2429;background:#211012;color:#fff}
+.compare-chart-wrap{min-height:0}
+.chart-empty{color:#69737e;font:700 10px Arial,sans-serif;letter-spacing:1px}
+@media(max-height:430px){
+ nav button{min-width:55px!important;padding:0 6px!important;font-size:8px!important}
+ .chart-runbar select{max-width:140px;height:23px}
+ .stored-chart-box .charthead,.compare-chart-box .charthead{min-height:29px}
+ .compare-chart-box{grid-template-rows:29px 30px 1fr!important}
+ .compare-run-chip{height:24px;font-size:7px;padding:0 6px}
+}
+</style>
+<style id="mobile-chart-clean-v3">
+.stored-chart-box{grid-template-rows:31px 22px minmax(0,1fr)!important}
+.compare-chart-box{grid-template-rows:31px 31px minmax(0,1fr)!important}
+.chartbox{padding:3px 5px 5px!important}
+.charthead{padding:0 3px!important;overflow:hidden}
+.charthead>span:first-child{font-size:9px!important;letter-spacing:.55px;white-space:nowrap}
+.chart-runbar{margin-left:auto;max-width:67%;overflow:hidden}
+.chart-runbar>span:first-child{display:none!important}
+.chart-runbar select{height:24px!important;max-width:154px!important;min-width:110px!important;padding:0 5px!important;font-size:8px!important;text-overflow:ellipsis}
+.chart-runbar .vals{font-size:7px!important;max-width:145px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mobile-chart-legend{height:22px;display:flex;align-items:center;justify-content:center;gap:11px;border-top:1px solid #11161a;border-bottom:1px solid #11161a;background:#07090b;overflow:hidden;white-space:nowrap}
+.mobile-chart-legend .lg{position:relative;padding-left:15px;font:700 7px Arial,sans-serif;color:#adb5bd;letter-spacing:.2px}
+.mobile-chart-legend .lg:before{content:"";position:absolute;left:0;top:50%;width:11px;height:2px;transform:translateY(-50%);border-radius:2px}
+.mobile-chart-legend .hp:before,.mobile-chart-legend .erpm:before{background:#ff3038}
+.mobile-chart-legend .tq:before{background:#ff9f1c}
+.mobile-chart-legend .rrpm:before{background:#37d45a}
+.mobile-chart-legend .spd:before{background:#d3d6da}
+.mobile-chart-legend .afr:before{background:#3488ff}
+.mobile-chart-legend .axis-note{margin-left:auto;padding-right:5px;color:#626c76;font:700 7px Arial,sans-serif}
+.chartwrap{overflow:hidden!important;min-width:0!important;min-height:0!important}
+.chartwrap canvas{display:block!important;width:100%!important;height:100%!important;transform:none!important;filter:none!important}
+.compare-head .compare-tools{max-width:62%;overflow:hidden}
+.compare-tools label{display:flex;align-items:center;gap:4px}
+.compare-tools select{height:24px!important;max-width:92px!important;font-size:8px!important}
+#compareHint{font-size:7px!important;white-space:nowrap}
+.compare-run-list-mobile{height:31px!important;padding:2px 3px!important;gap:4px!important;border-top:1px solid #11161a;border-bottom:1px solid #11161a;background:#07090b}
+.compare-run-chip{height:25px!important;padding:0 6px!important;font-size:7px!important;border-radius:6px!important}
+.compare-run-chip input{width:11px!important;height:11px!important}
+@media(max-height:430px){
+ .stored-chart-box{grid-template-rows:27px 19px minmax(0,1fr)!important}
+ .compare-chart-box{grid-template-rows:27px 27px minmax(0,1fr)!important}
+ .charthead>span:first-child{font-size:8px!important}
+ .chart-runbar{max-width:64%}
+ .chart-runbar select{height:21px!important;max-width:126px!important;min-width:96px!important;font-size:7px!important}
+ .chart-runbar .vals{display:none!important}
+ .mobile-chart-legend{height:19px;gap:8px}
+ .mobile-chart-legend .lg{font-size:6px;padding-left:12px}.mobile-chart-legend .lg:before{width:9px}
+ .compare-run-list-mobile{height:27px!important}
+ .compare-run-chip{height:22px!important;font-size:6px!important}
+}
+</style>
+<style id="compare-run-colors-v3">
+.compare-run-chip{--run:#ff4d57}
+.compare-run-chip:nth-child(2){--run:#40c4ff}
+.compare-run-chip:nth-child(3){--run:#ffd740}
+.compare-run-chip:nth-child(4){--run:#69f0ae}
+.compare-run-chip:nth-child(5){--run:#b388ff}
+.compare-run-chip input{accent-color:var(--run)!important}
+.compare-run-chip.checked{border-color:var(--run)!important;box-shadow:inset 2px 0 0 var(--run);background:#101214!important}
+</style>
+<style id="pc-calc-settings-mobile-v4">
+.smoothbar{display:flex;align-items:center;gap:2px;margin-left:3px}
+.smoothbar button{height:18px;min-width:36px;padding:0 5px;border:1px solid #2c3238;border-radius:4px;background:#0c0f12;color:#747f89;font:800 6px Arial,sans-serif;letter-spacing:.3px}
+.smoothbar button.on{color:#fff;border-color:#8f252b;background:#321114}
+#settings{overflow-x:hidden!important;overflow-y:auto!important;padding:6px 6px 52px!important;-webkit-overflow-scrolling:touch}
+#settings .settingsgrid{width:100%;min-width:0;grid-template-columns:repeat(3,minmax(0,1fr));align-items:start}
+#settings .card{min-width:0;overflow:visible!important}
+#settings .setline{grid-template-columns:minmax(0,1fr) minmax(68px,84px);min-width:0}
+#settings .setline span{min-width:0;overflow-wrap:anywhere}
+#settings .setline input,#settings .setline select{min-width:0;max-width:100%;box-sizing:border-box}
+.settings-actions{position:sticky;left:0;right:0;bottom:0;z-index:8;display:flex;align-items:center;justify-content:center;gap:8px;min-height:42px;margin-top:6px;padding:5px 8px;border:1px solid #292f35;border-radius:9px;background:#080b0eef;backdrop-filter:blur(8px)}
+#btnSaveSettings{height:31px;min-width:132px;border:1px solid #8f252b;border-radius:7px;background:#321114;color:#fff;font:900 9px Arial,sans-serif;letter-spacing:.7px}
+#btnSaveSettings:active{transform:translateY(1px)}
+#settingsSaveStatus{font:800 8px Arial,sans-serif;color:#6f7a84;letter-spacing:.5px;white-space:nowrap}
+#settingsSaveStatus.saving{color:#ffd166}
+#settingsSaveStatus.saved{color:#6ee7a8}
+#settingsSaveStatus.error{color:#ff6d75}
+@media(max-width:760px){
+ #settings .settingsgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:560px){
+ #settings .settingsgrid{grid-template-columns:1fr}
+}
+@media(max-height:430px){
+ .smoothbar button{height:16px;min-width:31px;font-size:5px;padding:0 3px}
+ #settings{padding-bottom:45px!important}
+ .settings-actions{min-height:36px;padding:3px 6px}
+ #btnSaveSettings{height:27px;min-width:112px;font-size:8px}
+ #settingsSaveStatus{font-size:7px}
+}
+</style>
+<style id="power-peaks-ignition-v5">
+#power .power-chart-box{grid-template-rows:31px 30px 22px minmax(0,1fr)!important}
+.power-peak-strip{height:30px;display:flex;align-items:stretch;gap:5px;padding:2px 3px;overflow:hidden}
+.power-peak{min-width:0;flex:1;display:flex;align-items:baseline;justify-content:center;gap:5px;border:1px solid #252b31;border-radius:6px;background:#080b0e;padding:2px 7px}
+.power-peak span{font:800 7px Arial,sans-serif;letter-spacing:.55px;color:#79838d;white-space:nowrap}
+.power-peak b{font:900 17px Arial,sans-serif;line-height:1;color:#f3f5f7;white-space:nowrap}
+.power-peak em{font:800 7px Arial,sans-serif;color:#7c858e;font-style:normal}
+.hp-peak{border-color:#4d1b1e}.hp-peak b{color:#ff444c}
+.tq-peak{border-color:#4c3518}.tq-peak b{color:#ffad36}
+@media(max-height:430px){
+ #power .power-chart-box{grid-template-rows:27px 25px 19px minmax(0,1fr)!important}
+ .power-peak-strip{height:25px;padding:1px 3px}
+ .power-peak{padding:1px 5px;gap:4px}
+ .power-peak span{font-size:6px}.power-peak b{font-size:14px}.power-peak em{font-size:6px}
+}
+</style>
+<style id="android-settings-scroll-v6">
+#settings{overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;touch-action:pan-y!important;overscroll-behavior-y:contain!important}
+#settings .settingsgrid{overflow:visible!important;min-height:max-content}
+#settings .settingsgrid .card{overflow:visible!important;touch-action:auto!important}
+html.android-app #settings,body.android-app #settings{overflow-y:scroll!important}
+</style>\n</head>
+<body>
+<div id="app">
+<header>
+ <div class="brand">DYNO <b>TL</b> MOBILE</div>
+ <nav>
+  <button data-page="live" class="on">LIVE</button>
+  <button data-page="power">HP/TOR</button>
+  <button data-page="rpm">RPM/AFR</button>
+  <button data-page="compare">COMPARE</button>
+  <button data-page="test201">201m</button>
+  <button data-page="settings">SET</button>
+ </nav>
+ <div class="headright"><span id="bleStatus" class="pill">BLE OFF</span><button id="bleTop" class="mini">BLE</button></div>
+</header>
+
+<main id="live" class="page on live-red-main">
+ <section id="livePcMount" class="pc-original-shell">
+  <div class="pc-live-loading">LOADING DYNOTL LIVE...</div>
+ </section>
+ <div class="legacy-live-values" aria-hidden="true">
+  <span id="liveRpm">0</span><span id="liveSpeed">0</span><span id="liveAfr">--</span><span id="liveHp">0.0</span><span id="liveTq">0.0</span>
+  <span id="rpmBar"></span><span id="speedBar"></span>
+ </div>
+ <div class="controls pc-controls">
+  <button id="ctlBle" class="go">BLE</button><button id="ctlAuto" class="auto">AUTO</button><button id="ctlRun" class="go">RUN</button><button id="ctlStop" class="stop">STOP</button><button id="ctlSim">SIM</button>
+ </div>
+</main>
+
+<main id="power" class="page chartpage">
+ <section class="chartbox stored-chart-box power-chart-box">
+  <div class="charthead">
+   <span>HP / TORQUE VS RPM</span>
+   <div class="chart-runbar"><span>SAVED RUN</span><select id="powerRunSelect"></select><span id="powerVals" class="vals">NO SAVED RUN</span></div>
+  </div>
+  <div class="power-peak-strip">
+   <div class="power-peak hp-peak"><span>MAX HP</span><b id="powerMaxHp">0.0</b></div>
+   <div class="power-peak tq-peak"><span>MAX TORQUE</span><b id="powerMaxTq">0.0</b><em>Nm</em></div>
+  </div>
+  <div class="mobile-chart-legend power-legend"><span class="lg hp">HP</span><span class="lg tq">TORQUE</span><div class="smoothbar" aria-label="Chart smoothing"><button type="button" data-smooth="0">RAW</button><button type="button" data-smooth="1" class="on">LIGHT</button><button type="button" data-smooth="2">MED</button></div><span class="axis-note">X: RPM</span></div>
+  <div class="chartwrap"><canvas id="powerCanvas"></canvas></div>
+ </section>
+</main>
+
+<main id="rpm" class="page chartpage">
+ <section class="chartbox stored-chart-box">
+  <div class="charthead">
+   <span>RPM / SPEED / AFR VS TIME</span>
+   <div class="chart-runbar"><span>SAVED RUN</span><select id="rpmRunSelect"></select><span id="rpmVals" class="vals">NO SAVED RUN</span></div>
+  </div>
+  <div class="mobile-chart-legend"><span class="lg erpm">ENGINE RPM</span><span class="lg rrpm">ROLLER RPM</span><span class="lg spd">SPEED</span><span class="lg afr">AFR</span><span class="axis-note">X: TIME</span></div>
+  <div class="chartwrap"><canvas id="rpmCanvas"></canvas></div>
+ </section>
+</main>
+
+<main id="compare" class="page chartpage">
+ <section class="chartbox compare-chart-box">
+  <div class="charthead compare-head">
+   <span>RUN COMPARE</span>
+   <div class="compare-tools">
+    <label>METRIC <select id="compareMetric"><option value="hp">HP</option><option value="tq">TORQUE</option><option value="speed">SPEED</option><option value="afr">AFR</option></select></label>
+    <span id="compareHint" class="vals">SELECT 2–5 RUNS</span>
+   </div>
+  </div>
+  <div id="compareRunList" class="compare-run-list-mobile"></div>
+  <div class="chartwrap compare-chart-wrap"><canvas id="compareCanvas"></canvas></div>
+ </section>
+</main>
+
+<main id="test201" class="page">
+ <div class="twocol">
+  <section class="card"><h2>201 m RUN</h2><div class="row"><button id="run201">RUN 201m</button><button id="reset201">RESET</button><span id="state201" class="note">Waiting</span></div>
+   <div class="metricgrid"><div class="metric"><span>DISTANCE</span><b id="dist201">0.0 m</b></div><div class="metric"><span>TIME</span><b id="time201">--</b></div><div class="metric"><span>SPEED</span><b id="speed201">0.0</b></div><div class="metric"><span>RPM</span><b id="rpm201">0</b></div></div>
+  </section>
+  <section class="card"><h2>RESULT</h2><div class="metricgrid"><div class="metric"><span>201 m</span><b id="result201">--</b></div><div class="metric"><span>MAX SPEED</span><b id="maxSpeed201">0.0</b></div><div class="metric"><span>MAX RPM</span><b id="maxRpm201">0</b></div><div class="metric"><span>AFR END</span><b id="afrEnd201">--</b></div></div><p class="note">Timer starts when calculated vehicle speed reaches 1 km/h.</p></section>
+ </div>
+</main>
+
+<main id="settings" class="page">
+ <div class="settingsgrid">
+  <section class="card"><h3>DYNO</h3>
+   <label class="setline"><span>Wheel diameter (mm)</span><input id="rollerD" type="number" value="240"></label>
+   <label class="setline"><span>Vehicle inertia J</span><input id="rollerJ" type="number" step=".01" value="1.73"></label>
+   <label class="setline"><span>Max RPM display</span><input id="maxRpm" type="number" value="16000"></label>
+   <label class="setline"><span>Max speed display</span><input id="maxSpeed" type="number" value="160"></label>
+  </section>
+  <section class="card"><h3>AFR</h3>
+   <label class="setline"><span>Volt min</span><input id="afrVMin" type="number" step=".01" value="0"></label>
+   <label class="setline"><span>AFR min</span><input id="afrMin" type="number" step=".1" value="10"></label>
+   <label class="setline"><span>Volt max</span><input id="afrVMax" type="number" step=".01" value="3.15"></label>
+   <label class="setline"><span>AFR max</span><input id="afrMax" type="number" step=".1" value="20"></label>
+  </section>
+  <section class="card"><h3>ENGINE RPM</h3>
+   <label class="setline"><span>Ignition cycle</span><select id="ignitionCycle"><option value="360">360° · 1 pulse/rev</option><option value="720">720° · 1 pulse/2 rev</option></select></label>
+   <p class="note">Use 720° when the RPM pickup sees one ignition pulse every two crank revolutions. The app multiplies engine RPM ×2.</p>
+  </section>
+  <section class="card"><h3>AUTO RUN</h3>
+   <label class="setline"><span>Auto start</span><input id="autoStart" type="checkbox"></label>
+   <label class="setline"><span>Min speed km/h</span><input id="autoSpeed" type="number" value="10"></label>
+   <label class="setline"><span>Min HP</span><input id="autoHp" type="number" step=".1" value="1"></label>
+   <label class="setline"><span>Min alpha rad/s²</span><input id="autoAlpha" type="number" value="10"></label>
+  </section>
+ </div>
+ <div class="settings-actions"><button id="btnSaveSettings" type="button">SAVE SETTINGS</button><span id="settingsSaveStatus">AUTO-SAVE ON</span></div>
+</main>
+</div>
+
+<script>
+(function(){
+'use strict';
+try{if(/[?&]android=1(?:&|$)/.test(location.search)){document.documentElement.classList.add('android-app');document.body&&document.body.classList.add('android-app')}}catch(e){}
+var S={connected:false,recording:false,sim:false,auto:false,device:null,server:null,live:null,cmd:null,status:null,lineBuf:'',lastT:0,omegaF:0,ow:[],tw:[],rpm:0,rrpm:0,speed:0,afr:0,hp:0,tq:0,alpha:0,hpMax:0,tqMax:0,runPower:[],runRpm:[],liveRpmPts:[],lastSampleT:0,simT:0,run201:false,wait201:false,done201:false,d201:0,t2010:0,t201last:0,maxS201:0,maxR201:0,rollerCalcPrimed:false,rollerStartupSamplesRemaining:0,rollerGuardLastDistinctRpm:0,rollerGuardLastDistinctMs:0,lastPlotRpm:0,smoothingLevel:1};
+var BLE={service:'d7a10001-7c35-4a6d-9f0e-2ea3117f1000',live:'d7a10002-7c35-4a6d-9f0e-2ea3117f1000',cmd:'d7a10003-7c35-4a6d-9f0e-2ea3117f1000',status:'d7a10005-7c35-4a6d-9f0e-2ea3117f1000'};
+var $=function(id){return document.getElementById(id)},dec=new TextDecoder(),enc=new TextEncoder();
+var cfgIds=['rollerD','rollerJ','maxRpm','maxSpeed','afrVMin','afrMin','afrVMax','afrMax','ignitionCycle','autoSpeed','autoHp','autoAlpha'];
+var runHistory=[],selectedRunIndex=-1,RUN_HISTORY_KEY='dynotl_mobile_runs_v2',RUN_COUNTER_KEY='dynotl_mobile_run_counter_v2';
+var OMEGA_EMA_K=0.15,ALPHA_WINDOW_N=10,ROLLER_STARTUP_SKIP_SAMPLES=4;
+var ROLLER_DISTINCT_EPS_RPM=0.5,ROLLER_JUMP_MIN_RPM=250.0,ROLLER_JUMP_RATIO=0.55,ROLLER_JUMP_MAX_DT_MS=300.0,ROLLER_JUMP_COOLDOWN_SAMPLES=2;
+
+// SIM emulates the ESP32 VIP one-magnet wheel sensor path, then emits the same
+// D,timeMs,wheelRPM,engineRPM,afrVoltage packets as BLE hardware.
+var SIM={
+ tMs:0,tickMs:5,lastPacketMs:0,phase:0,lastPulseUs:0,lastValidPeriodUs:0,
+ hist:[0,0,0,0,0],histCount:0,histIndex:0,startupLocked:false,
+ periodFilteredUs:0,rpmFiltered:0,rpmOutput:0,lastHallPulseMs:0,
+ engineFiltered:0,afrFiltered:0
+};
+var SIM_SAMPLE_MS=25,SIM_ROLLER_TIMEOUT_MS=1000,SIM_ABS_MIN_PERIOD_US=6000;
+var SIM_EARLY_GATE_PERCENT=45,SIM_PERIOD_ALPHA=0.40,SIM_OUTPUT_ALPHA=0.18,SIM_AFR_ALPHA=0.20;
+function n(id,d){var v=parseFloat($(id).value);return isFinite(v)?v:d}
+function afrFromV(v){var v0=n('afrVMin',0),v1=n('afrVMax',3.15),a0=n('afrMin',10),a1=n('afrMax',20);if(v1===v0)return a0;return a0+(v-v0)*(a1-a0)/(v1-v0)}
+function ignitionMultiplier(){var e=$('ignitionCycle');return e&&e.value==='720'?2:1}
+function correctEngineRpm(raw){raw=+raw||0;return raw*ignitionMultiplier()}
+// PC J_DIV10 is the active torque mode in DynoTL Mobile.
+// HP/RPM torque helper intentionally removed to prevent accidental fallback.
+function normalizePowerData(data){
+ return(data||[]).map(function(a){
+   var rpm=+a[0]||0,hp=+a[1]||0,tq=+a[2]||0;
+   if(!isFinite(tq)||tq<0)tq=0;
+   return[rpm,hp,tq]
+ })
+}
+function setBle(on,msg){S.connected=on;$('bleStatus').textContent=msg||(on?'BLE OK':'BLE OFF');$('bleStatus').classList.toggle('ok',on);$('ctlBle').textContent=on?'OFF':'BLE';$('bleTop').textContent=on?'OFF':'BLE'}
+async function connectBle(){if(S.connected){disconnectBle();return}if(!navigator.bluetooth){alert('Web Bluetooth unavailable. On iPhone open this HTTPS page in Bluefy or another Web Bluetooth compatible browser.');return}try{$('bleStatus').textContent='SCAN BLE';S.device=await navigator.bluetooth.requestDevice({
+  acceptAllDevices:true,
+  optionalServices:[BLE.service]
+});S.device.addEventListener('gattserverdisconnected',function(){setBle(false,'BLE LOST')});S.server=await S.device.gatt.connect();var sv=await S.server.getPrimaryService(BLE.service);S.live=await sv.getCharacteristic(BLE.live);S.cmd=await sv.getCharacteristic(BLE.cmd);S.status=await sv.getCharacteristic(BLE.status);await S.live.startNotifications();S.live.addEventListener('characteristicvaluechanged',onLive);await S.status.startNotifications();S.status.addEventListener('characteristicvaluechanged',onStatus);setBle(true,'DynoTL Mobile Hardware');writeCmd('PING')}catch(e){if(!e||e.name!=='NotFoundError')alert('BLE error: '+(e&&e.message||e));setBle(false)}}
+function disconnectBle(){try{if(S.device&&S.device.gatt.connected)S.device.gatt.disconnect()}catch(e){}setBle(false)}
+async function writeCmd(t){if(!S.cmd)return;var b=enc.encode(t);if(S.cmd.writeValueWithoutResponse)await S.cmd.writeValueWithoutResponse(b);else await S.cmd.writeValue(b)}
+function onStatus(e){try{var d=e.target.value;$('bleStatus').textContent=dec.decode(new Uint8Array(d.buffer,d.byteOffset,d.byteLength)).trim()||'BLE OK'}catch(x){}}
+function onLive(e){var d=e.target.value,txt=dec.decode(new Uint8Array(d.buffer,d.byteOffset,d.byteLength));S.lineBuf+=txt;var i;while((i=S.lineBuf.indexOf('\n'))>=0){var line=S.lineBuf.slice(0,i).replace(/\r/g,'').trim();S.lineBuf=S.lineBuf.slice(i+1);handleLine(line)}}
+function handleLine(line){if(!line||line.charAt(0)!=='D')return;var p=line.split(',');if(p.length<5)return;sample(+p[1],+p[2],correctEngineRpm(+p[3]),+p[4])}
+function sample(t,rr,r,v){
+ if(!isFinite(t)||!isFinite(rr)||!isFinite(r)||!isFinite(v))return;
+ var D=n('rollerD',240)/1000,J=n('rollerJ',1.73);
+ var speed=rr*Math.PI*D/60*3.6,afr=afrFromV(v),omega=rr*2*Math.PI/60;
+ var rollerForceBaselineReset=false,hpTorqueSampleValid=false;
+
+ // PC Dyno jump guard: a sudden implausible positive roller-RPM jump resets
+ // the alpha baseline without blocking the UI or sensor stream.
+ if(!isFinite(rr)||rr<=0){
+   S.rollerGuardLastDistinctRpm=0;S.rollerGuardLastDistinctMs=0;
+ }else if(!(S.rollerGuardLastDistinctRpm>0)){
+   S.rollerGuardLastDistinctRpm=rr;S.rollerGuardLastDistinctMs=t;
+ }else if(Math.abs(rr-S.rollerGuardLastDistinctRpm)>=ROLLER_DISTINCT_EPS_RPM){
+   var guardPrev=S.rollerGuardLastDistinctRpm,guardDelta=rr-guardPrev,guardDt=t-S.rollerGuardLastDistinctMs;
+   var guardLimit=Math.max(ROLLER_JUMP_MIN_RPM,Math.abs(guardPrev)*ROLLER_JUMP_RATIO);
+   if(guardDelta>0&&guardDelta>=guardLimit&&guardDt>0&&guardDt<=ROLLER_JUMP_MAX_DT_MS)rollerForceBaselineReset=true;
+   S.rollerGuardLastDistinctRpm=rr;S.rollerGuardLastDistinctMs=t;
+ }
+
+ // PC Dyno startup guard + omega EMA + 10-sample alpha window.
+ var rollerCalcReady=true;
+ if(!isFinite(rr)||rr<=0){
+   S.rollerCalcPrimed=false;S.rollerStartupSamplesRemaining=0;S.omegaF=0;S.ow=[];S.tw=[];S.alpha=0;rollerCalcReady=false;
+ }else if(!S.rollerCalcPrimed||rollerForceBaselineReset){
+   S.rollerCalcPrimed=true;
+   S.rollerStartupSamplesRemaining=rollerForceBaselineReset?ROLLER_JUMP_COOLDOWN_SAMPLES:ROLLER_STARTUP_SKIP_SAMPLES;
+   S.omegaF=omega;S.ow=[S.omegaF];S.tw=[t];S.alpha=0;rollerCalcReady=false;
+ }else{
+   if(!isFinite(S.omegaF)||S.omegaF<=0)S.omegaF=omega;
+   else S.omegaF=S.omegaF+OMEGA_EMA_K*(omega-S.omegaF);
+   S.ow.push(S.omegaF);S.tw.push(t);
+   if(S.rollerStartupSamplesRemaining>0){S.rollerStartupSamplesRemaining--;rollerCalcReady=false}
+ }
+
+ var maxLen=ALPHA_WINDOW_N+1;
+ while(S.ow.length>maxLen)S.ow.shift();
+ while(S.tw.length>maxLen)S.tw.shift();
+
+ var torqueJ=0,hp=0,tq=0,alpha=0;
+ if(rollerCalcReady&&S.ow.length>=maxLen){
+   var dt=(S.tw[S.tw.length-1]-S.tw[0])/1000.0;
+   if(isFinite(dt)&&dt>0){
+     alpha=(S.ow[S.ow.length-1]-S.ow[0])/dt;
+     hpTorqueSampleValid=isFinite(alpha)&&alpha>0;
+     if(!hpTorqueSampleValid)alpha=0;
+     torqueJ=hpTorqueSampleValid?(J*alpha):0;
+     var powerW=hpTorqueSampleValid?(torqueJ*S.omegaF):0;
+     hp=powerW/745.7;
+     if(!isFinite(hp)||hp<0)hp=0;
+   }
+ }
+
+ // PC torque mode J_DIV10:
+ // torqueDisplay = torqueTotal / 10.0
+ // Mobile has no brake compensation, so torqueTotal = torqueJ = J * alpha.
+ tq=hpTorqueSampleValid?(torqueJ/10.0):0;
+ if(!isFinite(tq)||tq<0)tq=0;
+
+ S.lastT=t;S.alpha=alpha;S.rpm=r;S.rrpm=rr;S.speed=speed;S.afr=afr;S.hp=hp;S.tq=tq;
+ updateLive();
+
+ if(!S.recording&&S.auto&&speed>=n('autoSpeed',10)&&(hpTorqueSampleValid&&(hp>=n('autoHp',1)||Math.abs(alpha)>=n('autoAlpha',10))))startRun();
+
+ if(S.recording){
+   if(hpTorqueSampleValid){
+     S.hpMax=Math.max(S.hpMax,hp);S.tqMax=Math.max(S.tqMax,tq);
+     var plotX=(r>0)?r:rr;
+     if(plotX>=S.lastPlotRpm){
+       S.runPower.push([plotX,hp,tq]);
+       if(S.runPower.length>1200)S.runPower.shift();
+       S.lastPlotRpm=plotX;
+     }
+   }
+   S.runRpm.push([t/1000,r,rr,speed,afr]);
+   if(S.runRpm.length>1200)S.runRpm.shift();
+   drawAll();
+ }
+ S.liveRpmPts.push([t/1000,r,rr,speed,afr]);
+ if(S.liveRpmPts.length>400)S.liveRpmPts.shift();
+ update201(t,speed,r,afr);drawAll()
+}
+function updateLive(){$('liveRpm').textContent=Math.round(S.rpm);$('liveSpeed').textContent=S.speed.toFixed(0);$('liveAfr').textContent=isFinite(S.afr)?S.afr.toFixed(1):'--';$('liveHp').textContent=S.hp.toFixed(1);$('liveTq').textContent=S.tq.toFixed(1);$('rpmBar').style.width=Math.min(100,S.rpm/n('maxRpm',16000)*100)+'%';$('speedBar').style.width=Math.min(100,S.speed/n('maxSpeed',160)*100)+'%'}
+function startRun(){if(S.recording)return;S.recording=true;S.hpMax=S.tqMax=0;S.runPower=[];S.runRpm=[];S.lastPlotRpm=0;S.omegaF=0;S.ow=[];S.tw=[];S.rollerCalcPrimed=false;S.rollerStartupSamplesRemaining=0;S.runStartedWall=Date.now();$('ctlRun').textContent='RUNNING';$('ctlRun').classList.add('red');drawAll()}
+function stopRun(){if(!S.recording)return;S.recording=false;$('ctlRun').textContent='RUN';$('ctlRun').classList.remove('red');saveCurrentRun();drawAll()}
+function toggleAuto(){S.auto=!S.auto;$('autoStart').checked=S.auto;$('ctlAuto').classList.toggle('on',S.auto);save()}
+function simMedian5(a,b,c,d,e){
+ var v=[a,b,c,d,e];v.sort(function(x,y){return x-y});return v[2]
+}
+function simResetWheel(){
+ SIM.phase=0;SIM.lastPulseUs=0;SIM.lastValidPeriodUs=0;
+ SIM.hist=[0,0,0,0,0];SIM.histCount=0;SIM.histIndex=0;SIM.startupLocked=false;
+ SIM.periodFilteredUs=0;SIM.rpmFiltered=0;SIM.rpmOutput=0;SIM.lastHallPulseMs=0
+}
+function simStartupWindowOk(medianUs){
+ if(!(medianUs>=SIM_ABS_MIN_PERIOD_US))return false;
+ var minOk=Math.max(SIM_ABS_MIN_PERIOD_US,medianUs*0.40),maxOk=medianUs*2.50,good=0;
+ for(var i=0;i<5;i++)if(SIM.hist[i]>=minOk&&SIM.hist[i]<=maxOk)good++;
+ return good>=4
+}
+function simProcessPeriod(periodUs,nowMs){
+ if(!(periodUs>=SIM_ABS_MIN_PERIOD_US))return;
+ SIM.hist[SIM.histIndex]=periodUs;SIM.histIndex=(SIM.histIndex+1)%5;if(SIM.histCount<5)SIM.histCount++;
+
+ if(!SIM.startupLocked){
+   SIM.rpmFiltered=0;SIM.rpmOutput=0;
+   if(SIM.histCount<5)return;
+   var med=simMedian5(SIM.hist[0],SIM.hist[1],SIM.hist[2],SIM.hist[3],SIM.hist[4]);
+   if(!simStartupWindowOk(med))return;
+   var rpm=60000000/med;
+   if(!(rpm>0&&rpm<=10000))return;
+   SIM.periodFilteredUs=med;SIM.rpmFiltered=rpm;SIM.startupLocked=true;SIM.lastHallPulseMs=nowMs;return
+ }
+
+ var p=simMedian5(SIM.hist[0],SIM.hist[1],SIM.hist[2],SIM.hist[3],SIM.hist[4]);
+ SIM.periodFilteredUs=SIM.periodFilteredUs>0
+   ?SIM.periodFilteredUs*(1-SIM_PERIOD_ALPHA)+p*SIM_PERIOD_ALPHA
+   :p;
+ var rr=60000000/SIM.periodFilteredUs;
+ if(rr>=0&&rr<=10000){SIM.rpmFiltered=rr;SIM.lastHallPulseMs=nowMs}
+}
+function simHallEdge(edgeUs){
+ if(!SIM.lastPulseUs){SIM.lastPulseUs=edgeUs;return}
+ var dt=edgeUs-SIM.lastPulseUs;
+ if(dt<SIM_ABS_MIN_PERIOD_US)return;
+ if(SIM.lastValidPeriodUs>0){
+   var dynamicMin=Math.max(SIM_ABS_MIN_PERIOD_US,SIM.lastValidPeriodUs*SIM_EARLY_GATE_PERCENT/100);
+   if(dt<dynamicMin)return
+ }
+ SIM.lastValidPeriodUs=dt;SIM.lastPulseUs=edgeUs;simProcessPeriod(dt,edgeUs/1000)
+}
+function simTargetAt(ms){
+ // Repeating dyno pull: stationary -> launch -> pull -> coast -> stationary.
+ var cycle=14000,t=ms%cycle,wheel=0,engine=1450,afrV=1.58;
+ if(t<1200){
+   wheel=0;engine=1450+80*Math.sin(t/180);afrV=1.62
+ }else if(t<3000){
+   var q=(t-1200)/1800;
+   wheel=220+980*q;engine=1800+3300*q;afrV=1.55-0.12*q
+ }else if(t<9000){
+   var q=(t-3000)/6000;
+   wheel=1200+2850*q;engine=5100+7600*q;afrV=1.43+0.10*Math.sin(q*Math.PI*3)
+ }else if(t<11200){
+   var q=(t-9000)/2200;
+   wheel=4050*(1-q)+500*q;engine=12700*(1-q)+2600*q;afrV=1.62+0.15*q
+ }else{
+   wheel=0;engine=1450;afrV=1.65
+ }
+ return{wheel:Math.max(0,wheel),engine:Math.max(0,engine),afrV:Math.max(0,Math.min(3.3,afrV))}
+}
+function simEmitPacket(){
+ var target=simTargetAt(SIM.tMs);
+ // Firmware output smoothing runs every 25 ms even when no new Hall edge arrives.
+ if(SIM.rpmFiltered<=0)SIM.rpmOutput=0;
+ else if(SIM.rpmOutput<=0)SIM.rpmOutput=SIM.rpmFiltered;
+ else SIM.rpmOutput=SIM.rpmOutput*(1-SIM_OUTPUT_ALPHA)+SIM.rpmFiltered*SIM_OUTPUT_ALPHA;
+
+ // Emulate engine RPM EMA 0.25 and AFR EMA 0.20 from the ESP32 sensor code.
+ SIM.engineFiltered=SIM.engineFiltered<=0?target.engine:SIM.engineFiltered*0.75+target.engine*0.25;
+ SIM.afrFiltered=SIM.afrFiltered<=0?target.afrV:SIM.afrFiltered*(1-SIM_AFR_ALPHA)+target.afrV*SIM_AFR_ALPHA;
+
+ // Feed exactly the same text packet parser used by BLE notifications.
+ handleLine(
+   'D,'+Math.round(SIM.tMs)+','+
+   SIM.rpmOutput.toFixed(2)+','+
+   (SIM.engineFiltered/ignitionMultiplier()).toFixed(2)+','+
+   SIM.afrFiltered.toFixed(3)
+ )
+}
+function simStep(){
+ if(!S.sim)return;
+ var dt=SIM.tickMs,target=simTargetAt(SIM.tMs),rps=target.wheel/60;
+ var phase0=SIM.phase,advance=rps*(dt/1000),phase1=phase0+advance;
+
+ // One magnet = one Hall edge for every complete wheel revolution.
+ if(advance>0){
+   while(phase1>=1){
+     var frac=(1-phase0)/advance;
+     if(!isFinite(frac)||frac<0)frac=0;if(frac>1)frac=1;
+     var edgeMs=SIM.tMs+frac*dt;
+     simHallEdge(Math.round(edgeMs*1000));
+     phase1-=1;phase0=0;advance=phase1
+   }
+ }
+ SIM.phase=phase1;
+ SIM.tMs+=dt;S.simT=SIM.tMs;
+
+ // Same 1-second no-pulse timeout/reset as the real wheel firmware.
+ if(SIM.lastPulseUs>0&&(SIM.tMs-SIM.lastPulseUs/1000)>SIM_ROLLER_TIMEOUT_MS)simResetWheel();
+
+ if(SIM.tMs-SIM.lastPacketMs>=SIM_SAMPLE_MS){SIM.lastPacketMs=SIM.tMs;simEmitPacket()}
+ setTimeout(simStep,dt)
+}
+function resetSimulator(){
+ SIM.tMs=0;SIM.lastPacketMs=0;SIM.engineFiltered=0;SIM.afrFiltered=0;simResetWheel();
+ S.simT=0;S.lastT=0;S.omegaF=0;S.ow=[];S.tw=[];S.rollerCalcPrimed=false;S.rollerStartupSamplesRemaining=0;
+ S.rollerGuardLastDistinctRpm=0;S.rollerGuardLastDistinctMs=0
+}
+function toggleSim(){
+ S.sim=!S.sim;$('ctlSim').textContent=S.sim?'SIM OFF':'SIM';
+ if(S.sim){resetSimulator();setBle(false,'SIM 1-MAG');simStep()}
+ else{setBle(S.connected,S.connected?'BLE OK':'BLE OFF')}
+}
+function update201(t,speed,rpm,afr){if(S.wait201&&speed>=1){S.wait201=false;S.run201=true;S.t2010=S.t201last=t;S.d201=0;$('state201').textContent='RUNNING'}if(!S.run201)return;var dt=(t-S.t201last)/1000;if(dt>0&&dt<1)S.d201+=speed/3.6*dt;S.t201last=t;S.maxS201=Math.max(S.maxS201,speed);S.maxR201=Math.max(S.maxR201,rpm);$('dist201').textContent=S.d201.toFixed(1)+' m';$('time201').textContent=((t-S.t2010)/1000).toFixed(3)+' s';$('speed201').textContent=speed.toFixed(1);$('rpm201').textContent=Math.round(rpm);if(S.d201>=201){S.run201=false;S.done201=true;var tt=(t-S.t2010)/1000;$('state201').textContent='DONE';$('result201').textContent=tt.toFixed(3)+' s';$('maxSpeed201').textContent=S.maxS201.toFixed(1);$('maxRpm201').textContent=Math.round(S.maxR201);$('afrEnd201').textContent=afr.toFixed(1)}}
+function reset201(){S.run201=S.wait201=S.done201=false;S.d201=0;S.maxS201=S.maxR201=0;$('state201').textContent='Waiting';$('dist201').textContent='0.0 m';$('time201').textContent='--';$('speed201').textContent='0.0';$('rpm201').textContent='0';$('result201').textContent='--';$('maxSpeed201').textContent='0.0';$('maxRpm201').textContent='0';$('afrEnd201').textContent='--'}
+function setupCanvas(c){
+ var dpr=Math.min(window.devicePixelRatio||1,3);
+ var w=Math.max(20,c.clientWidth||c.parentElement.clientWidth||300);
+ var h=Math.max(20,c.clientHeight||c.parentElement.clientHeight||150);
+ var pw=Math.round(w*dpr),ph=Math.round(h*dpr);
+ if(c.width!==pw||c.height!==ph){c.width=pw;c.height=ph}
+ c.style.width=w+'px';c.style.height=h+'px';
+ var x=c.getContext('2d');
+ x.setTransform(dpr,0,0,dpr,0,0);
+ x.imageSmoothingEnabled=true;
+ return{x:x,w:w,h:h,dpr:dpr}
+}
+function niceMax(v){v=Math.max(1,Number(v)||1);var p=Math.pow(10,Math.floor(Math.log10(v))),q=v/p;if(q<=1)q=1;else if(q<=2)q=2;else if(q<=5)q=5;else q=10;return q*p}
+function fmtAxis(v){var a=Math.abs(v);if(a>=1000)return Math.round(v).toString();if(a>=100)return Math.round(v).toString();if(a>=10)return (Math.round(v*10)/10).toString();return (Math.round(v*100)/100).toString()}
+function chartFrame(g,opt){
+ var x=g.x,w=g.w,h=g.h,compact=(h<360||w<760);
+ var hasR2=!!opt.right2,L=compact?42:48,R=hasR2?(compact?68:76):(opt.right?(compact?46:52):14),T=8,B=compact?28:31;
+ var P={l:L,r:w-R,t:T,b:h-B};P.w=Math.max(40,P.r-P.l);P.h=Math.max(40,P.b-P.t);
+ x.clearRect(0,0,w,h);x.fillStyle='#030405';x.fillRect(0,0,w,h);x.textBaseline='middle';
+ var xt=compact?4:5,yt=compact?4:5,i,v,px,py;
+ x.save();x.setLineDash([3,4]);x.lineWidth=1;
+ for(i=0;i<=xt;i++){
+   px=P.l+P.w*i/xt;x.strokeStyle='#15191d';x.beginPath();x.moveTo(px,P.t);x.lineTo(px,P.b);x.stroke();
+   v=opt.xMin+(opt.xMax-opt.xMin)*i/xt;x.fillStyle='#89939d';x.textAlign='center';x.font=(compact?'7':'8')+'px Arial';
+   x.fillText(opt.xFmt?opt.xFmt(v):fmtAxis(v),px,P.b+(compact?9:11));
+ }
+ for(i=0;i<=yt;i++){
+   py=P.b-P.h*i/yt;x.strokeStyle='#15191d';x.beginPath();x.moveTo(P.l,py);x.lineTo(P.r,py);x.stroke();
+   v=(opt.yMin||0)+(opt.yMax-(opt.yMin||0))*i/yt;x.fillStyle=opt.yColor||'#ff4a50';x.textAlign='right';x.font=(compact?'7':'8')+'px Arial';
+   x.fillText(fmtAxis(v),P.l-5,py);
+ }
+ x.restore();
+ x.strokeStyle='#30363d';x.lineWidth=1;x.strokeRect(P.l+.5,P.t+.5,P.w-1,P.h-1);
+ x.fillStyle='#89939d';x.textAlign='center';x.font='700 '+(compact?'7':'8')+'px Arial';x.fillText(opt.xLabel||'',P.l+P.w/2,h-(compact?6:7));
+ if(opt.yLabel){x.fillStyle=opt.yColor||'#ff4a50';x.textAlign='left';x.font='700 '+(compact?'7':'8')+'px Arial';x.fillText(opt.yLabel,P.l+3,P.t+7)}
+ if(opt.right){
+   for(i=0;i<=yt;i++){py=P.b-P.h*i/yt;v=opt.right.max*i/yt;x.fillStyle=opt.right.color;x.textAlign='left';x.font=(compact?'7':'8')+'px Arial';x.fillText(fmtAxis(v),P.r+5,py)}
+   x.fillStyle=opt.right.color;x.textAlign='right';x.font='700 '+(compact?'6':'7')+'px Arial';x.fillText(opt.right.shortLabel||opt.right.label||'',w-3,P.t+7)
+ }
+ if(opt.right2){
+   for(i=0;i<=yt;i++){py=P.b-P.h*i/yt;v=opt.right2.min+(opt.right2.max-opt.right2.min)*i/yt;x.fillStyle=opt.right2.color;x.textAlign='left';x.font=(compact?'6':'7')+'px Arial';x.fillText(fmtAxis(v),P.r+(compact?31:35),py)}
+   x.fillStyle=opt.right2.color;x.textAlign='right';x.font='700 '+(compact?'6':'7')+'px Arial';x.fillText(opt.right2.shortLabel||opt.right2.label||'',w-3,P.t+17)
+ }
+ return P
+}
+function plotSeries(g,P,data,getX,getY,xMin,xMax,yMin,yMax,color,width){
+ if(!data||data.length<2)return;var x=g.x,started=false;x.strokeStyle=color;x.lineWidth=width||1.7;x.setLineDash([]);x.beginPath();
+ data.forEach(function(d){var xv=getX(d),yv=getY(d);if(!isFinite(xv)||!isFinite(yv))return;var px=P.l+(xv-xMin)/(xMax-xMin||1)*P.w,py=P.b-(yv-yMin)/(yMax-yMin||1)*P.h;if(!started){x.moveTo(px,py);started=true}else x.lineTo(px,py)});if(started)x.stroke()
+}
+function chartEmpty(g,msg){g.x.fillStyle='#66717c';g.x.textAlign='center';g.x.font='700 10px Arial';g.x.fillText(msg,g.w/2,g.h/2)}
+function getSelectedRun(){return selectedRunIndex>=0&&runHistory[selectedRunIndex]?runHistory[selectedRunIndex]:null}
+function drawLegend(g,items){var x=g.x,px=62;x.font='700 8px Arial';x.textAlign='left';items.forEach(function(it){x.strokeStyle=it[1];x.lineWidth=2;x.beginPath();x.moveTo(px,12);x.lineTo(px+14,12);x.stroke();x.fillStyle='#c3c8ce';x.fillText(it[0],px+18,12);px+=18+x.measureText(it[0]).width+24})}
+function getSmoothingWindow(level){return level===1?3:(level===2?7:1)}
+function smoothCenteredPower(data,windowSize){
+ if(!data||!data.length||windowSize<=1)return(data||[]).map(function(a){return a.slice()});
+ if(windowSize%2===0)windowSize++;var half=Math.floor(windowSize/2),out=[];
+ for(var i=0;i<data.length;i++){var a=Math.max(0,i-half),b=Math.min(data.length-1,i+half),sh=0,st=0,nc=0;
+   for(var j=a;j<=b;j++){sh+=+data[j][1]||0;st+=+data[j][2]||0;nc++}
+   out.push([data[i][0],sh/nc,st/nc])
+ }return out
+}
+function smoothTrailingPairs(data,windowSize){
+ if(!data||!data.length||windowSize<=1)return(data||[]).map(function(a){return a.slice()});
+ var out=[],q=[],sum=0;for(var i=0;i<data.length;i++){var y=+data[i][1]||0;q.push(y);sum+=y;if(q.length>windowSize)sum-=q.shift();out.push([data[i][0],sum/q.length])}return out
+}
+function trimPowerAtHalfHp(data){
+ if(!data||data.length<3)return(data||[]).map(function(a){return a.slice()});
+ var maxHp=-Infinity,maxIdx=-1;
+ for(var i=0;i<data.length;i++){var y=+data[i][1];if(isFinite(y)&&y>maxHp){maxHp=y;maxIdx=i}}
+ if(!(maxHp>0)||maxIdx<0||maxIdx>=data.length-1)return data.map(function(a){return a.slice()});
+ var threshold=maxHp*0.50;
+ for(var k=maxIdx+1;k<data.length;k++){
+   var cy=+data[k][1];if(!isFinite(cy)||cy>threshold)continue;
+   var nextBelow=(k===data.length-1)||(isFinite(+data[k+1][1])&&+data[k+1][1]<=threshold);if(!nextBelow)continue;
+   var prev=data[k-1],cur=data[k],py=+prev[1],px=+prev[0],cx=+cur[0],ratio=1;
+   if(isFinite(py)&&py>threshold&&cy<py){ratio=(py-threshold)/(py-cy);ratio=Math.max(0,Math.min(1,ratio))}
+   var xCut=isFinite(px)&&isFinite(cx)?px+(cx-px)*ratio:cx;
+   var tqPrev=+prev[2],tqCur=+cur[2],tqCut=isFinite(tqPrev)&&isFinite(tqCur)?tqPrev+(tqCur-tqPrev)*ratio:(isFinite(tqCur)?tqCur:0);
+   var out=data.slice(0,k).map(function(a){return a.slice()});out.push([xCut,threshold,tqCut]);out._cut=true;out._threshold=threshold;return out
+ }var full=data.map(function(a){return a.slice()});full._cut=false;full._threshold=threshold;return full
+}
+function buildPowerDisplayData(raw){
+ var d=trimPowerAtHalfHp(normalizePowerData(raw||[])),cut=!!d._cut,threshold=d._threshold;
+ if(S.smoothingLevel>0){d=smoothCenteredPower(d,getSmoothingWindow(S.smoothingLevel));if(cut&&d.length)d[d.length-1][1]=threshold}
+ return d
+}
+function syncSmoothingButtons(){document.querySelectorAll('[data-smooth]').forEach(function(b){b.classList.toggle('on',parseInt(b.dataset.smooth,10)===S.smoothingLevel)})}
+function setSmoothingLevel(level,persist){level=parseInt(level,10);if(level!==0&&level!==1&&level!==2)level=1;S.smoothingLevel=level;syncSmoothingButtons();drawAll();if(persist!==false)save()}
+function updatePowerPeakUI(maxHp,maxTq){
+ var hp=$('powerMaxHp'),tq=$('powerMaxTq'),vals=$('powerVals');
+ maxHp=isFinite(maxHp)?maxHp:0;maxTq=isFinite(maxTq)?maxTq:0;
+ if(hp)hp.textContent=maxHp.toFixed(1);
+ if(tq)tq.textContent=maxTq.toFixed(1);
+ if(vals)vals.textContent=(maxHp>0||maxTq>0)?('MAX '+maxHp.toFixed(1)+'HP · '+maxTq.toFixed(1)+'Nm'):'NO RUN';
+}
+function drawPower(){
+ var c=$('powerCanvas'),g=setupCanvas(c),run=getSelectedRun(),raw0=S.recording?S.runPower:(run?run.power:[]),raw=normalizePowerData(raw0),d=buildPowerDisplayData(raw);
+ var maxHp=0,maxTq=0;if(raw&&raw.length)raw.forEach(function(a){maxHp=Math.max(maxHp,+a[1]||0);maxTq=Math.max(maxTq,+a[2]||0)});
+ if(!S.recording&&run){if((+run.hpMax||0)>maxHp)maxHp=+run.hpMax||0;if((+run.tqMax||0)>maxTq)maxTq=+run.tqMax||0}
+ updatePowerPeakUI(maxHp,maxTq);
+ var xMin=d&&d.length?Math.min.apply(null,d.map(function(a){return+a[0]})):0,xMax=d&&d.length?Math.max.apply(null,d.map(function(a){return+a[0]})):1;if(xMax<=xMin)xMax=xMin+1;
+ var hpY=niceMax(maxHp*1.1),tqY=niceMax(maxTq*1.1),P=chartFrame(g,{xMin:xMin,xMax:xMax,xLabel:'ENGINE RPM / ROLLER RPM',yMax:hpY,yLabel:'HP',yColor:'#ff3038',right:{max:tqY,label:'TORQUE (Nm)',shortLabel:'Nm',color:'#ff9f1c'}});
+ if(!d||d.length<2){chartEmpty(g,'NO SAVED RUN DATA');return}
+ plotSeries(g,P,d,function(a){return+a[0]},function(a){return+a[1]},xMin,xMax,0,hpY,'#ff3038',1.8);plotSeries(g,P,d,function(a){return+a[0]},function(a){return+a[2]},xMin,xMax,0,tqY,'#ff9f1c',1.8)
+}
+function drawRpm(){
+ var c=$('rpmCanvas'),g=setupCanvas(c),run=getSelectedRun(),d=S.recording?S.runRpm:(run?run.rpm:[]);
+ if(!d||!d.length){var P0=chartFrame(g,{xMin:0,xMax:1,xLabel:'TIME (s)',yMax:n('maxRpm',16000),yLabel:'RPM',yColor:'#ff4c52',right:{max:n('maxSpeed',160),label:'SPEED km/h',shortLabel:'km/h',color:'#d3d6da'},right2:{min:10,max:20,label:'AFR',shortLabel:'AFR',color:'#3488ff'}});chartEmpty(g,'NO SAVED RUN DATA');return}
+ var t0=+d[0][0],td=d.map(function(a){return[(+a[0]-t0),+a[1],+a[2],+a[3],+a[4]]}),xMax=Math.max(1,td[td.length-1][0]),rpmY=niceMax(Math.max(1000,Math.max.apply(null,td.map(function(a){return Math.max(a[1]||0,a[2]||0)})))*1.05),speedY=niceMax(Math.max(20,Math.max.apply(null,td.map(function(a){return a[3]||0})))*1.08);
+ var P=chartFrame(g,{xMin:0,xMax:xMax,xLabel:'TIME (s)',xFmt:function(v){return v.toFixed(v<10?1:0)},yMax:rpmY,yLabel:'RPM',yColor:'#ff4c52',right:{max:speedY,label:'SPEED km/h',shortLabel:'km/h',color:'#d3d6da'},right2:{min:10,max:20,label:'AFR',shortLabel:'AFR',color:'#3488ff'}});
+
+ plotSeries(g,P,td,function(a){return a[0]},function(a){return a[1]},0,xMax,0,rpmY,'#ff4c52',1.7);
+ plotSeries(g,P,td,function(a){return a[0]},function(a){return a[2]},0,xMax,0,rpmY,'#37d45a',1.4);
+ plotSeries(g,P,td,function(a){return a[0]},function(a){return a[3]},0,xMax,0,speedY,'#d3d6da',1.4);
+ plotSeries(g,P,td,function(a){return a[0]},function(a){return a[4]},0,xMax,10,20,'#3488ff',1.7)
+}
+function getCompareIndices(){var out=[];document.querySelectorAll('#compareRunList input:checked').forEach(function(e){out.push(+e.value)});return out.slice(0,5)}
+function compareSeriesFor(run,metric){
+ if(!run)return[];if(metric==='hp'){var a=(run.power||[]).map(function(v){return[+v[0],+v[1]]});return S.smoothingLevel>0?smoothTrailingPairs(a,getSmoothingWindow(S.smoothingLevel)):a}
+ if(metric==='tq'){var b=normalizePowerData(run.power||[]).map(function(v){return[+v[0],+v[2]]});return S.smoothingLevel>0?smoothTrailingPairs(b,getSmoothingWindow(S.smoothingLevel)):b}
+ if(metric==='speed')return(run.rpm||[]).map(function(a){return[+a[1]||+a[2],+a[3]]});
+ return(run.rpm||[]).map(function(a){return[+a[1]||+a[2],+a[4]]})
+}
+function drawCompare(){
+ var c=$('compareCanvas');if(!c)return;var g=setupCanvas(c),idxs=getCompareIndices(),metric=$('compareMetric')?$('compareMetric').value:'hp',sets=[],all=[];
+ idxs.forEach(function(idx){var r=runHistory[idx];if(!r)return;var d=compareSeriesFor(r,metric);sets.push({run:r,data:d});all=all.concat(d)});
+ var yLabel=metric==='hp'?'POWER (HP)':metric==='tq'?'TORQUE (Nm)':metric==='speed'?'SPEED (km/h)':'AFR',yColor=metric==='tq'?'#ff9f1c':metric==='afr'?'#3488ff':metric==='speed'?'#d3d6da':'#ff3038';
+ var xMin=all.length?Math.min.apply(null,all.map(function(a){return a[0]})):0,xMax=all.length?Math.max.apply(null,all.map(function(a){return a[0]})):1;if(xMax<=xMin)xMax=xMin+1;
+ var yMin=metric==='afr'?10:0,yMax=metric==='afr'?20:niceMax(Math.max(1,all.length?Math.max.apply(null,all.map(function(a){return a[1]})):1)*1.1);
+ var P=chartFrame(g,{xMin:xMin,xMax:xMax,xLabel:'ENGINE RPM / ROLLER RPM',yMin:yMin,yMax:yMax,yLabel:yLabel,yColor:yColor});
+ var pal=['#ff4d57','#40c4ff','#ffd740','#69f0ae','#b388ff'];
+ if(sets.length<2){chartEmpty(g,'SELECT 2–5 SAVED RUNS');return}
+ sets.forEach(function(s,i){plotSeries(g,P,s.data,function(a){return a[0]},function(a){return a[1]},xMin,xMax,yMin,yMax,pal[i%pal.length],1.8)})
+}
+function drawAll(){drawPower();drawRpm();drawCompare()}
+
+function saveCurrentRun(){
+ if(!S.runPower||S.runPower.length<2||!S.runRpm||S.runRpm.length<2)return;
+ var seq=parseInt(localStorage.getItem(RUN_COUNTER_KEY)||'0',10)+1;localStorage.setItem(RUN_COUNTER_KEY,String(seq));
+ var rpmMax=0,speedMax=0;S.runRpm.forEach(function(a){rpmMax=Math.max(rpmMax,+a[1]||0);speedMax=Math.max(speedMax,+a[3]||0)});
+ var fixedPower=normalizePowerData(S.runPower),hpPeak=S.hpMax||0,tqPeak=S.tqMax||0;
+ fixedPower.forEach(function(a){hpPeak=Math.max(hpPeak,+a[1]||0);tqPeak=Math.max(tqPeak,+a[2]||0)});
+ var item={seq:seq,timestamp:new Date().toLocaleString('vi-VN',{hour12:false}),ignitionCycle:$('ignitionCycle')?$('ignitionCycle').value:'360',power:fixedPower.map(function(a){return a.slice()}),rpm:S.runRpm.map(function(a){return a.slice()}),hpMax:hpPeak,tqMax:tqPeak,rpmMax:rpmMax,speedMax:speedMax};
+ runHistory.push(item);if(runHistory.length>10)runHistory.shift();selectedRunIndex=runHistory.length-1;persistRunHistory();renderRunHistoryUI()
+}
+function persistRunHistory(){try{localStorage.setItem(RUN_HISTORY_KEY,JSON.stringify(runHistory))}catch(e){}}
+function restoreRunHistory(){try{var a=JSON.parse(localStorage.getItem(RUN_HISTORY_KEY)||'[]');if(Array.isArray(a))runHistory=a.slice(-10)}catch(e){runHistory=[]}selectedRunIndex=runHistory.length?runHistory.length-1:-1}
+function runLabel(r){return'RUN #'+r.seq+' · '+(r.hpMax||0).toFixed(1)+'HP · '+(r.tqMax||0).toFixed(1)+'Nm'}
+function renderRunSelectors(){
+ ['powerRunSelect','rpmRunSelect'].forEach(function(id){var s=$(id);if(!s)return;var keep=selectedRunIndex;s.innerHTML='';if(!runHistory.length){var o=document.createElement('option');o.value='';o.textContent='-- NO SAVED RUN --';s.appendChild(o);return}for(var i=runHistory.length-1;i>=0;i--){var o=document.createElement('option');o.value=String(i);o.textContent=runLabel(runHistory[i]);s.appendChild(o)}s.value=String(keep>=0?keep:runHistory.length-1)})
+ var r=getSelectedRun();if(r){var hp=+r.hpMax||0,tq=+r.tqMax||0;if((!hp||!tq)&&r.power&&r.power.length){normalizePowerData(r.power).forEach(function(a){hp=Math.max(hp,+a[1]||0);tq=Math.max(tq,+a[2]||0)})}updatePowerPeakUI(hp,tq)}else updatePowerPeakUI(0,0);$('rpmVals').textContent=r?(Math.round(+r.rpmMax||0)+'RPM · '+(+r.speedMax||0).toFixed(1)+'km/h'):'NO RUN'
+}
+function renderCompareRunList(){
+ var box=$('compareRunList');if(!box)return;box.innerHTML='';if(!runHistory.length){box.innerHTML='<span class="chart-empty">NO SAVED RUNS</span>';return}
+ var auto=[];if(runHistory.length>=2)auto=[runHistory.length-1,runHistory.length-2];else auto=[runHistory.length-1];
+ for(var i=runHistory.length-1;i>=0;i--){var lab=document.createElement('label');lab.className='compare-run-chip';var cb=document.createElement('input');cb.type='checkbox';cb.value=String(i);cb.checked=auto.indexOf(i)>=0;var sp=document.createElement('span');sp.textContent='RUN #'+runHistory[i].seq+' · '+runHistory[i].hpMax.toFixed(1)+'HP';lab.appendChild(cb);lab.appendChild(sp);if(cb.checked)lab.classList.add('checked');cb.addEventListener('change',function(){var checked=document.querySelectorAll('#compareRunList input:checked');if(checked.length>5){this.checked=false;return}this.parentElement.classList.toggle('checked',this.checked);$('compareHint').textContent=checked.length+' RUN(S) SELECTED';drawCompare()});box.appendChild(lab)}
+ $('compareHint').textContent=document.querySelectorAll('#compareRunList input:checked').length+' RUN(S) SELECTED'
+}
+function renderRunHistoryUI(){renderRunSelectors();renderCompareRunList();drawAll()}
+function bindRunHistoryUI(){
+ ['powerRunSelect','rpmRunSelect'].forEach(function(id){var s=$(id);if(!s)return;s.addEventListener('change',function(){var v=parseInt(this.value,10);if(!isFinite(v)||!runHistory[v])return;selectedRunIndex=v;renderRunSelectors();drawAll()})});
+ if($('compareMetric'))$('compareMetric').addEventListener('change',drawCompare)
+}
+function setSaveStatus(text,cls){var e=$('settingsSaveStatus');if(!e)return;e.textContent=text;e.className=cls||''}
+function save(showStatus){try{if(showStatus)setSaveStatus('SAVING...','saving');var o={};cfgIds.forEach(function(id){o[id]=$(id).value});o.auto=$('autoStart').checked;o.smoothingLevel=S.smoothingLevel;localStorage.setItem('dynotl_mobile_v1',JSON.stringify(o));if(showStatus){setSaveStatus('SAVED','saved');setTimeout(function(){setSaveStatus('AUTO-SAVE ON','')},1400)}return true}catch(e){if(showStatus)setSaveStatus('SAVE ERROR','error');return false}}
+function load(){try{var o=JSON.parse(localStorage.getItem('dynotl_mobile_v1')||'{}');cfgIds.forEach(function(id){if(o[id]!=null)$(id).value=o[id]});S.auto=!!o.auto;S.smoothingLevel=(o.smoothingLevel===0||o.smoothingLevel===1||o.smoothingLevel===2)?o.smoothingLevel:1;$('autoStart').checked=S.auto;$('ctlAuto').classList.toggle('on',S.auto);syncSmoothingButtons()}catch(e){}}
+document.querySelectorAll('nav button').forEach(function(b){b.onclick=function(){document.querySelectorAll('nav button').forEach(function(x){x.classList.remove('on')});document.querySelectorAll('.page').forEach(function(x){x.classList.remove('on')});b.classList.add('on');$(b.dataset.page).classList.add('on');setTimeout(drawAll,30)}})
+$('bleTop').onclick=connectBle;$('ctlBle').onclick=connectBle;$('ctlRun').onclick=startRun;$('ctlStop').onclick=stopRun;$('ctlAuto').onclick=toggleAuto;$('ctlSim').onclick=toggleSim;if($('btnSaveSettings'))$('btnSaveSettings').onclick=function(){save(true)};document.querySelectorAll('[data-smooth]').forEach(function(b){b.onclick=function(){setSmoothingLevel(this.dataset.smooth,true)}});$('run201').onclick=function(){reset201();S.wait201=true;$('state201').textContent='Waiting ≥ 1 km/h'};$('reset201').onclick=reset201;$('autoStart').onchange=function(){S.auto=this.checked;$('ctlAuto').classList.toggle('on',S.auto);save()}
+cfgIds.forEach(function(id){$(id).addEventListener('change',function(){save(false)});$(id).addEventListener('input',function(){save(false)})});window.addEventListener('resize',drawAll);document.addEventListener('visibilitychange',function(){if(!document.hidden)drawAll()});load();restoreRunHistory();renderRunHistoryUI();bindRunHistoryUI();reset201();setBle(false);try{if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(function(){})}catch(e){};setTimeout(drawAll,100);
+})();
+</script>
+<script id="original-pc-live-adapter">
+(function(){
+ 'use strict';
+ var mount=document.getElementById('livePcMount');
+ if(!mount)return;
+ function getText(path){return fetch(path+'?v=pc2').then(function(r){if(!r.ok)throw new Error(path+' '+r.status);return r.text()})}
+ Promise.all([
+   getText('live/head.html'),getText('live/rpm.html'),getText('live/kpis.html'),getText('live/speed.html'),getText('live/info.html')
+ ]).then(function(p){
+   mount.innerHTML=p[0]+'<div class="live-gauge-grid">'+p[1]+p[2]+p[3]+'</div>'+p[4];
+   startPcLive();
+ }).catch(function(e){mount.innerHTML='<div class="pc-live-loading">LIVE LOAD ERROR</div>';console.error(e)});
+
+ function startPcLive(){
+   var rpmGauge=document.getElementById('liveRpmArc'),speedGauge=document.getElementById('liveSpeedArc');
+   function rebuildActive(el){
+     if(!el)return;
+     var track=Array.from(el.querySelectorAll('.led-track > path'));
+     var active=el.querySelector('[id$="Active"]');
+     if(!active)return;
+     while(active.firstChild)active.removeChild(active.firstChild);
+     track.forEach(function(src,i){
+       var n=src.cloneNode(false);
+       n.removeAttribute('fill');n.removeAttribute('stroke');n.removeAttribute('stroke-width');
+       n.setAttribute('class','led-segment');n.setAttribute('opacity','0');
+       var a0=164.55+i*7.571429,a1=a0+6.471429;
+       n.dataset.a0=a0.toFixed(6);n.dataset.a1=a1.toFixed(6);
+       active.appendChild(n);
+     });
+   }
+   rebuildActive(rpmGauge);rebuildActive(speedGauge);
+
+   function buildGauge(el){
+     if(!el)return;
+     el._led={
+       paths:Array.from(el.querySelectorAll('.led-segment')).map(function(node){return{node:node,a0:+node.dataset.a0,a1:+node.dataset.a1,lastEnd:null}}),
+       svg:el.querySelector('svg'),digits:el.querySelector('.led-digital'),over:el.querySelector('.led-overrange'),lastText:null
+     };
+     renderDigits(el,'0');
+   }
+   function ledPoint(r,a){var q=a*Math.PI/180;return[260+r*Math.cos(q),267+r*Math.sin(q)]}
+   function ledSector(a,b){
+     function p(r,t){var x=ledPoint(r,t);return x[0].toFixed(3)+' '+x[1].toFixed(3)}
+     return'M'+p(204,a)+' A204 204 0 0 1 '+p(204,b)+' L'+p(161,b)+' A161 161 0 0 0 '+p(161,a)+' Z'
+   }
+   function renderDigits(el,str){
+     var s=el&&el._led;if(!s||!s.digits||str===s.lastText)return;s.lastText=str;
+     var outlines={
+      '0':'M7 0H32L39 7V59L32 66H7L0 59V7Z M10 10V56H29V10Z','1':'M16 0H27V66H16V14L7 22V10Z',
+      '2':'M3 0H32L39 7V28L32 36H10V56H39V66H0V35L7 27H29V10H0V3Z','3':'M3 0H32L39 7V28L34 33L39 38V59L32 66H0V56H29V38H10V28H29V10H0V3Z',
+      '4':'M23 0H33V41H39V50H33V66H24V50H0V40Z M24 14L8 41H24Z','5':'M0 0H39V10H10V27H32L39 34V59L32 66H0V56H29V38H0Z',
+      '6':'M7 0H35V10H10V27H32L39 34V59L32 66H7L0 59V7Z M10 38V56H29V38Z','7':'M0 0H39V10L20 66H9L28 10H0Z',
+      '8':'M7 0H32L39 7V28L34 33L39 38V59L32 66H7L0 59V38L5 33L0 28V7Z M10 10V27H29V10Z M10 39V56H29V39Z',
+      '9':'M7 0H32L39 7V59L32 66H4V56H29V39H7L0 32V7Z M10 10V28H29V10Z','-':'M3 28H36V38H3Z'
+     };
+     var ns='http://www.w3.org/2000/svg';while(s.digits.firstChild)s.digits.removeChild(s.digits.firstChild);
+     var glyphWidth=45,space=7,width=str.length*glyphWidth+(str.length-1)*space,scale=Math.min(1,242/width);
+     s.digits.setAttribute('transform','translate('+(260-width*scale/2).toFixed(3)+' '+(246+(1-scale)*33).toFixed(3)+') scale('+scale.toFixed(4)+')');
+     Array.from(str).forEach(function(ch,i){var g=document.createElementNS(ns,'g');g.setAttribute('transform','translate('+(i*(glyphWidth+space))+',0) scale(1.15,1)');var path=document.createElementNS(ns,'path');path.setAttribute('d',outlines[ch]||outlines['-']);path.setAttribute('fill-rule','evenodd');g.appendChild(path);s.digits.appendChild(g)})
+   }
+   function setArc(el,value,maxValue){
+     if(!el||!el._led)return;var n=Number(value);if(!Number.isFinite(n)||n<0)n=0;var max=Number(maxValue)||1;
+     var fraction=Math.max(0,Math.min(1,n/max)),end=164+212*fraction;
+     el._led.paths.forEach(function(seg){var on=end>seg.a0&&fraction>0;if(!on){seg.node.setAttribute('opacity','0');seg.lastEnd=null;return}var b=Math.min(end,seg.a1);if(seg.lastEnd!==b){seg.node.setAttribute('d',ledSector(seg.a0,b));seg.lastEnd=b}seg.node.setAttribute('opacity','1')});
+     renderDigits(el,String(Math.round(n)));if(el._led.svg)el._led.svg.setAttribute('aria-label',el.dataset.title+': '+Math.round(n));if(el._led.over)el._led.over.setAttribute('visibility',n>max?'visible':'hidden')
+   }
+   buildGauge(rpmGauge);buildGauge(speedGauge);
+
+   var distKm=0,last=performance.now(),runStart=0,prevRun=false,runNo=0;
+   function num(id){var e=document.getElementById(id),v=e?parseFloat(e.textContent):0;return Number.isFinite(v)?v:0}
+   function tick(){
+     var rpm=num('liveRpm'),speed=num('liveSpeed'),afr=num('liveAfr'),hp=num('liveHp'),tq=num('liveTq');
+     var e;
+     if((e=document.getElementById('liveAfrValue')))e.textContent=Number.isFinite(afr)&&afr>0?afr.toFixed(1):'--';
+     if((e=document.getElementById('liveHpValue')))e.textContent=hp.toFixed(1);
+     if((e=document.getElementById('liveTorqueValue')))e.textContent=tq.toFixed(1);
+     setArc(rpmGauge,rpm,16000);setArc(speedGauge,speed,160);
+
+     var ble=document.getElementById('bleStatus'),sim=document.getElementById('ctlSim'),run=document.getElementById('ctlRun');
+     var isSim=sim&&/OFF/.test(sim.textContent),isBle=ble&&ble.classList.contains('ok'),recording=run&&/RUNNING/.test(run.textContent);
+     var live=document.getElementById('live');live.dataset.source=isSim?'sim':(isBle?'ble':'idle');
+     if((e=document.getElementById('liveDataState')))e.textContent=isSim?'SIMULATOR':(isBle?'CONNECTED':'STANDBY');
+     if((e=document.getElementById('liveRunState')))e.textContent=recording?'Recording':'Standby';
+     if((e=document.getElementById('liveRecordDot')))e.classList.toggle('on',!!recording);
+
+     var now=performance.now(),dt=Math.max(0,Math.min(.2,(now-last)/1000));last=now;
+     if(recording&&!prevRun){runStart=now;distKm=0;runNo++}
+     if(recording)distKm+=Math.max(0,speed)*dt/3600;
+     prevRun=recording;
+     if((e=document.getElementById('liveDistanceValue')))e.textContent=distKm.toFixed(2)+' km';
+     if((e=document.getElementById('liveRunNumberValue')))e.textContent=String(runNo);
+     if((e=document.getElementById('liveElapsedValue'))){var sec=recording?Math.max(0,(now-runStart)/1000):0,m=Math.floor(sec/60),s=sec-m*60;e.textContent=String(m).padStart(2,'0')+':'+s.toFixed(1).padStart(4,'0')}
+   }
+   setInterval(tick,50);tick();
+ }
+})();
+</script>
+</body></html>

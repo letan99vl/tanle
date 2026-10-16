@@ -31,15 +31,25 @@ jobs:
           test -f live/kpis.html
           test -f live/rpm.html
           test -f live/speed.html
+          test -f dynotl/index.html
+          test -f dynotl/manifest.webmanifest
+          test -f dynotl/live/head.html
+          test -f dynotl/live/info.html
+          test -f dynotl/live/kpis.html
+          test -f dynotl/live/rpm.html
+          test -f dynotl/live/speed.html
+          grep -q '<title>Dyno TL Mobile</title>' dynotl/index.html
           grep -q 'id="buildTag"' index.html
           grep -q 'id="afrSettingsLiveVoltage"' index.html
 
       - name: Stage runtime allowlist only
         run: |
           set -euo pipefail
-          mkdir -p public-runtime/live
+          mkdir -p public-runtime/live public-runtime/dynotl/live
           cp index.html manifest.webmanifest .nojekyll public-runtime/
           cp live/head.html live/info.html live/kpis.html live/rpm.html live/speed.html public-runtime/live/
+          cp dynotl/index.html dynotl/manifest.webmanifest public-runtime/dynotl/
+          cp dynotl/live/head.html dynotl/live/info.html dynotl/live/kpis.html dynotl/live/rpm.html dynotl/live/speed.html public-runtime/dynotl/live/
           test ! -e public-runtime/android
           test ! -e public-runtime/firmware
 

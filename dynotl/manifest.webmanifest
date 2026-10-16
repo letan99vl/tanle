@@ -1,0 +1,9 @@
+{
+  "name":"Dyno TL Mobile",
+  "short_name":"Dyno TL",
+  "start_url":"./",
+  "display":"fullscreen",
+  "orientation":"landscape",
+  "background_color":"#040506",
+  "theme_color":"#040506"
+}

@@ -1,6 +1,19 @@
 <!doctype html>
 <html lang="en">
 <head>
+<script id="legacy-dynotl-launcher-route">
+(function () {
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var version = params.get("v");
+    var oldBuild = version !== null && /^\d+$/.test(version) && Number(version) <= 11;
+    var oldAgent = /DynoTL-ANDROID|DynoTL-Mobile/i.test(navigator.userAgent || "");
+    if (params.get("android") === "1" && (oldBuild || oldAgent)) {
+      window.location.replace(window.location.origin + "/tanle/dynotl/" + window.location.search + window.location.hash);
+    }
+  } catch (ignored) {}
+})();
+</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#050607">
