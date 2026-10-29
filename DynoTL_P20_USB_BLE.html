@@ -1,0 +1,1637 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script id="legacy-dynotl-launcher-route">
+(function () {
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var version = params.get("v");
+    var oldBuild = version !== null && /^\d+$/.test(version) && Number(version) <= 11;
+    var oldAgent = /DynoTL-ANDROID|DynoTL-Mobile/i.test(navigator.userAgent || "");
+    if (params.get("android") === "1" && (oldBuild || oldAgent)) {
+      window.location.replace(window.location.origin + "/tanle/dynotl/" + window.location.search + window.location.hash);
+    }
+  } catch (ignored) {}
+})();
+</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#050607">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<title>BT Speed Dyno P20</title>
+<style>
+:root{--bg:#040506;--panel:#0b0d10;--line:#252a30;--red:#ff6a00;--orange:#ff9f1c;--green:#37d45a;--blue:#3488ff;--text:#f3f5f7;--muted:#89939d;--nav:40px;--ctl:44px}
+*{box-sizing:border-box;-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
+html,body{margin:0;width:100%;height:100%;background:var(--bg);color:var(--text);font-family:Arial,sans-serif;overflow:hidden;touch-action:manipulation}
+input,textarea,select{user-select:text;-webkit-user-select:text}
+button,input,select{font:inherit}button{color:var(--text)}
+#app{width:100%;height:100%;background:var(--bg);display:grid;grid-template-rows:var(--nav) 1fr}
+@media(orientation:portrait){body{position:fixed;left:0;top:0;width:100vh;height:100vw;transform-origin:top left;transform:rotate(90deg) translateY(-100%)}}
+header{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:6px;padding:4px 6px;border-bottom:1px solid #191d21;background:#080a0c}
+.brand{font-size:12px;font-weight:900;letter-spacing:.8px;white-space:nowrap}.brand b{color:var(--red)}
+nav{display:flex;justify-content:center;gap:3px;min-width:0}nav button{height:31px;min-width:68px;padding:0 8px;border:1px solid #242930;border-radius:7px;background:#0d1013;font-size:10px;font-weight:800;white-space:nowrap}
+nav button.on{border-color:#8d252b;background:#251013;color:#fff}
+.headright{display:flex;align-items:center;gap:4px}.pill{height:28px;display:flex;align-items:center;padding:0 8px;border:1px solid #2b3036;border-radius:999px;color:var(--muted);font-size:9px;white-space:nowrap}.pill.ok{color:#86ef9e;border-color:#255f33}
+.mini{height:30px;padding:0 9px;border:1px solid #383f47;border-radius:7px;background:#111419;font-size:10px;font-weight:800}.mini.red{border-color:#7b272c;color:#ff7279}
+main{display:none;min-height:0;overflow:hidden}.page.on{display:block;height:100%}
+#live{padding:6px 8px calc(var(--ctl) + 8px)}
+.livegrid{height:100%;display:grid;grid-template-columns:1fr minmax(170px,.55fr) 1fr;gap:7px;min-height:0}
+.gauge,.centerbox,.chartbox,.card{border:1px solid var(--line);background:linear-gradient(180deg,#0b0d10,#060709);border-radius:12px;min-height:0;position:relative;overflow:hidden}
+.gauge{display:flex;flex-direction:column;align-items:center;justify-content:center}.gauge h3{margin:0 0 6px;font-size:14px;color:#9ca6b0}.big{font-size:clamp(54px,11vh,112px);line-height:.9;font-weight:900;text-shadow:0 0 18px #ff6a0044}.unit{margin-top:8px;color:#8390a0;font-size:15px}.scale{position:absolute;left:8%;right:8%;bottom:10%;height:7px;border-radius:99px;background:#171b20;overflow:hidden}.scale i{display:block;height:100%;width:0;background:linear-gradient(90deg,#772025,var(--red));transition:width .08s linear}
+.centerbox{display:grid;grid-template-rows:1fr 1fr 1fr}.kpi{display:flex;flex-direction:column;align-items:center;justify-content:center;border-bottom:1px solid #191d21}.kpi:last-child{border:0}.kpi label{font-size:11px;color:#8d98a4;font-weight:800}.kpi strong{font-size:clamp(29px,6vh,58px);line-height:1;margin-top:3px}.kpi.hp strong{color:var(--red)}.kpi.tq strong{color:var(--orange)}.kpi.afr strong{color:#fff}
+.controls{position:fixed;left:50%;bottom:4px;transform:translateX(-50%);width:min(620px,calc(100% - 12px));height:var(--ctl);padding:4px;display:flex;gap:4px;border:1px solid #272d33;border-radius:12px;background:#090b0dee;backdrop-filter:blur(10px);z-index:20}
+.controls button{flex:1;min-width:0;border:1px solid #313840;border-radius:8px;background:#111419;font-size:10px;font-weight:900}.controls .go{border-color:#7d2a30;background:#251013}.controls .stop{color:#ff6c73;border-color:#6d282d}.controls .auto.on{color:#ffc56b;border-color:#80521c;background:#22170a}
+.chartpage{padding:6px}.chartbox{height:100%;display:grid;grid-template-rows:34px 1fr;padding:4px 6px 6px}.charthead{display:flex;align-items:center;justify-content:space-between;gap:6px;color:#9aa4ae;font-size:10px;font-weight:900;letter-spacing:.5px}.charthead .vals{font-size:9px;color:#c4cad0;font-weight:700}.chartwrap{min-height:0;position:relative}canvas{width:100%!important;height:100%!important;display:block}
+#test201,#settings{overflow:auto;padding:6px}.twocol{display:grid;grid-template-columns:1fr 1fr;gap:6px}.card{padding:10px}.card h2{font-size:13px;margin:0 0 8px}.metricgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.metric{border:1px solid #252a30;border-radius:9px;background:#080a0c;padding:8px}.metric span{display:block;color:#84909a;font-size:9px}.metric b{display:block;font-size:20px;margin-top:4px}
+.row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:6px 0}.row label{font-size:10px;color:#b5bdc5}.row input,.row select{height:30px;border:1px solid #303840;border-radius:6px;background:#0b0e11;color:#fff;padding:0 7px;max-width:110px}.row button{height:32px;border:1px solid #343b43;border-radius:7px;background:#101419;padding:0 10px;font-size:10px;font-weight:800}
+.settingsgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.settingsgrid .card{overflow:auto}.settingsgrid h3{font-size:11px;margin:0 0 7px;color:#ff8126}.setline{display:grid;grid-template-columns:1fr 88px;gap:7px;align-items:center;margin:6px 0;font-size:10px;color:#aab4bd}.setline input,.setline select{width:100%;height:29px;border:1px solid #303840;border-radius:6px;background:#0b0e11;color:#fff;padding:0 6px}
+.note{font-size:9px;color:#77828c;line-height:1.4}.good{color:#7de195}.bad{color:#ff7078}
+@media(max-height:430px){:root{--nav:36px;--ctl:40px}nav button{height:28px;min-width:61px;font-size:9px}.brand{font-size:10px}.pill{height:26px}.mini{height:28px}.big{font-size:clamp(44px,10vh,82px)}.gauge h3{font-size:11px}.unit{font-size:12px}.kpi strong{font-size:clamp(24px,5.5vh,44px)}.controls button{font-size:9px}.settingsgrid{grid-template-columns:repeat(3,1fr)}}
+</style>
+
+
+
+<style id="original-pc-live-mobile">
+#live{padding:5px 7px calc(var(--ctl) + 5px)!important;background:#030304;color:#f4f4f5;overflow:hidden}
+#live .legacy-live-values{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;opacity:0!important;pointer-events:none!important}
+#live .pc-original-shell{height:100%;min-height:0;display:grid;grid-template-rows:34px minmax(0,1fr) 32px;gap:5px}
+#live .pc-live-loading{display:grid;place-items:center;grid-row:1/-1;color:#737d87;font:700 11px Arial;letter-spacing:1.3px}
+#live .live-monitor-head{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;min-width:0;padding:0 12px;border:1px solid #301414;border-radius:7px;background:linear-gradient(105deg,#0c0c0d,#060607 50%,#0c0b0c)}
+#live .live-head-box{min-width:0}
+#live .live-monitor-title{font:600 9px Arial,sans-serif;letter-spacing:1.5px;color:#949ca5}
+#live .live-monitor-sub{font:600 6px Arial,sans-serif;letter-spacing:1.3px;color:#646b74;margin-top:2px}
+#live .live-title-banner{position:relative;width:min(32vw,280px);height:34px;display:grid;place-items:center;isolation:isolate}
+#live .live-title-banner svg{position:absolute;inset:0;width:100%;height:100%;z-index:-1}
+#live .live-title-banner span{font:700 14px Arial,sans-serif;color:#f5f5f7;white-space:nowrap}
+#live .live-head-right{display:flex;justify-content:flex-end;align-items:center;gap:7px;min-width:0}
+#live .live-badge{font:600 8px Arial,sans-serif;letter-spacing:1px;color:#9299a3;display:flex;gap:6px;align-items:center;white-space:nowrap}
+#live .live-dot{height:6px;width:6px;border-radius:50%;background:#515158}
+#live[data-source="ble"] .live-dot{background:#ff3338;box-shadow:0 0 8px #e6222860}
+#live[data-source="sim"] .live-dot{background:#ff9a30;box-shadow:0 0 8px #ff9a3055}
+#live .live-head-slashes{width:18px;height:10px;opacity:.5;background:repeating-linear-gradient(130deg,transparent 0 3px,#ee161d 3px 5px)}
+#live .live-gauge-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(112px,.51fr) minmax(0,1fr);gap:7px;min-height:0}
+#live .live-arc-card{position:relative;min-width:0;min-height:0;overflow:hidden}
+#live .led-gauge{height:100%;width:100%}
+#live .led-gauge-svg{display:block;width:100%;height:100%;overflow:hidden}
+#live .led-scale{font:500 20px Arial,sans-serif;fill:#f3f4f7;text-anchor:middle;dominant-baseline:middle}
+#live .led-title{font:700 26px Arial,sans-serif;fill:#838b96;text-anchor:middle;dominant-baseline:middle}
+#live .led-unit{font:600 23px Arial,sans-serif;fill:#727b87;text-anchor:middle;dominant-baseline:middle}
+#live .led-digital{fill:#fcfcff}
+#live .led-accessible-value{fill:transparent;font:700 64px Arial;text-anchor:middle;pointer-events:none}
+#live .led-overrange{fill:#ff7979;font:600 11px Arial;text-anchor:middle;letter-spacing:2px}
+#live .live-kpi-stack{display:grid;grid-template-rows:1.30fr 1fr 1fr;gap:6px;padding:2px 0;min-width:0;min-height:0}
+#live .live-kpi{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;min-height:0;isolation:isolate;padding:3px 7px}
+#live .led-panel-frame{position:absolute;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none}
+#live .live-kpi-label{font:700 clamp(8px,1.5vh,14px) Arial,sans-serif;color:#7c8692;margin:0}
+#live .live-kpi-afr .live-kpi-label{font-size:clamp(10px,2vh,18px)}
+#live .live-kpi-value{font:700 clamp(21px,5.7vh,50px)/1 Arial,sans-serif;letter-spacing:-1px;margin-top:2px;color:#f8f9fa;font-variant-numeric:tabular-nums;white-space:nowrap}
+#live .live-kpi-value.afr{font-size:clamp(30px,8vh,70px);color:#ff292d!important;text-shadow:0 0 7px #ff28283d,0 0 18px #ff00003b!important;margin-top:0}
+#live .live-kpi-unit{font:500 clamp(7px,1.3vh,11px) Arial,sans-serif;color:#818993;margin-top:2px}
+#live .live-info-strip{position:relative;isolation:isolate;display:flex;align-items:center;min-width:0;padding:0 12px;gap:14px;color:#727d89;overflow:hidden}
+#live .live-info-strip>div{white-space:nowrap;font:9px Arial,sans-serif;min-width:0}
+#live .live-info-strip b{font-weight:400;color:#c7ccd3;margin-left:4px;font-variant-numeric:tabular-nums}
+#live .live-info-strip .live-recording{padding-right:12px;border-right:1px solid #2b2d30;display:flex;align-items:center;gap:5px}
+#live .live-record-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#53565c}
+#live .live-record-dot.on{background:#ff3035;box-shadow:0 0 9px #ff27279c}
+#live .live-env-first{margin-left:auto}
+#live .pc-controls{height:34px!important;width:min(420px,calc(100% - 14px))!important;padding:3px!important;gap:3px!important;border-radius:9px!important;background:#080a0cee!important}
+#live .pc-controls button{font-size:8px!important;letter-spacing:.4px!important;min-height:0!important;padding:0 5px!important;border-radius:6px!important}
+@media(max-height:430px){
+ #live{padding-top:3px!important}
+ #live .pc-original-shell{grid-template-rows:28px minmax(0,1fr) 27px;gap:3px}
+ #live .live-monitor-head{padding:0 8px}
+ #live .live-title-banner{height:28px;width:min(30vw,240px)}
+ #live .live-title-banner span{font-size:11px}
+ #live .live-monitor-title{font-size:8px}.live-monitor-sub{font-size:5px}
+ #live .live-gauge-grid{gap:4px;grid-template-columns:minmax(0,1fr) minmax(96px,.48fr) minmax(0,1fr)}
+ #live .live-kpi-stack{gap:4px}
+ #live .live-info-strip{gap:8px;padding:0 8px}
+ #live .live-info-strip>div{font-size:7px}
+ #live .live-env-first,#live .live-info-strip>div:nth-last-child(-n+3){display:none}
+ #live .pc-controls{height:31px!important}
+}
+</style>
+<style id="run-history-mobile-v2">
+.chart-runbar,.compare-tools{display:flex;align-items:center;gap:6px;min-width:0}
+.chart-runbar>span:first-child,.compare-tools label{font-size:8px;color:#727d88;letter-spacing:.8px;font-weight:800;white-space:nowrap}
+.chart-runbar select,.compare-tools select{height:25px;max-width:190px;border:1px solid #30363d;border-radius:6px;background:#0a0d10;color:#eef2f6;padding:0 7px;font-size:9px;font-weight:700}
+.stored-chart-box .charthead{min-height:34px}
+.compare-chart-box{grid-template-rows:34px 34px 1fr!important}
+.compare-run-list-mobile{display:flex;align-items:center;gap:5px;overflow-x:auto;overflow-y:hidden;padding:3px 2px;scrollbar-width:none}
+.compare-run-list-mobile::-webkit-scrollbar{display:none}
+.compare-run-chip{height:27px;display:flex;align-items:center;gap:5px;flex:0 0 auto;padding:0 8px;border:1px solid #2b3137;border-radius:7px;background:#090c0f;color:#aab3bc;font-size:8px;font-weight:800;white-space:nowrap}
+.compare-run-chip input{width:13px;height:13px;margin:0;accent-color:#ff343b}
+.compare-run-chip.checked{border-color:#7f2429;background:#211012;color:#fff}
+.compare-chart-wrap{min-height:0}
+.chart-empty{color:#69737e;font:700 10px Arial,sans-serif;letter-spacing:1px}
+@media(max-height:430px){
+ nav button{min-width:55px!important;padding:0 6px!important;font-size:8px!important}
+ .chart-runbar select{max-width:140px;height:23px}
+ .stored-chart-box .charthead,.compare-chart-box .charthead{min-height:29px}
+ .compare-chart-box{grid-template-rows:29px 30px 1fr!important}
+ .compare-run-chip{height:24px;font-size:7px;padding:0 6px}
+}
+</style>
+<style id="mobile-chart-clean-v3">
+.stored-chart-box{grid-template-rows:31px 22px minmax(0,1fr)!important}
+.compare-chart-box{grid-template-rows:31px 31px minmax(0,1fr)!important}
+.chartbox{padding:3px 5px 5px!important}
+.charthead{padding:0 3px!important;overflow:hidden}
+.charthead>span:first-child{font-size:9px!important;letter-spacing:.55px;white-space:nowrap}
+.chart-runbar{margin-left:auto;max-width:67%;overflow:hidden}
+.chart-runbar>span:first-child{display:none!important}
+.chart-runbar select{height:24px!important;max-width:154px!important;min-width:110px!important;padding:0 5px!important;font-size:8px!important;text-overflow:ellipsis}
+.chart-runbar .vals{font-size:7px!important;max-width:145px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mobile-chart-legend{height:22px;display:flex;align-items:center;justify-content:center;gap:11px;border-top:1px solid #11161a;border-bottom:1px solid #11161a;background:#07090b;overflow:hidden;white-space:nowrap}
+.mobile-chart-legend .lg{position:relative;padding-left:15px;font:700 7px Arial,sans-serif;color:#adb5bd;letter-spacing:.2px}
+.mobile-chart-legend .lg:before{content:"";position:absolute;left:0;top:50%;width:11px;height:2px;transform:translateY(-50%);border-radius:2px}
+.mobile-chart-legend .hp:before{background:#ff3b30}
+.mobile-chart-legend .erpm:before{background:#ff6a00}
+.mobile-chart-legend .tq:before{background:#ffd400}
+.mobile-chart-legend .rrpm:before{background:#37d45a}
+.mobile-chart-legend .spd:before{background:#d3d6da}
+.mobile-chart-legend .afr:before{background:#3488ff}
+.mobile-chart-legend .axis-note{margin-left:auto;padding-right:5px;color:#626c76;font:700 7px Arial,sans-serif}
+.chartwrap{overflow:hidden!important;min-width:0!important;min-height:0!important}
+.chartwrap canvas{display:block!important;width:100%!important;height:100%!important;transform:none!important;filter:none!important}
+.compare-head .compare-tools{max-width:62%;overflow:hidden}
+.compare-tools label{display:flex;align-items:center;gap:4px}
+.compare-tools select{height:24px!important;max-width:92px!important;font-size:8px!important}
+#compareHint{font-size:7px!important;white-space:nowrap}
+.compare-run-list-mobile{height:31px!important;padding:2px 3px!important;gap:4px!important;border-top:1px solid #11161a;border-bottom:1px solid #11161a;background:#07090b}
+.compare-run-chip{height:25px!important;padding:0 6px!important;font-size:7px!important;border-radius:6px!important}
+.compare-run-chip input{width:11px!important;height:11px!important}
+@media(max-height:430px){
+ .stored-chart-box{grid-template-rows:27px 19px minmax(0,1fr)!important}
+ .compare-chart-box{grid-template-rows:27px 27px minmax(0,1fr)!important}
+ .charthead>span:first-child{font-size:8px!important}
+ .chart-runbar{max-width:64%}
+ .chart-runbar select{height:21px!important;max-width:126px!important;min-width:96px!important;font-size:7px!important}
+ .chart-runbar .vals{display:none!important}
+ .mobile-chart-legend{height:19px;gap:8px}
+ .mobile-chart-legend .lg{font-size:6px;padding-left:12px}.mobile-chart-legend .lg:before{width:9px}
+ .compare-run-list-mobile{height:27px!important}
+ .compare-run-chip{height:22px!important;font-size:6px!important}
+}
+</style>
+<style id="compare-run-colors-v3">
+.compare-run-chip{--run:#ff7a00}
+.compare-run-chip:nth-child(2){--run:#40c4ff}
+.compare-run-chip:nth-child(3){--run:#ffd740}
+.compare-run-chip:nth-child(4){--run:#69f0ae}
+.compare-run-chip:nth-child(5){--run:#b388ff}
+.compare-run-chip input{accent-color:var(--run)!important}
+.compare-run-chip.checked{border-color:var(--run)!important;box-shadow:inset 2px 0 0 var(--run);background:#101214!important}
+</style>
+<style id="pc-calc-settings-mobile-v4">
+.smoothbar{display:flex;align-items:center;gap:2px;margin-left:3px}
+.smoothbar button{height:18px;min-width:36px;padding:0 5px;border:1px solid #2c3238;border-radius:4px;background:#0c0f12;color:#747f89;font:800 6px Arial,sans-serif;letter-spacing:.3px}
+.smoothbar button.on{color:#fff;border-color:#8f252b;background:#321114}
+#settings{overflow-x:hidden!important;overflow-y:auto!important;padding:6px 6px 52px!important;-webkit-overflow-scrolling:touch}
+#settings .settingsgrid{width:100%;min-width:0;grid-template-columns:repeat(3,minmax(0,1fr));align-items:start}
+#settings .card{min-width:0;overflow:visible!important}
+#settings .setline{grid-template-columns:minmax(0,1fr) minmax(68px,84px);min-width:0}
+#settings .setline span{min-width:0;overflow-wrap:anywhere}
+#settings .setline input,#settings .setline select{min-width:0;max-width:100%;box-sizing:border-box}
+#settings .afr-live-voltage output{font:900 12px Arial,sans-serif;color:#ff9f1c;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.settings-actions{position:sticky;left:0;right:0;bottom:0;z-index:8;display:flex;align-items:center;justify-content:center;gap:8px;min-height:42px;margin-top:6px;padding:5px 8px;border:1px solid #292f35;border-radius:9px;background:#080b0eef;backdrop-filter:blur(8px)}
+#btnSaveSettings{height:31px;min-width:132px;border:1px solid #8f252b;border-radius:7px;background:#321114;color:#fff;font:900 9px Arial,sans-serif;letter-spacing:.7px}
+#btnSaveSettings:active{transform:translateY(1px)}
+#settingsSaveStatus{font:800 8px Arial,sans-serif;color:#6f7a84;letter-spacing:.5px;white-space:nowrap}
+#settingsSaveStatus.saving{color:#ffd166}
+#settingsSaveStatus.saved{color:#6ee7a8}
+#settingsSaveStatus.error{color:#ff6d75}
+@media(max-width:760px){
+ #settings .settingsgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:560px){
+ #settings .settingsgrid{grid-template-columns:1fr}
+}
+@media(max-height:430px){
+ .smoothbar button{height:16px;min-width:31px;font-size:5px;padding:0 3px}
+ #settings{padding-bottom:45px!important}
+ .settings-actions{min-height:36px;padding:3px 6px}
+ #btnSaveSettings{height:27px;min-width:112px;font-size:8px}
+ #settingsSaveStatus{font-size:7px}
+}
+</style>
+<style id="power-peaks-ignition-v5">
+#power .power-chart-box{grid-template-rows:31px 38px 22px minmax(0,1fr)!important}
+.power-peak-strip{height:38px;display:flex;align-items:stretch;gap:5px;padding:2px 3px;overflow:hidden}
+.power-peak{min-width:0;flex:1;display:grid;grid-template-columns:auto auto auto;grid-template-rows:auto auto;align-content:center;justify-content:center;column-gap:5px;row-gap:1px;border:1px solid #252b31;border-radius:6px;background:#080b0e;padding:2px 7px}
+.power-peak span{font:800 7px Arial,sans-serif;letter-spacing:.55px;color:#79838d;white-space:nowrap;align-self:end}
+.power-peak b{font:900 17px Arial,sans-serif;line-height:1;color:#f3f5f7;white-space:nowrap;align-self:end}
+.power-peak em{font:800 7px Arial,sans-serif;color:#7c858e;font-style:normal;align-self:end}
+.power-peak .peak-rpm{grid-column:1/-1;display:block;width:100%;min-width:88px;text-align:center;font:900 11px Arial,sans-serif;color:#f3f5f7;letter-spacing:.35px;white-space:nowrap;line-height:1.15;overflow:visible}
+.hp-peak{border-color:#4d1b1e}.hp-peak b{color:#ff3b30}
+.tq-peak{border-color:#4c3518}.tq-peak b{color:#ffd400}
+@media(max-height:430px){
+ #power .power-chart-box{grid-template-rows:27px 33px 19px minmax(0,1fr)!important}
+ .power-peak-strip{height:33px;padding:1px 3px}
+ .power-peak{padding:1px 5px;column-gap:4px;row-gap:0}
+ .power-peak span{font-size:6px}.power-peak b{font-size:14px}.power-peak em{font-size:6px}.power-peak .peak-rpm{grid-column:1/-1;display:block;width:100%;min-width:88px;text-align:center;font:900 11px Arial,sans-serif;color:#f3f5f7;letter-spacing:.35px;white-space:nowrap;line-height:1.15;overflow:visible}
+}
+</style>
+<style id="android-settings-scroll-v6">
+#settings{overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;touch-action:pan-y!important;overscroll-behavior-y:contain!important}
+#settings .settingsgrid{overflow:visible!important;min-height:max-content}
+#settings .settingsgrid .card{overflow:visible!important;touch-action:auto!important}
+html.android-app #settings,body.android-app #settings{overflow-y:scroll!important}
+</style>\n
+<style id="bt-speed-orange-v1">
+:root{--red:#ff6a00;--orange:#ff9d00;--green:#39d98a;--blue:#4da3ff;--bg:#050505;--panel:#0b0b0c;--line:#2c211a;--text:#f7f7f7;--muted:#9d948d}
+html,body,#app{background:#050505}
+body{background:radial-gradient(circle at 50% -30%,rgba(255,106,0,.16),transparent 45%),linear-gradient(180deg,#050505,#090704)}
+header{border-bottom-color:#342114;background:linear-gradient(180deg,#0b0907,#060606)}
+.brand{font-style:italic;letter-spacing:1.1px}.brand b{color:#ff7a00}
+nav{overflow-x:auto;justify-content:flex-start;scrollbar-width:none}nav::-webkit-scrollbar{display:none}
+nav button{min-width:58px;border-color:#33271f;background:#0d0b09}
+nav button.on{border-color:#ff7a00;background:linear-gradient(180deg,#4a2107,#1a0d04);box-shadow:0 0 18px rgba(255,106,0,.16)}
+.pill.ok{color:#ffbd7e;border-color:#8a430f}.mini.red,.controls .stop{color:#ff9d62;border-color:#6f330c}
+.gauge,.centerbox,.chartbox,.card{border-color:#302117;background:linear-gradient(180deg,#0d0c0b,#070707)}
+.scale i{background:linear-gradient(90deg,#6c2a00,#ff6a00)}
+.controls{border-color:#392619;background:#090705ee}.controls .go{border-color:#8d430e;background:#261205}.controls .auto.on{color:#ffd19e;border-color:#8b4c14;background:#211005}
+.settingsgrid h3{color:#ff8126}.hp-peak{border-color:#6e3510}.hp-peak b{color:#ff3b30}.tq-peak{border-color:#5c461e}.tq-peak b{color:#ffd400}
+#live .live-title-banner span{color:#fff5eb}
+#live .live-monitor-head{border-color:#4a2915;background:linear-gradient(105deg,#0f0b08,#060606 50%,#100b07)}
+#live .live-head-slashes{background:repeating-linear-gradient(130deg,transparent 0 3px,#ff6a00 3px 5px)}
+#live .live-kpi-value.afr{color:#ff8b2b!important;text-shadow:0 0 7px #ff7a0048,0 0 18px #ff6a0035!important}
+#live[data-source="ble"] .live-dot{background:#ff7a00;box-shadow:0 0 8px #ff6a0060}
+#live .live-record-dot.on{background:#ff7a00;box-shadow:0 0 9px #ff6a009c}
+.bt-afr-page{padding:6px;overflow:auto}.bt-afr-live-grid{height:100%;display:grid;grid-template-columns:1fr 1fr;gap:8px;min-height:0}
+.bt-afr-panel{position:relative;border:1px solid #3b2718;border-radius:14px;background:linear-gradient(180deg,#0f0c09,#070707);padding:12px;overflow:hidden}
+.bt-afr-panel:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(#ff9d00,#ff5a00)}
+.bt-afr-title{font:900 10px Arial;letter-spacing:1.2px;color:#a89b91;text-transform:uppercase}.bt-afr-big{font:900 clamp(54px,12vh,110px)/.95 Arial;margin-top:8px;color:#fff;font-variant-numeric:tabular-nums}
+.bt-afr-big.orange{color:#ff851b;text-shadow:0 0 24px rgba(255,106,0,.22)}.bt-afr-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.bt-tag{padding:6px 9px;border:1px solid #3a2a1f;border-radius:999px;background:#100d0a;font:800 9px Arial;color:#bbb0a8}
+.bt-tag.rich{color:#ff7777;border-color:#5d2323}.bt-tag.target{color:#66e8a0;border-color:#1d5b38}.bt-tag.lean{color:#ffc05e;border-color:#664516}
+#afrMap{padding:5px 7px;overflow:hidden}.bt-map-shell{height:100%;min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:5px}
+.bt-map-top{display:grid;grid-template-columns:1fr 1fr auto;gap:6px;align-items:stretch}.bt-map-kpi{border:1px solid #382619;border-radius:10px;background:#0c0a08;padding:7px 10px}
+.bt-map-kpi span{display:block;font:800 7px Arial;letter-spacing:.8px;color:#8f857e}.bt-map-kpi b{display:block;font:900 24px Arial;margin-top:1px}.bt-map-kpi b.orange{color:#ff8126}
+.bt-map-state{min-width:115px;display:grid;place-items:center;border:1px solid #3d2b1f;border-radius:10px;background:#0b0908;font:900 9px Arial;letter-spacing:.7px}
+.bt-map-scroll{min-height:0;overflow:auto;border:1px solid #38271c;border-radius:10px;background:#070707}.bt-map-table{width:100%;border-collapse:separate;border-spacing:0}
+.bt-map-table th{position:sticky;top:0;z-index:4;background:#130e0a;color:#ffb36f;font:900 8px Arial;letter-spacing:.8px;text-transform:uppercase}
+.bt-map-table th,.bt-map-table td{padding:8px 12px;border-bottom:1px solid #1d1814}.bt-map-table td{font:900 18px Arial;font-variant-numeric:tabular-nums}
+.bt-map-table tr.active td{background:linear-gradient(90deg,rgba(255,106,0,.22),rgba(255,106,0,.04))}.bt-map-table tr.active td:first-child{box-shadow:inset 4px 0 0 #ff7a00}
+.bt-afr-rich{color:#ff6b6b}.bt-afr-target{color:#54e796}.bt-afr-lean{color:#ffb64c}
+.bt-map-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}.bt-map-actions button{height:31px;border:1px solid #3a2a20;border-radius:7px;background:#0e0b09;color:#f2ece7;font:900 8px Arial}
+.bt-map-actions button.hot{border-color:#a84d0c;background:#2b1305;color:#ffc18d}.bt-analysis{display:none;margin:6px 0 0;border:1px solid #51331f;border-radius:10px;background:#0b0908;padding:8px;font-size:9px;line-height:1.45}
+.bt-analysis.show{display:block}.bt-analysis h3{margin:0 0 6px;color:#ff9a45;font-size:10px}.bt-band-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:6px}
+.bt-band{border:1px solid #2d241e;border-radius:7px;padding:6px;background:#090807}.bt-band b{display:block;font-size:8px}.bt-band span{font-size:7px;color:#9d938b}
+@media(max-height:430px){.bt-afr-panel{padding:8px}.bt-afr-big{font-size:clamp(42px,10vh,74px)}.bt-map-table th,.bt-map-table td{padding:5px 10px}.bt-map-table td{font-size:15px}.bt-map-kpi b{font-size:19px}.bt-map-actions button{height:27px;font-size:7px}}
+</style>
+
+<style id="power-touch-readout-v1">
+.power-peak .peak-rpm{grid-column:1/-1;display:block;width:100%;min-width:88px;text-align:center;font:900 11px Arial,sans-serif;color:#f3f5f7;letter-spacing:.35px;white-space:nowrap;line-height:1.15;overflow:visible}
+#powerCanvas{cursor:crosshair;touch-action:manipulation}
+@media(max-height:430px){.power-peak .peak-rpm{grid-column:1/-1;display:block;width:100%;min-width:88px;text-align:center;font:900 11px Arial,sans-serif;color:#f3f5f7;letter-spacing:.35px;white-space:nowrap;line-height:1.15;overflow:visible}}
+</style>
+<style id="app-number-keypad-v1">
+input[data-app-numpad="1"]{
+  cursor:pointer;
+  caret-color:transparent;
+  -moz-appearance:textfield;
+}
+input[data-app-numpad="1"]::-webkit-outer-spin-button,
+input[data-app-numpad="1"]::-webkit-inner-spin-button{
+  -webkit-appearance:none;
+  margin:0;
+}
+input[data-app-numpad="1"].app-num-active{
+  border-color:#ff7a00!important;
+  box-shadow:0 0 0 1px #ff7a00,0 0 16px rgba(255,106,0,.18)!important;
+}
+#appNumPad{
+  position:fixed;
+  left:50%;
+  bottom:7px;
+  z-index:9999;
+  width:min(520px,calc(100% - 14px));
+  transform:translate(-50%,115%);
+  opacity:0;
+  pointer-events:none;
+  transition:transform .16s ease,opacity .14s ease;
+  border:1px solid #4c2b18;
+  border-radius:12px;
+  background:linear-gradient(180deg,#12100e,#080706);
+  box-shadow:0 16px 50px rgba(0,0,0,.68),0 0 24px rgba(255,106,0,.10);
+  padding:7px;
+}
+#appNumPad.show{
+  transform:translate(-50%,0);
+  opacity:1;
+  pointer-events:auto;
+}
+.app-np-head{
+  height:31px;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:8px;
+  padding:0 4px 5px;
+}
+.app-np-meta{min-width:0}
+#appNumPadLabel{
+  display:block;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:#91867d;
+  font:800 7px Arial,sans-serif;
+  letter-spacing:.7px;
+  text-transform:uppercase;
+}
+#appNumPadValue{
+  display:block;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:#fff;
+  font:900 15px Arial,sans-serif;
+  font-variant-numeric:tabular-nums;
+}
+#appNumPadHideTop{
+  width:42px;
+  height:27px;
+  border:1px solid #38312c;
+  border-radius:6px;
+  background:#111;
+  color:#c9c2bc;
+  font:900 13px Arial,sans-serif;
+}
+.app-np-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:5px;
+}
+.app-np-key{
+  height:38px;
+  border:1px solid #3b3028;
+  border-radius:7px;
+  background:linear-gradient(180deg,#1b1815,#0e0d0c);
+  color:#fff;
+  font:900 15px Arial,sans-serif;
+  touch-action:manipulation;
+}
+.app-np-key:active{transform:translateY(1px);background:#24170e}
+.app-np-key.fn{font-size:10px;color:#ffc08d}
+.app-np-key.clear{color:#ff7878}
+.app-np-key.hide{color:#d7d7d7}
+.app-np-key.save{
+  border-color:#a94f12;
+  background:linear-gradient(180deg,#5a2607,#2b1204);
+  color:#fff1e5;
+  font-size:11px;
+}
+body.app-numpad-open #settings{
+  padding-bottom:210px!important;
+}
+@media(max-height:430px){
+ #appNumPad{width:min(470px,calc(100% - 10px));bottom:4px;padding:5px}
+ .app-np-head{height:26px;padding-bottom:3px}
+ #appNumPadValue{font-size:12px}
+ .app-np-key{height:30px;font-size:12px}
+ .app-np-key.fn,.app-np-key.save{font-size:8px}
+ body.app-numpad-open #settings{padding-bottom:168px!important}
+}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+ <div class="brand">BT <b>SPEED</b> DYNO <small id="buildTag" style="font:900 9px Arial;color:#2dff8a;margin-left:4px">P20</small></div>
+ <nav>
+  <button data-page="live" class="on">LIVE</button>
+  <button data-page="power">HP/TOR</button>
+  <button data-page="rpm">RPM</button>
+  <button data-page="afrLive">AFR</button>
+  <button data-page="afrMap">AFR MAP</button>
+  <button data-page="compare">COMPARE</button>
+  <button data-page="test201">201m</button>
+  <button data-page="settings">SET</button>
+ </nav>
+ <div class="headright"><span id="bleStatus" class="pill">OFF</span><button id="bleTop" class="mini">BLE</button><button id="usbTop" class="mini">USB</button></div>
+</header>
+
+<main id="live" class="page on live-red-main">
+ <section id="livePcMount" class="pc-original-shell">
+  <div class="pc-live-loading">LOADING BT SPEED DYNO...</div>
+ </section>
+ <div class="legacy-live-values" aria-hidden="true">
+  <span id="liveRpm">0</span><span id="liveSpeed">0</span><span id="liveAfr">--</span><span id="liveHp">0.0</span><span id="liveTq">0.0</span>
+  <span id="rpmBar"></span><span id="speedBar"></span>
+ </div>
+ <div class="controls pc-controls">
+  <button id="ctlBle" class="go">BLE</button><button id="ctlUsb" class="go">USB</button><button id="ctlAuto" class="auto">AUTO</button><button id="ctlRun" class="go">RUN</button><button id="ctlStop" class="stop">STOP</button><button id="ctlSim">SIM</button>
+ </div>
+</main>
+
+<main id="power" class="page chartpage">
+ <section class="chartbox stored-chart-box power-chart-box">
+  <div class="charthead">
+   <span>HP / TORQUE VS RPM</span>
+   <div class="chart-runbar"><span>SAVED RUN</span><select id="powerRunSelect"></select><span id="powerVals" class="vals">NO SAVED RUN</span></div>
+  </div>
+  <div class="power-peak-strip">
+   <div class="power-peak hp-peak"><span>MAX HP</span><b id="powerMaxHp">0.0</b><div id="powerMaxHpRpm" class="peak-rpm">@ -- RPM</div></div>
+   <div class="power-peak tq-peak"><span>MAX TORQUE</span><b id="powerMaxTq">0.0</b><em>Nm</em><div id="powerMaxTqRpm" class="peak-rpm">@ -- RPM</div></div>
+  </div>
+  <div class="mobile-chart-legend power-legend"><span class="lg hp">HP</span><span class="lg tq">TORQUE</span><div class="smoothbar" aria-label="Chart smoothing"><button type="button" data-smooth="0">RAW</button><button type="button" data-smooth="1" class="on">LIGHT</button><button type="button" data-smooth="2">MED</button></div><span class="axis-note">X: RPM</span></div>
+  <div class="chartwrap"><canvas id="powerCanvas"></canvas></div>
+ </section>
+</main>
+
+<main id="rpm" class="page chartpage">
+ <section class="chartbox stored-chart-box">
+  <div class="charthead">
+   <span>ENGINE RPM / SPEED / AFR VS TIME</span>
+   <div class="chart-runbar"><span>SAVED RUN</span><select id="rpmRunSelect"></select><span id="rpmVals" class="vals">NO SAVED RUN</span></div>
+  </div>
+  <div class="mobile-chart-legend"><span class="lg erpm">ENGINE RPM</span><span class="lg spd">SPEED</span><span class="lg afr">AFR</span><span class="axis-note">X: TIME</span></div>
+  <div class="chartwrap"><canvas id="rpmCanvas"></canvas></div>
+ </section>
+</main>
+
+
+<main id="afrLive" class="page bt-afr-page">
+ <div class="bt-afr-live-grid">
+  <section class="bt-afr-panel"><div class="bt-afr-title">BT Speed AFR · Live AFR</div><div id="btAfrLiveValue" class="bt-afr-big orange">--</div><div class="bt-afr-meta"><span id="btAfrState" class="bt-tag">WAITING</span><span id="btAfrWriteState" class="bt-tag">WRITE AUTO</span><span id="btAfrVoltage" class="bt-tag">-- V</span></div></section>
+  <section class="bt-afr-panel"><div class="bt-afr-title">Engine RPM</div><div id="btAfrRpmValue" class="bt-afr-big">0</div><div class="bt-afr-meta"><span id="btAfrTrend" class="bt-tag">HOLD</span><span id="btAfrActiveBin" class="bt-tag">BIN --</span><span class="bt-tag">BLE SHARED WITH DYNO</span></div></section>
+ </div>
+</main>
+<main id="afrMap" class="page">
+ <div class="bt-map-shell">
+  <div><div class="bt-map-top"><div class="bt-map-kpi"><span>LIVE AFR</span><b id="btMapAfr" class="orange">--</b></div><div class="bt-map-kpi"><span>ENGINE RPM</span><b id="btMapRpm">0</b></div><div id="btMapWrite" class="bt-map-state">AUTO WRITE</div></div><div id="btAfrAnalysis" class="bt-analysis"><h3>AFR ANALYSIS</h3><div id="btAfrAnalysisSummary"></div><div id="btAfrBands" class="bt-band-grid"></div><div id="btAfrRule" style="margin-top:6px"></div></div></div>
+  <div class="bt-map-scroll"><table class="bt-map-table"><thead><tr><th>RPM</th><th>AFR</th><th>SAMPLES</th></tr></thead><tbody id="btAfrMapBody"></tbody></table></div>
+  <div class="bt-map-actions"><button id="btAfrClear">CLEAR TABLE</button><button id="btAfrAnalyze" class="hot">ANALYZE</button><button id="btAfrWriteToggle" class="hot">AUTO WRITE: ON</button><button id="btAfrScrollToggle">AUTO SCROLL: ON</button></div>
+ </div>
+</main>
+<main id="compare" class="page chartpage">
+ <section class="chartbox compare-chart-box">
+  <div class="charthead compare-head">
+   <span>RUN COMPARE</span>
+   <div class="compare-tools">
+    <label>METRIC <select id="compareMetric"><option value="hp">HP</option><option value="tq">TORQUE</option><option value="speed">SPEED</option><option value="afr">AFR</option></select></label>
+    <span id="compareHint" class="vals">SELECT 2–5 RUNS</span>
+   </div>
+  </div>
+  <div id="compareRunList" class="compare-run-list-mobile"></div>
+  <div class="chartwrap compare-chart-wrap"><canvas id="compareCanvas"></canvas></div>
+ </section>
+</main>
+
+<main id="test201" class="page">
+ <div class="twocol">
+  <section class="card"><h2>201 m RUN</h2><div class="row"><button id="run201">RUN 201m</button><button id="reset201">RESET</button><span id="state201" class="note">Waiting</span></div>
+   <div class="metricgrid"><div class="metric"><span>DISTANCE</span><b id="dist201">0.0 m</b></div><div class="metric"><span>TIME</span><b id="time201">--</b></div><div class="metric"><span>SPEED</span><b id="speed201">0.0</b></div><div class="metric"><span>RPM</span><b id="rpm201">0</b></div></div>
+  </section>
+  <section class="card"><h2>RESULT</h2><div class="metricgrid"><div class="metric"><span>201 m</span><b id="result201">--</b></div><div class="metric"><span>MAX SPEED</span><b id="maxSpeed201">0.0</b></div><div class="metric"><span>MAX RPM</span><b id="maxRpm201">0</b></div><div class="metric"><span>AFR END</span><b id="afrEnd201">--</b></div></div><p class="note">Timer starts when calculated vehicle speed reaches 1 km/h.</p></section>
+ </div>
+</main>
+
+<main id="settings" class="page">
+ <div class="settingsgrid">
+  <section class="card"><h3>DYNO</h3>
+   <label class="setline"><span>Wheel diameter (mm)</span><input id="rollerD" type="number" value="240"></label>
+   <label class="setline"><span>Vehicle inertia J</span><input id="rollerJ" type="number" step=".01" value="1.73"></label>
+   <label class="setline"><span>Max RPM display</span><input id="maxRpm" type="number" value="16000"></label>
+   <label class="setline"><span>Max speed display</span><input id="maxSpeed" type="number" value="160"></label>
+  </section>
+  <section class="card"><h3>AFR</h3>
+   <div class="setline afr-live-voltage"><span>AFR voltage (LIVE)</span><output id="afrSettingsLiveVoltage">-- V</output></div>
+   <div class="setline afr-live-voltage"><span>BLE packet errors</span><output id="afrRxRejectCount" title="Dropped malformed/invalid BLE samples">0</output></div>
+   <label class="setline"><span>Volt min</span><input id="afrVMin" type="number" step=".01" value="0"></label>
+   <label class="setline"><span>AFR min</span><input id="afrMin" type="number" step=".1" value="10"></label>
+   <label class="setline"><span>Volt max</span><input id="afrVMax" type="number" step=".01" value="3.15"></label>
+   <label class="setline"><span>AFR max</span><input id="afrMax" type="number" step=".1" value="20"></label>
+   <label class="setline"><span>Decel lock epsilon</span><input id="afrDecelEps" type="number" min="0" max="500" step="5" value="40"></label>
+   <p class="note">BT Speed AFR uses the same BLE stream and AFR calibration as Dyno. AFR/RPM map recording locks during RPM drop and unlocks after RPM is stable.</p>
+  </section>
+  <section class="card"><h3>ENGINE RPM</h3>
+   <label class="setline"><span>Ignition cycle</span><select id="ignitionCycle"><option value="360">360° · 1 pulse/rev</option><option value="720">720° · 1 pulse/2 rev</option></select></label>
+   <label class="setline"><span>RPM pulse filter (us)</span><input id="rpmFilterUs" type="number" min="50" max="10000" step="50" value="250"></label>
+   <p class="note">Use 720° when the RPM pickup sees one ignition pulse every two crank revolutions. RPM pulse filter is the VIP ENGINE_MIN_PERIOD_US value: 250 us is the original VIP setting; larger values reject closer pickup pulses. The value is stored in the ESP32.</p>
+  </section>
+  <section class="card"><h3>AUTO RUN</h3>
+   <label class="setline"><span>Auto start</span><input id="autoStart" type="checkbox"></label>
+   <label class="setline"><span>Auto end run (3s decline)</span><input id="autoEndRun" type="checkbox" checked></label>
+   <label class="setline"><span>Min speed km/h</span><input id="autoSpeed" type="number" value="10"></label>
+   <label class="setline"><span>Min HP</span><input id="autoHp" type="number" step=".1" value="1"></label>
+   <label class="setline"><span>Min alpha rad/s²</span><input id="autoAlpha" type="number" value="10"></label>
+  </section>
+ </div>
+ <div class="settings-actions"><button id="btnSaveSettings" type="button">SAVE SETTINGS</button><span id="settingsSaveStatus">AUTO-SAVE ON</span></div>
+</main>
+</div>
+
+<div id="appNumPad" aria-hidden="true">
+ <div class="app-np-head">
+  <div class="app-np-meta"><span id="appNumPadLabel">NUMBER INPUT</span><b id="appNumPadValue">0</b></div>
+  <button id="appNumPadHideTop" type="button" aria-label="Hide keypad">⌄</button>
+ </div>
+ <div class="app-np-grid">
+  <button class="app-np-key" type="button" data-np="7">7</button>
+  <button class="app-np-key" type="button" data-np="8">8</button>
+  <button class="app-np-key" type="button" data-np="9">9</button>
+  <button class="app-np-key fn" type="button" data-np="back">⌫</button>
+
+  <button class="app-np-key" type="button" data-np="4">4</button>
+  <button class="app-np-key" type="button" data-np="5">5</button>
+  <button class="app-np-key" type="button" data-np="6">6</button>
+  <button class="app-np-key fn clear" type="button" data-np="clear">C</button>
+
+  <button class="app-np-key" type="button" data-np="1">1</button>
+  <button class="app-np-key" type="button" data-np="2">2</button>
+  <button class="app-np-key" type="button" data-np="3">3</button>
+  <button class="app-np-key fn hide" type="button" data-np="hide">HIDE</button>
+
+  <button class="app-np-key" type="button" data-np="0">0</button>
+  <button class="app-np-key" type="button" data-np="00">00</button>
+  <button class="app-np-key" type="button" data-np=".">.</button>
+  <button class="app-np-key save" type="button" data-np="save">SAVE</button>
+ </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+try{if(/[?&]android=1(?:&|$)/.test(location.search)){document.documentElement.classList.add('android-app');document.body&&document.body.classList.add('android-app')}}catch(e){}
+var S={badLiveFrames:0,lastBadLiveFrame:'',connected:false,recording:false,sim:false,auto:false,autoEndRun:true,device:null,server:null,live:null,cmd:null,status:null,lineBuf:'',statusBuf:'',cfgState:'unknown',cfgMigrating:false,lastT:0,omegaF:0,ow:[],tw:[],rpm:0,rrpm:0,speed:0,afr:0,hp:0,tq:0,alpha:0,hpMax:0,tqMax:0,hpMaxRpm:0,tqMaxRpm:0,runPower:[],runRpm:[],liveRpmPts:[],lastSampleT:0,simT:0,run201:false,wait201:false,done201:false,d201:0,t2010:0,t201last:0,maxS201:0,maxR201:0,rollerCalcPrimed:false,rollerStartupSamplesRemaining:0,rollerGuardLastDistinctRpm:0,rollerGuardLastDistinctMs:0,lastPlotRpm:0,runPeakRollerRpm:0,runDeclineSinceMs:0,smoothingLevel:1,powerPickX:null,powerHit:null};
+var BLE={service:'d7a10001-7c35-4a6d-9f0e-2ea3117f1000',live:'d7a10002-7c35-4a6d-9f0e-2ea3117f1000',cmd:'d7a10003-7c35-4a6d-9f0e-2ea3117f1000',status:'d7a10005-7c35-4a6d-9f0e-2ea3117f1000'};
+var $=function(id){return document.getElementById(id)},dec=new TextDecoder(),enc=new TextEncoder();
+var cfgIds=['rollerD','rollerJ','maxRpm','maxSpeed','afrVMin','afrMin','afrVMax','afrMax','afrDecelEps','ignitionCycle','rpmFilterUs','autoSpeed','autoHp','autoAlpha'];
+var cfgBleKeys={
+ rollerD:'WD',rollerJ:'IJ',maxRpm:'MR',maxSpeed:'MS',
+ afrVMin:'V0',afrMin:'A0',afrVMax:'V1',afrMax:'A1',afrDecelEps:'DE',
+ ignitionCycle:'IC',rpmFilterUs:'RF',autoSpeed:'SP',autoHp:'HP',autoAlpha:'AA'
+};
+var cfgBleIds={
+ WD:'rollerD',IJ:'rollerJ',MR:'maxRpm',MS:'maxSpeed',
+ V0:'afrVMin',A0:'afrMin',V1:'afrVMax',A1:'afrMax',DE:'afrDecelEps',
+ IC:'ignitionCycle',RF:'rpmFilterUs',SP:'autoSpeed',HP:'autoHp',AA:'autoAlpha'
+};
+var runHistory=[],selectedRunIndex=-1,RUN_HISTORY_KEY='dynotl_mobile_runs_v2',RUN_COUNTER_KEY='dynotl_mobile_run_counter_v2';
+var OMEGA_EMA_K=0.15,ALPHA_WINDOW_N=10,ROLLER_STARTUP_SKIP_SAMPLES=4;
+var ROLLER_DISTINCT_EPS_RPM=0.5,ROLLER_JUMP_MIN_RPM=250.0,ROLLER_JUMP_RATIO=0.55,ROLLER_JUMP_MAX_DT_MS=300.0,ROLLER_JUMP_COOLDOWN_SAMPLES=2;
+var AUTO_END_DECLINE_MS=3000,AUTO_END_DROP_MIN_RPM=20,AUTO_END_DROP_RATIO=0.01,AUTO_END_RECOVER_RATIO=0.004;
+
+// SIM emulates the ESP32 VIP one-magnet wheel sensor path, then emits the same
+// D,timeMs,wheelRPM,engineRPM,afrVoltage packets as BLE hardware.
+var SIM={
+ tMs:0,tickMs:5,lastPacketMs:0,phase:0,lastPulseUs:0,lastValidPeriodUs:0,
+ hist:[0,0,0,0,0],histCount:0,histIndex:0,startupLocked:false,
+ periodFilteredUs:0,rpmFiltered:0,rpmOutput:0,lastHallPulseMs:0,
+ engineFiltered:0,afrFiltered:0
+};
+var SIM_SAMPLE_MS=25,SIM_ROLLER_TIMEOUT_MS=1000,SIM_ABS_MIN_PERIOD_US=6000;
+var SIM_EARLY_GATE_PERCENT=45,SIM_PERIOD_ALPHA=0.40,SIM_OUTPUT_ALPHA=0.18,SIM_AFR_ALPHA=0.20;
+var APP_NUMPAD={input:null,replaceNext:false,draft:''};
+
+function appNumPadLabelFor(input){
+ var lab=input&&input.closest?input.closest('label'):null;
+ var span=lab&&lab.querySelector?lab.querySelector('span'):null;
+ return span&&span.textContent?span.textContent.trim():(input&&input.id?input.id:'NUMBER INPUT')
+}
+function appNumPadRefresh(){
+ var pad=$('appNumPad'),val=$('appNumPadValue'),lab=$('appNumPadLabel');
+ if(!pad)return;
+ if(lab)lab.textContent=APP_NUMPAD.input?appNumPadLabelFor(APP_NUMPAD.input):'NUMBER INPUT';
+ if(val)val.textContent=APP_NUMPAD.input&&APP_NUMPAD.draft!==''?APP_NUMPAD.draft:'--'
+}
+function appNumPadOpen(input){
+ if(!input||input.dataset.appNumpad!=='1')return;
+ if(APP_NUMPAD.input!==input){
+  if(APP_NUMPAD.input)APP_NUMPAD.input.classList.remove('app-num-active');
+  APP_NUMPAD.input=input;APP_NUMPAD.draft=String(input.value||'');APP_NUMPAD.replaceNext=true;
+ }
+ input.classList.add('app-num-active');
+ var pad=$('appNumPad');if(pad){pad.classList.add('show');pad.setAttribute('aria-hidden','false')}
+ document.body.classList.add('app-numpad-open');
+ try{input.blur()}catch(e){}
+ appNumPadRefresh();
+ setTimeout(function(){try{input.scrollIntoView({block:'center',behavior:'smooth'})}catch(e){}},30)
+}
+function appNumPadHide(){
+ if(APP_NUMPAD.input)APP_NUMPAD.input.classList.remove('app-num-active');
+ APP_NUMPAD.input=null;APP_NUMPAD.replaceNext=false;APP_NUMPAD.draft='';
+ var pad=$('appNumPad');if(pad){pad.classList.remove('show');pad.setAttribute('aria-hidden','true')}
+ document.body.classList.remove('app-numpad-open')
+}
+function appNumPadEmitInput(input){
+ if(!input)return;
+ // App number fields use text so unfinished decimals (e.g. "2.") remain visible.
+ input.value=APP_NUMPAD.input===input?APP_NUMPAD.draft:String(input.value||'');
+ try{input.dispatchEvent(new Event('input',{bubbles:true}))}catch(e){}
+ appNumPadRefresh()
+}
+function appNumPadAppend(token){
+ var input=APP_NUMPAD.input;if(!input)return;
+ var v=APP_NUMPAD.draft;
+ if(token==='back'){
+  APP_NUMPAD.replaceNext=false;
+  APP_NUMPAD.draft=v.slice(0,-1);
+  appNumPadEmitInput(input);return
+ }
+ if(token==='clear'){
+  APP_NUMPAD.replaceNext=false;
+  APP_NUMPAD.draft='';
+  appNumPadEmitInput(input);return
+ }
+ if(token==='.'){
+  if(APP_NUMPAD.replaceNext){v='0';APP_NUMPAD.replaceNext=false}
+  if(v.indexOf('.')<0)v=(v||'0')+'.';
+  APP_NUMPAD.draft=v;appNumPadEmitInput(input);return
+ }
+ if(APP_NUMPAD.replaceNext){v='';APP_NUMPAD.replaceNext=false}
+ if(v==='0'&&token!=='00')v='';
+ APP_NUMPAD.draft=v+token;
+ appNumPadEmitInput(input)
+}
+function appNumPadNormalize(input){
+ if(!input)return;
+ var raw=String(APP_NUMPAD.input===input?APP_NUMPAD.draft:(input.value||'')).trim();
+ if(raw===''||raw==='.'||raw==='-.')raw='0';
+ var v=Number(raw);if(!isFinite(v))v=0;
+ var mn=input.getAttribute('min'),mx=input.getAttribute('max');
+ if(mn!==null&&mn!==''&&isFinite(+mn))v=Math.max(+mn,v);
+ if(mx!==null&&mx!==''&&isFinite(+mx))v=Math.min(+mx,v);
+ input.value=String(v);
+ if(APP_NUMPAD.input===input)APP_NUMPAD.draft=input.value;
+ appNumPadEmitInput(input)
+}
+function appNumPadSave(){
+ var input=APP_NUMPAD.input;
+ if(input)appNumPadNormalize(input);
+ save(true);
+ if(S.connected&&S.cmd)pushAllConfigToS3(S.cfgState!=='ready');
+ appNumPadHide()
+}
+function bindAppNumPadInput(input){
+ if(!input||input.type!=='number'||input.dataset.appNumpad==='1')return;
+ input.dataset.appNumpad='1';
+ // Native number inputs sanitize trailing decimal points on phones.
+ // The app validates numeric ranges when Save is pressed.
+ input.type='text';
+ input.setAttribute('inputmode','none');
+ input.setAttribute('readonly','readonly');
+ input.setAttribute('autocomplete','off');
+ input.setAttribute('enterkeyhint','done');
+ input.addEventListener('pointerdown',function(e){e.preventDefault();appNumPadOpen(input)});
+ input.addEventListener('click',function(e){e.preventDefault();appNumPadOpen(input)});
+ input.addEventListener('focus',function(){try{input.blur()}catch(e){};appNumPadOpen(input)});
+ input.addEventListener('keydown',function(e){e.preventDefault()})
+}
+function initAppNumPad(){
+ document.querySelectorAll('input[type="number"]').forEach(bindAppNumPadInput);
+ var pad=$('appNumPad');if(pad){
+   pad.addEventListener('pointerdown',function(e){e.stopPropagation()});
+   pad.querySelectorAll('[data-np]').forEach(function(b){
+     b.addEventListener('click',function(){
+       var k=this.dataset.np;
+       if(k==='hide'){appNumPadHide();return}
+       if(k==='save'){appNumPadSave();return}
+       appNumPadAppend(k)
+     })
+   })
+ }
+ var hide=$('appNumPadHideTop');if(hide)hide.onclick=appNumPadHide;
+ try{
+   new MutationObserver(function(ms){
+     ms.forEach(function(m){Array.prototype.forEach.call(m.addedNodes||[],function(n){
+       if(!n||n.nodeType!==1)return;
+       if(n.matches&&n.matches('input[type="number"]'))bindAppNumPadInput(n);
+       if(n.querySelectorAll)n.querySelectorAll('input[type="number"]').forEach(bindAppNumPadInput)
+     })})
+   }).observe(document.body,{childList:true,subtree:true})
+ }catch(e){}
+}
+function n(id,d){var v=parseFloat($(id).value);return isFinite(v)?v:d}
+function afrFromV(v){var v0=n('afrVMin',0),v1=n('afrVMax',3.15),a0=n('afrMin',10),a1=n('afrMax',20);if(v1===v0)return a0;return a0+(v-v0)*(a1-a0)/(v1-v0)}
+function ignitionMultiplier(){var e=$('ignitionCycle');return e&&e.value==='720'?2:1}
+function correctEngineRpm(raw){raw=+raw||0;return raw*ignitionMultiplier()}
+function pushRpmFilter(){
+ if(!S.connected||!S.cmd||!$('rpmFilterUs'))return;
+ var v=parseInt($('rpmFilterUs').value,10);if(!isFinite(v))v=250;v=Math.max(50,Math.min(10000,v));
+ $('rpmFilterUs').value=String(v);save(false);writeCmd('RPMFILTER '+v)
+}
+function cfgValueForId(id){
+ if(id==='autoStart')return $('autoStart').checked?'1':'0';
+ if(id==='autoEndRun')return $('autoEndRun').checked?'1':'0';
+ if(id==='smoothingLevel')return String(S.smoothingLevel);
+ var e=$(id);return e?String(e.value):''
+}
+async function pushConfigKey(id){
+ if(!S.connected||!S.cmd||S.cfgState!=='ready')return;
+ var key=id==='autoStart'?'AS':(id==='autoEndRun'?'AE':(id==='smoothingLevel'?'SM':cfgBleKeys[id]));
+ if(!key)return;
+ try{await writeCmd('CFG '+key+' '+cfgValueForId(id))}catch(e){}
+}
+async function pushAllConfigToS3(isMigration){
+ if(!S.connected||!S.cmd||S.cfgMigrating)return;
+ S.cfgMigrating=true;
+ try{
+   if(isMigration)await writeCmd('CFGINIT');
+   for(var i=0;i<cfgIds.length;i++){
+     var id=cfgIds[i],key=cfgBleKeys[id];
+     if(key)await writeCmd('CFG '+key+' '+cfgValueForId(id));
+   }
+   await writeCmd('CFG AS '+cfgValueForId('autoStart'));
+   await writeCmd('CFG AE '+cfgValueForId('autoEndRun'));
+   await writeCmd('CFG SM '+cfgValueForId('smoothingLevel'));
+   if(isMigration)await writeCmd('CFGSAVE');
+   else await writeCmd('CFGSAVE');
+   S.cfgState='ready';
+   setTimeout(function(){writeCmd('CONFIG?')},120);
+ }catch(e){
+   setSaveStatus('S3 SAVE ERROR','error');
+ }finally{
+   S.cfgMigrating=false;
+ }
+}
+function applyConfigLine(line){
+ if(line.indexOf('CFG;')!==0)return false;
+ var parts=line.split(';'),m={};
+ for(var i=1;i<parts.length;i++){
+   var p=parts[i],eq=p.indexOf('=');
+   if(eq>0)m[p.slice(0,eq)]=p.slice(eq+1);
+ }
+ Object.keys(cfgBleIds).forEach(function(k){
+   if(m[k]==null)return;
+   var e=$(cfgBleIds[k]);if(e)e.value=m[k];
+ });
+ if(m.AS!=null){S.auto=m.AS==='1';$('autoStart').checked=S.auto;$('ctlAuto').classList.toggle('on',S.auto)}
+ if(m.AE!=null){S.autoEndRun=m.AE==='1';$('autoEndRun').checked=S.autoEndRun}
+ if(m.SM!=null){var sm=parseInt(m.SM,10);S.smoothingLevel=(sm===0||sm===1||sm===2)?sm:1;syncSmoothingButtons()}
+ S.cfgState='ready';
+ save(false);
+ drawAll();
+ return true;
+}
+// PC J_DIV10 is the active torque mode in DynoTL Mobile.
+// HP/RPM torque helper intentionally removed to prevent accidental fallback.
+function normalizePowerData(data){
+ return(data||[]).map(function(a){
+   var rpm=+a[0]||0,hp=+a[1]||0,tq=+a[2]||0,engineRpm=+a[3]||0;
+   if(!isFinite(tq)||tq<0)tq=0;
+   return[rpm,hp,tq,engineRpm]
+ })
+}
+function setBle(on,msg){if(!on){S.lineBuf='';S.statusBuf=''}S.connected=on;$('bleStatus').textContent=msg||(on?'BLE OK':'BLE OFF');$('bleStatus').classList.toggle('ok',on);$('ctlBle').textContent=on?'OFF':'BLE';$('bleTop').textContent=on?'OFF':'BLE';if(!on&&!S.sim){var v=$('afrSettingsLiveVoltage');if(v)v.textContent='-- V';v=$('btAfrVoltage');if(v)v.textContent='-- V'}}
+
+// USB LEGACY TRANSPORT: the original ESP32 sketch needs no firmware update.
+// 115200 8N1, CSV: D,timeMs,rollerRPM,engineRPM,afrVoltage
+// BLE and USB deliberately share handleLine()/sample() and never run together.
+var DYNO_USB={port:null,reader:null,task:null,closing:false,rx:'',seen:false};
+function setUsbLink(on,msg){
+ S.connected=!!on;
+ $('bleStatus').textContent=msg||(on?'USB 115200':'USB OFF');
+ $('bleStatus').classList.toggle('ok',!!on);
+ $('usbTop').textContent=on?'OFF':'USB';
+ $('ctlUsb').textContent=on?'OFF':'USB';
+ $('bleTop').textContent='BLE';
+ $('ctlBle').textContent='BLE';
+ if(!on){
+  S.cfgState='unknown';DYNO_USB.seen=false;DYNO_USB.rx='';
+  if(!S.sim){var v=$('afrSettingsLiveVoltage');if(v)v.textContent='-- V';v=$('btAfrVoltage');if(v)v.textContent='-- V'}
+ }
+}
+async function readUsbLegacy(port){
+ var reader=null,decoder=new TextDecoder();
+ try{
+  if(!port.readable)throw new Error('USB port is not readable');
+  reader=port.readable.getReader();DYNO_USB.reader=reader;
+  while(DYNO_USB.port===port&&!DYNO_USB.closing){
+   var packet=await reader.read();
+   if(packet.done)break;
+   if(!packet.value)continue;
+   DYNO_USB.rx+=decoder.decode(packet.value,{stream:true});
+   var i;
+   while((i=DYNO_USB.rx.indexOf('\n'))>=0){
+    var line=DYNO_USB.rx.slice(0,i).replace(/\r/g,'').trim();
+    DYNO_USB.rx=DYNO_USB.rx.slice(i+1);
+    // The legacy sketch prints a startup banner and HEADER, not just D frames.
+    if(!line.startsWith('D,'))continue;
+    var badBefore=S.badLiveFrames;
+    handleLine(line);
+    if(!DYNO_USB.seen&&S.badLiveFrames===badBefore){
+     DYNO_USB.seen=true;setUsbLink(true,'USB DATA OK');
+    }
+   }
+   if(DYNO_USB.rx.length>DYNO_LIVE_MAX_PENDING){
+    var at=DYNO_USB.rx.lastIndexOf('D,');
+    DYNO_USB.rx=at>=0?DYNO_USB.rx.slice(at):'';
+    if(DYNO_USB.rx.length>DYNO_LIVE_MAX_LINE)DYNO_USB.rx='';
+   }
+  }
+ }catch(e){if(!DYNO_USB.closing)console.warn('DynoTL USB read:',e)}
+ finally{
+  try{if(reader)reader.releaseLock()}catch(e){}
+  if(DYNO_USB.reader===reader)DYNO_USB.reader=null;
+  if(DYNO_USB.port===port&&!DYNO_USB.closing){
+   DYNO_USB.closing=true;
+   try{await port.close()}catch(e){}
+   DYNO_USB.port=null;DYNO_USB.task=null;DYNO_USB.closing=false;
+   setUsbLink(false,'USB LOST');
+  }
+ }
+}
+async function disconnectUsb(){
+ var port=DYNO_USB.port;if(!port)return;
+ DYNO_USB.closing=true;
+ try{if(DYNO_USB.reader)await DYNO_USB.reader.cancel()}catch(e){}
+ try{if(DYNO_USB.task)await DYNO_USB.task}catch(e){}
+ try{await port.close()}catch(e){console.warn('USB close:',e)}
+ if(DYNO_USB.port===port){
+  DYNO_USB.port=null;DYNO_USB.reader=null;DYNO_USB.task=null;
+  DYNO_USB.closing=false;setUsbLink(false,S.sim?'SIM 1-MAG':'USB OFF');
+ }
+}
+async function connectUsb(){
+ if(DYNO_USB.port){await disconnectUsb();return}
+ if(S.connected)return alert('Đang kết nối BLE. Bấm OFF tại BLE trước khi chuyển sang USB.');
+ if(S.sim)return alert('Hãy tắt SIM trước khi kết nối USB.');
+ if(!navigator.serial||typeof navigator.serial.requestPort!=='function'){
+  return alert('Trình duyệt/app này không hỗ trợ Web Serial. Dùng Chrome/Edge có quyền USB trên Windows hoặc thiết bị Android được hỗ trợ. iOS dùng Bluetooth BLE.');
+ }
+ var port=null;
+ try{
+  $('bleStatus').textContent='USB SELECT';
+  port=await navigator.serial.requestPort();
+  await port.open({baudRate:115200,dataBits:8,stopBits:1,parity:'none',flowControl:'none'});
+  DYNO_USB.port=port;DYNO_USB.closing=false;DYNO_USB.seen=false;DYNO_USB.rx='';
+  // Old .ino has no CONFIG?/RPMFILTER command channel; settings remain local.
+  S.cmd=null;S.cfgState='legacy';S.cfgMigrating=false;
+  setUsbLink(true,'USB WAIT DATA');
+  DYNO_USB.task=readUsbLegacy(port);
+ }catch(e){
+  if(port&&!DYNO_USB.port){try{await port.close()}catch(_){}}
+  if(e&&e.name!=='NotFoundError')alert('Không mở được cáp USB 115200: '+(e.message||e));
+  if(!DYNO_USB.port)setUsbLink(false,'USB OFF');
+ }
+}
+
+async function connectBle(){if(DYNO_USB.port)return alert("Đang kết nối USB. Bấm OFF tại USB trước khi chuyển sang BLE.");if(S.sim)return alert("Hãy tắt SIM trước khi kết nối BLE.");if(S.connected){disconnectBle();return}if(!navigator.bluetooth){alert('Web Bluetooth unavailable. On iPhone open this HTTPS page in Bluefy or another Web Bluetooth compatible browser.');return}try{$('bleStatus').textContent='SCAN BLE';S.device=await navigator.bluetooth.requestDevice({
+  acceptAllDevices:true,
+  optionalServices:[BLE.service]
+});S.device.addEventListener('gattserverdisconnected',function(){if(!DYNO_USB.port)setBle(false,'BLE LOST')});S.server=await S.device.gatt.connect();var sv=await S.server.getPrimaryService(BLE.service);S.live=await sv.getCharacteristic(BLE.live);S.cmd=await sv.getCharacteristic(BLE.cmd);S.status=await sv.getCharacteristic(BLE.status);await S.live.startNotifications();S.live.addEventListener('characteristicvaluechanged',onLive);await S.status.startNotifications();S.status.addEventListener('characteristicvaluechanged',onStatus);S.cfgState='unknown';setBle(true,'BT Speed Dyno Hardware');writeCmd('STATUS');setTimeout(function(){writeCmd('RPMFILTER?')},80);setTimeout(function(){writeCmd('CONFIG?')},150)}catch(e){if(!e||e.name!=='NotFoundError')alert('BLE error: '+(e&&e.message||e));setBle(false)}}
+function disconnectBle(){try{if(S.device&&S.device.gatt.connected)S.device.gatt.disconnect()}catch(e){}S.cfgState='unknown';S.cfgMigrating=false;setBle(false)}
+async function writeCmd(t){if(!S.cmd)return;var b=enc.encode(t);if(S.cmd.writeValueWithoutResponse)await S.cmd.writeValueWithoutResponse(b);else await S.cmd.writeValue(b)}
+function onStatus(e){try{
+ var d=e.target.value,txt=dec.decode(new Uint8Array(d.buffer,d.byteOffset,d.byteLength));S.statusBuf+=txt;var i;
+ while((i=S.statusBuf.indexOf('\n'))>=0){
+   var line=S.statusBuf.slice(0,i).replace(/\r/g,'').trim();S.statusBuf=S.statusBuf.slice(i+1);if(!line)continue;
+   if(applyConfigLine(line))continue;
+   if(/^CFGEMPTY(?:;|$)/i.test(line)){
+     var rm=/RF=(\d+)/i.exec(line);if(rm&&$('rpmFilterUs'))$('rpmFilterUs').value=String(Math.max(50,Math.min(10000,+rm[1]||250)));
+     S.cfgState='empty';
+     pushAllConfigToS3(true);
+     continue;
+   }
+   if(/^CFGSAVED$/i.test(line)){S.cfgState='ready';setSaveStatus('SAVED TO S3','saved');setTimeout(function(){setSaveStatus('AUTO-SAVE ON','')},1400);continue}
+   var m=/RPM(?:FILTER|LOCK)=(\d+)/i.exec(line);if(m&&$('rpmFilterUs')){$('rpmFilterUs').value=String(Math.max(50,Math.min(10000,+m[1]||250)));save(false)}
+   if(/BT SPEED DYNO READY/i.test(line))$('bleStatus').textContent='BT SPEED DYNO';else if(/ERR/i.test(line))$('bleStatus').textContent=line;
+ }
+}catch(x){}}
+// The ESP32-S3 firmware limits ADC AFR voltage to 0.000..3.300 V.
+// A huge value here means the received text frame is damaged/invalid.
+var DYNO_AFR_RX_MAX_V=3.35,DYNO_LIVE_MAX_LINE=112,DYNO_LIVE_MAX_PENDING=256;
+function dropBadLiveFrame(reason,line){
+ S.badLiveFrames=(S.badLiveFrames||0)+1;
+ S.lastBadLiveFrame=reason+': '+String(line||'').slice(0,120);
+ var el=$('afrRxRejectCount');
+ if(el){el.textContent=String(S.badLiveFrames);el.title=S.lastBadLiveFrame}
+ if(S.badLiveFrames<=3||S.badLiveFrames%50===0){
+  try{console.warn('BT Speed: dropped invalid BLE live frame ('+reason+'):',String(line||'').slice(0,120))}catch(e){}
+ }
+}
+function onLive(e){
+ var d=e.target.value,txt=dec.decode(new Uint8Array(d.buffer,d.byteOffset,d.byteLength));
+ S.lineBuf+=txt;
+ var i;
+ while((i=S.lineBuf.indexOf('\n'))>=0){
+  var line=S.lineBuf.slice(0,i).replace(/\r/g,'').trim();
+  S.lineBuf=S.lineBuf.slice(i+1);
+  handleLine(line);
+ }
+ // Missing BLE fragments must never create an unbounded receive buffer.
+ if(S.lineBuf.length>DYNO_LIVE_MAX_PENDING){
+  dropBadLiveFrame('unterminated frame',S.lineBuf);
+  var lastStart=S.lineBuf.lastIndexOf('D,');
+  S.lineBuf=lastStart>=0?S.lineBuf.slice(lastStart):'';
+  if(S.lineBuf.length>DYNO_LIVE_MAX_LINE)S.lineBuf='';
+ }
+}
+function handleLine(line){
+ if(!line)return;
+ if(line.length>DYNO_LIVE_MAX_LINE){dropBadLiveFrame('oversize frame',line);return}
+ var p=line.split(',');
+ if(p.length!==5||p[0]!=='D'){dropBadLiveFrame('broken CSV frame',line);return}
+ // Reject missing digits, concatenated packets, junk, Infinity, NaN and exponent text.
+ var decimal=/^\d+(?:\.\d+)?$/;
+ if(!/^\d{1,10}$/.test(p[1])||!decimal.test(p[2])||!decimal.test(p[3])||!decimal.test(p[4])){
+  dropBadLiveFrame('malformed numeric field',line);return
+ }
+ var t=Number(p[1]),rr=Number(p[2]),r=Number(p[3]),v=Number(p[4]);
+ if(!Number.isFinite(t)||!Number.isFinite(rr)||!Number.isFinite(r)||!Number.isFinite(v)
+    ||rr>30000||r>30000||v<0||v>DYNO_AFR_RX_MAX_V){
+  dropBadLiveFrame('out-of-range sensor value',line);return
+ }
+ sample(t,rr,correctEngineRpm(r),v)
+}
+function sample(t,rr,r,v){
+ if(!isFinite(t)||!isFinite(rr)||!isFinite(r)||!isFinite(v)||v<0||v>DYNO_AFR_RX_MAX_V)return;
+ var D=n('rollerD',240)/1000,J=n('rollerJ',1.73);
+ var speed=rr*Math.PI*D/60*3.6,afr=afrFromV(v),omega=rr*2*Math.PI/60;
+ var rollerForceBaselineReset=false,hpTorqueSampleValid=false;
+
+ // PC Dyno jump guard: a sudden implausible positive roller-RPM jump resets
+ // the alpha baseline without blocking the UI or sensor stream.
+ if(!isFinite(rr)||rr<=0){
+   S.rollerGuardLastDistinctRpm=0;S.rollerGuardLastDistinctMs=0;
+ }else if(!(S.rollerGuardLastDistinctRpm>0)){
+   S.rollerGuardLastDistinctRpm=rr;S.rollerGuardLastDistinctMs=t;
+ }else if(Math.abs(rr-S.rollerGuardLastDistinctRpm)>=ROLLER_DISTINCT_EPS_RPM){
+   var guardPrev=S.rollerGuardLastDistinctRpm,guardDelta=rr-guardPrev,guardDt=t-S.rollerGuardLastDistinctMs;
+   var guardLimit=Math.max(ROLLER_JUMP_MIN_RPM,Math.abs(guardPrev)*ROLLER_JUMP_RATIO);
+   if(guardDelta>0&&guardDelta>=guardLimit&&guardDt>0&&guardDt<=ROLLER_JUMP_MAX_DT_MS)rollerForceBaselineReset=true;
+   S.rollerGuardLastDistinctRpm=rr;S.rollerGuardLastDistinctMs=t;
+ }
+
+ // PC Dyno startup guard + omega EMA + 10-sample alpha window.
+ var rollerCalcReady=true;
+ if(!isFinite(rr)||rr<=0){
+   S.rollerCalcPrimed=false;S.rollerStartupSamplesRemaining=0;S.omegaF=0;S.ow=[];S.tw=[];S.alpha=0;rollerCalcReady=false;
+ }else if(!S.rollerCalcPrimed||rollerForceBaselineReset){
+   S.rollerCalcPrimed=true;
+   S.rollerStartupSamplesRemaining=rollerForceBaselineReset?ROLLER_JUMP_COOLDOWN_SAMPLES:ROLLER_STARTUP_SKIP_SAMPLES;
+   S.omegaF=omega;S.ow=[S.omegaF];S.tw=[t];S.alpha=0;rollerCalcReady=false;
+ }else{
+   if(!isFinite(S.omegaF)||S.omegaF<=0)S.omegaF=omega;
+   else S.omegaF=S.omegaF+OMEGA_EMA_K*(omega-S.omegaF);
+   S.ow.push(S.omegaF);S.tw.push(t);
+   if(S.rollerStartupSamplesRemaining>0){S.rollerStartupSamplesRemaining--;rollerCalcReady=false}
+ }
+
+ var maxLen=ALPHA_WINDOW_N+1;
+ while(S.ow.length>maxLen)S.ow.shift();
+ while(S.tw.length>maxLen)S.tw.shift();
+
+ var torqueJ=0,hp=0,tq=0,alpha=0;
+ if(rollerCalcReady&&S.ow.length>=maxLen){
+   var dt=(S.tw[S.tw.length-1]-S.tw[0])/1000.0;
+   if(isFinite(dt)&&dt>0){
+     alpha=(S.ow[S.ow.length-1]-S.ow[0])/dt;
+     hpTorqueSampleValid=isFinite(alpha)&&alpha>0;
+     if(!hpTorqueSampleValid)alpha=0;
+     torqueJ=hpTorqueSampleValid?(J*alpha):0;
+     var powerW=hpTorqueSampleValid?(torqueJ*S.omegaF):0;
+     hp=powerW/745.7;
+     if(!isFinite(hp)||hp<0)hp=0;
+   }
+ }
+
+ // PC torque mode J_DIV10:
+ // torqueDisplay = torqueTotal / 10.0
+ // Mobile has no brake compensation, so torqueTotal = torqueJ = J * alpha.
+ tq=hpTorqueSampleValid?(torqueJ/10.0):0;
+ if(!isFinite(tq)||tq<0)tq=0;
+
+ S.lastT=t;S.alpha=alpha;S.rpm=r;S.rrpm=rr;S.speed=speed;S.afr=afr;S.hp=hp;S.tq=tq;
+ var liveAfrVoltEl=$('afrSettingsLiveVoltage');if(liveAfrVoltEl)liveAfrVoltEl.textContent=v.toFixed(3)+' V';
+ updateLive();
+ if(window.BT_AFR_UPDATE)window.BT_AFR_UPDATE(t,r,afr,v);
+
+ if(!S.recording&&S.auto&&speed>=n('autoSpeed',10)&&(hpTorqueSampleValid&&(hp>=n('autoHp',1)||Math.abs(alpha)>=n('autoAlpha',10))))startRun();
+
+ if(S.recording){
+   if(hpTorqueSampleValid){
+     var peakRpm=(r>0)?r:0;
+     var peakChanged=false;
+     if(hp>S.hpMax){S.hpMax=hp;S.hpMaxRpm=peakRpm;peakChanged=true}
+     if(tq>S.tqMax){S.tqMax=tq;S.tqMaxRpm=peakRpm;peakChanged=true}
+     if(peakChanged)updatePowerPeakUI(S.hpMax,S.tqMax,S.hpMaxRpm,S.tqMaxRpm)
+     var plotX=(r>0)?r:rr;
+     if(plotX>=S.lastPlotRpm){
+       S.runPower.push([plotX,hp,tq,r>0?r:0]);
+       if(S.runPower.length>1200)S.runPower.shift();
+       S.lastPlotRpm=plotX;
+     }
+   }
+   S.runRpm.push([t/1000,r,rr,speed,afr]);
+   if(S.runRpm.length>1200)S.runRpm.shift();
+   if(updateAutoEndRun(t,rr))return;
+   drawAll();
+ }
+ S.liveRpmPts.push([t/1000,r,rr,speed,afr]);
+ if(S.liveRpmPts.length>400)S.liveRpmPts.shift();
+ update201(t,speed,r,afr);drawAll()
+}
+function updateLive(){$('liveRpm').textContent=Math.round(S.rpm);$('liveSpeed').textContent=S.speed.toFixed(0);$('liveAfr').textContent=isFinite(S.afr)?S.afr.toFixed(1):'--';$('liveHp').textContent=S.hp.toFixed(1);$('liveTq').textContent=S.tq.toFixed(1);$('rpmBar').style.width=Math.min(100,S.rpm/n('maxRpm',16000)*100)+'%';$('speedBar').style.width=Math.min(100,S.speed/n('maxSpeed',160)*100)+'%'}
+function showPage(pageId){
+ document.querySelectorAll('nav button').forEach(function(x){x.classList.toggle('on',x.dataset.page===pageId)});
+ document.querySelectorAll('.page').forEach(function(x){x.classList.toggle('on',x.id===pageId)});
+ setTimeout(drawAll,30)
+}
+function startRun(){if(S.recording)return;S.recording=true;S.hpMax=S.tqMax=0;S.hpMaxRpm=S.tqMaxRpm=0;S.runPower=[];S.runRpm=[];S.lastPlotRpm=0;S.runPeakRollerRpm=0;S.runDeclineSinceMs=0;S.omegaF=0;S.ow=[];S.tw=[];S.rollerCalcPrimed=false;S.rollerStartupSamplesRemaining=0;S.runStartedWall=Date.now();$('ctlRun').textContent='RUNNING';$('ctlRun').classList.add('red');drawAll()}
+function stopRun(){if(!S.recording)return;S.recording=false;S.runDeclineSinceMs=0;$('ctlRun').textContent='RUN';$('ctlRun').classList.remove('red');saveCurrentRun();drawAll()}
+function autoEndRunToPower(){
+ if(!S.recording)return;
+ stopRun();
+ showPage('power')
+}
+function updateAutoEndRun(t,rr){
+ if(!S.autoEndRun){S.runDeclineSinceMs=0;return false}
+ if(!S.recording||!isFinite(t)||!isFinite(rr)||rr<0)return false;
+ if(rr>S.runPeakRollerRpm){S.runPeakRollerRpm=rr;S.runDeclineSinceMs=0;return false}
+ if(!(S.runPeakRollerRpm>0))return false;
+ var drop=Math.max(AUTO_END_DROP_MIN_RPM,S.runPeakRollerRpm*AUTO_END_DROP_RATIO);
+ var recover=Math.max(AUTO_END_DROP_MIN_RPM*0.5,S.runPeakRollerRpm*AUTO_END_RECOVER_RATIO);
+ if(rr>=S.runPeakRollerRpm-recover){S.runDeclineSinceMs=0;return false}
+ if(rr<=S.runPeakRollerRpm-drop){
+   if(!(S.runDeclineSinceMs>0))S.runDeclineSinceMs=t;
+   if((t-S.runDeclineSinceMs)>=AUTO_END_DECLINE_MS){
+     autoEndRunToPower();
+     return true
+   }
+ }
+ return false
+}
+function toggleAuto(){S.auto=!S.auto;$('autoStart').checked=S.auto;$('ctlAuto').classList.toggle('on',S.auto);save()}
+function simMedian5(a,b,c,d,e){
+ var v=[a,b,c,d,e];v.sort(function(x,y){return x-y});return v[2]
+}
+function simResetWheel(){
+ SIM.phase=0;SIM.lastPulseUs=0;SIM.lastValidPeriodUs=0;
+ SIM.hist=[0,0,0,0,0];SIM.histCount=0;SIM.histIndex=0;SIM.startupLocked=false;
+ SIM.periodFilteredUs=0;SIM.rpmFiltered=0;SIM.rpmOutput=0;SIM.lastHallPulseMs=0
+}
+function simStartupWindowOk(medianUs){
+ if(!(medianUs>=SIM_ABS_MIN_PERIOD_US))return false;
+ var minOk=Math.max(SIM_ABS_MIN_PERIOD_US,medianUs*0.40),maxOk=medianUs*2.50,good=0;
+ for(var i=0;i<5;i++)if(SIM.hist[i]>=minOk&&SIM.hist[i]<=maxOk)good++;
+ return good>=4
+}
+function simProcessPeriod(periodUs,nowMs){
+ if(!(periodUs>=SIM_ABS_MIN_PERIOD_US))return;
+ SIM.hist[SIM.histIndex]=periodUs;SIM.histIndex=(SIM.histIndex+1)%5;if(SIM.histCount<5)SIM.histCount++;
+
+ if(!SIM.startupLocked){
+   SIM.rpmFiltered=0;SIM.rpmOutput=0;
+   if(SIM.histCount<5)return;
+   var med=simMedian5(SIM.hist[0],SIM.hist[1],SIM.hist[2],SIM.hist[3],SIM.hist[4]);
+   if(!simStartupWindowOk(med))return;
+   var rpm=60000000/med;
+   if(!(rpm>0&&rpm<=10000))return;
+   SIM.periodFilteredUs=med;SIM.rpmFiltered=rpm;SIM.startupLocked=true;SIM.lastHallPulseMs=nowMs;return
+ }
+
+ var p=simMedian5(SIM.hist[0],SIM.hist[1],SIM.hist[2],SIM.hist[3],SIM.hist[4]);
+ SIM.periodFilteredUs=SIM.periodFilteredUs>0
+   ?SIM.periodFilteredUs*(1-SIM_PERIOD_ALPHA)+p*SIM_PERIOD_ALPHA
+   :p;
+ var rr=60000000/SIM.periodFilteredUs;
+ if(rr>=0&&rr<=10000){SIM.rpmFiltered=rr;SIM.lastHallPulseMs=nowMs}
+}
+function simHallEdge(edgeUs){
+ if(!SIM.lastPulseUs){SIM.lastPulseUs=edgeUs;return}
+ var dt=edgeUs-SIM.lastPulseUs;
+ if(dt<SIM_ABS_MIN_PERIOD_US)return;
+ if(SIM.lastValidPeriodUs>0){
+   var dynamicMin=Math.max(SIM_ABS_MIN_PERIOD_US,SIM.lastValidPeriodUs*SIM_EARLY_GATE_PERCENT/100);
+   if(dt<dynamicMin)return
+ }
+ SIM.lastValidPeriodUs=dt;SIM.lastPulseUs=edgeUs;simProcessPeriod(dt,edgeUs/1000)
+}
+function simTargetAt(ms){
+ // Repeating dyno pull: stationary -> launch -> pull -> coast -> stationary.
+ var cycle=14000,t=ms%cycle,wheel=0,engine=1450,afrV=1.58;
+ if(t<1200){
+   wheel=0;engine=1450+80*Math.sin(t/180);afrV=1.62
+ }else if(t<3000){
+   var q=(t-1200)/1800;
+   wheel=220+980*q;engine=1800+3300*q;afrV=1.55-0.12*q
+ }else if(t<9000){
+   var q=(t-3000)/6000;
+   wheel=1200+2850*q;engine=5100+7600*q;afrV=1.43+0.10*Math.sin(q*Math.PI*3)
+ }else if(t<11200){
+   var q=(t-9000)/2200;
+   wheel=4050*(1-q)+500*q;engine=12700*(1-q)+2600*q;afrV=1.62+0.15*q
+ }else{
+   wheel=0;engine=1450;afrV=1.65
+ }
+ return{wheel:Math.max(0,wheel),engine:Math.max(0,engine),afrV:Math.max(0,Math.min(3.3,afrV))}
+}
+function simEmitPacket(){
+ var target=simTargetAt(SIM.tMs);
+ // Firmware output smoothing runs every 25 ms even when no new Hall edge arrives.
+ if(SIM.rpmFiltered<=0)SIM.rpmOutput=0;
+ else if(SIM.rpmOutput<=0)SIM.rpmOutput=SIM.rpmFiltered;
+ else SIM.rpmOutput=SIM.rpmOutput*(1-SIM_OUTPUT_ALPHA)+SIM.rpmFiltered*SIM_OUTPUT_ALPHA;
+
+ // Emulate engine RPM EMA 0.25 and AFR EMA 0.20 from the ESP32 sensor code.
+ SIM.engineFiltered=SIM.engineFiltered<=0?target.engine:SIM.engineFiltered*0.75+target.engine*0.25;
+ SIM.afrFiltered=SIM.afrFiltered<=0?target.afrV:SIM.afrFiltered*(1-SIM_AFR_ALPHA)+target.afrV*SIM_AFR_ALPHA;
+
+ // Feed exactly the same text packet parser used by BLE notifications.
+ handleLine(
+   'D,'+Math.round(SIM.tMs)+','+
+   SIM.rpmOutput.toFixed(2)+','+
+   (SIM.engineFiltered/ignitionMultiplier()).toFixed(2)+','+
+   SIM.afrFiltered.toFixed(3)
+ )
+}
+function simStep(){
+ if(!S.sim)return;
+ var dt=SIM.tickMs,target=simTargetAt(SIM.tMs),rps=target.wheel/60;
+ var phase0=SIM.phase,advance=rps*(dt/1000),phase1=phase0+advance;
+
+ // One magnet = one Hall edge for every complete wheel revolution.
+ if(advance>0){
+   while(phase1>=1){
+     var frac=(1-phase0)/advance;
+     if(!isFinite(frac)||frac<0)frac=0;if(frac>1)frac=1;
+     var edgeMs=SIM.tMs+frac*dt;
+     simHallEdge(Math.round(edgeMs*1000));
+     phase1-=1;phase0=0;advance=phase1
+   }
+ }
+ SIM.phase=phase1;
+ SIM.tMs+=dt;S.simT=SIM.tMs;
+
+ // Same 1-second no-pulse timeout/reset as the real wheel firmware.
+ if(SIM.lastPulseUs>0&&(SIM.tMs-SIM.lastPulseUs/1000)>SIM_ROLLER_TIMEOUT_MS)simResetWheel();
+
+ if(SIM.tMs-SIM.lastPacketMs>=SIM_SAMPLE_MS){SIM.lastPacketMs=SIM.tMs;simEmitPacket()}
+ setTimeout(simStep,dt)
+}
+function resetSimulator(){
+ SIM.tMs=0;SIM.lastPacketMs=0;SIM.engineFiltered=0;SIM.afrFiltered=0;simResetWheel();
+ S.simT=0;S.lastT=0;S.omegaF=0;S.ow=[];S.tw=[];S.rollerCalcPrimed=false;S.rollerStartupSamplesRemaining=0;
+ S.rollerGuardLastDistinctRpm=0;S.rollerGuardLastDistinctMs=0
+}
+function toggleSim(){
+ if(!S.sim&&S.connected)return alert('Ngắt USB hoặc BLE trước khi bật SIM.');
+ S.sim=!S.sim;$('ctlSim').textContent=S.sim?'SIM OFF':'SIM';
+ if(S.sim){resetSimulator();setBle(false,'SIM 1-MAG');simStep()}
+ else{setBle(false,'BLE OFF')}
+}
+function update201(t,speed,rpm,afr){if(S.wait201&&speed>=1){S.wait201=false;S.run201=true;S.t2010=S.t201last=t;S.d201=0;$('state201').textContent='RUNNING'}if(!S.run201)return;var dt=(t-S.t201last)/1000;if(dt>0&&dt<1)S.d201+=speed/3.6*dt;S.t201last=t;S.maxS201=Math.max(S.maxS201,speed);S.maxR201=Math.max(S.maxR201,rpm);$('dist201').textContent=S.d201.toFixed(1)+' m';$('time201').textContent=((t-S.t2010)/1000).toFixed(3)+' s';$('speed201').textContent=speed.toFixed(1);$('rpm201').textContent=Math.round(rpm);if(S.d201>=201){S.run201=false;S.done201=true;var tt=(t-S.t2010)/1000;$('state201').textContent='DONE';$('result201').textContent=tt.toFixed(3)+' s';$('maxSpeed201').textContent=S.maxS201.toFixed(1);$('maxRpm201').textContent=Math.round(S.maxR201);$('afrEnd201').textContent=afr.toFixed(1)}}
+function reset201(){S.run201=S.wait201=S.done201=false;S.d201=0;S.maxS201=S.maxR201=0;$('state201').textContent='Waiting';$('dist201').textContent='0.0 m';$('time201').textContent='--';$('speed201').textContent='0.0';$('rpm201').textContent='0';$('result201').textContent='--';$('maxSpeed201').textContent='0.0';$('maxRpm201').textContent='0';$('afrEnd201').textContent='--'}
+function setupCanvas(c){
+ var dpr=Math.min(window.devicePixelRatio||1,3);
+ var w=Math.max(20,c.clientWidth||c.parentElement.clientWidth||300);
+ var h=Math.max(20,c.clientHeight||c.parentElement.clientHeight||150);
+ var pw=Math.round(w*dpr),ph=Math.round(h*dpr);
+ if(c.width!==pw||c.height!==ph){c.width=pw;c.height=ph}
+ c.style.width=w+'px';c.style.height=h+'px';
+ var x=c.getContext('2d');
+ x.setTransform(dpr,0,0,dpr,0,0);
+ x.imageSmoothingEnabled=true;
+ return{x:x,w:w,h:h,dpr:dpr}
+}
+function niceMax(v){v=Math.max(1,Number(v)||1);var p=Math.pow(10,Math.floor(Math.log10(v))),q=v/p;if(q<=1)q=1;else if(q<=2)q=2;else if(q<=5)q=5;else q=10;return q*p}
+function fmtAxis(v){var a=Math.abs(v);if(a>=1000)return Math.round(v).toString();if(a>=100)return Math.round(v).toString();if(a>=10)return (Math.round(v*10)/10).toString();return (Math.round(v*100)/100).toString()}
+function chartFrame(g,opt){
+ var x=g.x,w=g.w,h=g.h,compact=(h<360||w<760);
+ var hasR2=!!opt.right2,L=compact?42:48,R=hasR2?(compact?68:76):(opt.right?(compact?46:52):14),T=8,B=compact?28:31;
+ var P={l:L,r:w-R,t:T,b:h-B};P.w=Math.max(40,P.r-P.l);P.h=Math.max(40,P.b-P.t);
+ x.clearRect(0,0,w,h);x.fillStyle='#030405';x.fillRect(0,0,w,h);x.textBaseline='middle';
+ var xt=compact?4:5,yt=compact?4:5,i,v,px,py;
+ x.save();x.setLineDash([3,4]);x.lineWidth=1;
+ for(i=0;i<=xt;i++){
+   px=P.l+P.w*i/xt;x.strokeStyle='#15191d';x.beginPath();x.moveTo(px,P.t);x.lineTo(px,P.b);x.stroke();
+   v=opt.xMin+(opt.xMax-opt.xMin)*i/xt;x.fillStyle='#89939d';x.textAlign='center';x.font=(compact?'7':'8')+'px Arial';
+   x.fillText(opt.xFmt?opt.xFmt(v):fmtAxis(v),px,P.b+(compact?9:11));
+ }
+ for(i=0;i<=yt;i++){
+   py=P.b-P.h*i/yt;x.strokeStyle='#15191d';x.beginPath();x.moveTo(P.l,py);x.lineTo(P.r,py);x.stroke();
+   v=(opt.yMin||0)+(opt.yMax-(opt.yMin||0))*i/yt;x.fillStyle=opt.yColor||'#ff4a50';x.textAlign='right';x.font=(compact?'7':'8')+'px Arial';
+   x.fillText(fmtAxis(v),P.l-5,py);
+ }
+ x.restore();
+ x.strokeStyle='#30363d';x.lineWidth=1;x.strokeRect(P.l+.5,P.t+.5,P.w-1,P.h-1);
+ x.fillStyle='#89939d';x.textAlign='center';x.font='700 '+(compact?'7':'8')+'px Arial';x.fillText(opt.xLabel||'',P.l+P.w/2,h-(compact?6:7));
+ if(opt.yLabel){x.fillStyle=opt.yColor||'#ff4a50';x.textAlign='left';x.font='700 '+(compact?'7':'8')+'px Arial';x.fillText(opt.yLabel,P.l+3,P.t+7)}
+ if(opt.right){
+   for(i=0;i<=yt;i++){py=P.b-P.h*i/yt;v=opt.right.max*i/yt;x.fillStyle=opt.right.color;x.textAlign='left';x.font=(compact?'7':'8')+'px Arial';x.fillText(fmtAxis(v),P.r+5,py)}
+   x.fillStyle=opt.right.color;x.textAlign='right';x.font='700 '+(compact?'6':'7')+'px Arial';x.fillText(opt.right.shortLabel||opt.right.label||'',w-3,P.t+7)
+ }
+ if(opt.right2){
+   for(i=0;i<=yt;i++){py=P.b-P.h*i/yt;v=opt.right2.min+(opt.right2.max-opt.right2.min)*i/yt;x.fillStyle=opt.right2.color;x.textAlign='left';x.font=(compact?'6':'7')+'px Arial';x.fillText(fmtAxis(v),P.r+(compact?31:35),py)}
+   x.fillStyle=opt.right2.color;x.textAlign='right';x.font='700 '+(compact?'6':'7')+'px Arial';x.fillText(opt.right2.shortLabel||opt.right2.label||'',w-3,P.t+17)
+ }
+ return P
+}
+function plotSeries(g,P,data,getX,getY,xMin,xMax,yMin,yMax,color,width){
+ if(!data||data.length<2)return;var x=g.x,started=false;x.strokeStyle=color;x.lineWidth=width||1.7;x.setLineDash([]);x.beginPath();
+ data.forEach(function(d){var xv=getX(d),yv=getY(d);if(!isFinite(xv)||!isFinite(yv))return;var px=P.l+(xv-xMin)/(xMax-xMin||1)*P.w,py=P.b-(yv-yMin)/(yMax-yMin||1)*P.h;if(!started){x.moveTo(px,py);started=true}else x.lineTo(px,py)});if(started)x.stroke()
+}
+function chartEmpty(g,msg){g.x.fillStyle='#66717c';g.x.textAlign='center';g.x.font='700 10px Arial';g.x.fillText(msg,g.w/2,g.h/2)}
+function getSelectedRun(){return selectedRunIndex>=0&&runHistory[selectedRunIndex]?runHistory[selectedRunIndex]:null}
+function drawLegend(g,items){var x=g.x,px=62;x.font='700 8px Arial';x.textAlign='left';items.forEach(function(it){x.strokeStyle=it[1];x.lineWidth=2;x.beginPath();x.moveTo(px,12);x.lineTo(px+14,12);x.stroke();x.fillStyle='#c3c8ce';x.fillText(it[0],px+18,12);px+=18+x.measureText(it[0]).width+24})}
+function getSmoothingWindow(level){return level===1?3:(level===2?7:1)}
+function smoothCenteredPower(data,windowSize){
+ if(!data||!data.length||windowSize<=1)return(data||[]).map(function(a){return a.slice()});
+ if(windowSize%2===0)windowSize++;var half=Math.floor(windowSize/2),out=[];
+ for(var i=0;i<data.length;i++){var a=Math.max(0,i-half),b=Math.min(data.length-1,i+half),sh=0,st=0,nc=0;
+   for(var j=a;j<=b;j++){sh+=+data[j][1]||0;st+=+data[j][2]||0;nc++}
+   out.push([data[i][0],sh/nc,st/nc,data[i][3]||0])
+ }return out
+}
+function smoothTrailingPairs(data,windowSize){
+ if(!data||!data.length||windowSize<=1)return(data||[]).map(function(a){return a.slice()});
+ var out=[],q=[],sum=0;for(var i=0;i<data.length;i++){var y=+data[i][1]||0;q.push(y);sum+=y;if(q.length>windowSize)sum-=q.shift();out.push([data[i][0],sum/q.length])}return out
+}
+function trimPowerAtHalfHp(data){
+ if(!data||data.length<3)return(data||[]).map(function(a){return a.slice()});
+ var maxHp=-Infinity,maxIdx=-1;
+ for(var i=0;i<data.length;i++){var y=+data[i][1];if(isFinite(y)&&y>maxHp){maxHp=y;maxIdx=i}}
+ if(!(maxHp>0)||maxIdx<0||maxIdx>=data.length-1)return data.map(function(a){return a.slice()});
+ var threshold=maxHp*0.50;
+ for(var k=maxIdx+1;k<data.length;k++){
+   var cy=+data[k][1];if(!isFinite(cy)||cy>threshold)continue;
+   var nextBelow=(k===data.length-1)||(isFinite(+data[k+1][1])&&+data[k+1][1]<=threshold);if(!nextBelow)continue;
+   var prev=data[k-1],cur=data[k],py=+prev[1],px=+prev[0],cx=+cur[0],ratio=1;
+   if(isFinite(py)&&py>threshold&&cy<py){ratio=(py-threshold)/(py-cy);ratio=Math.max(0,Math.min(1,ratio))}
+   var xCut=isFinite(px)&&isFinite(cx)?px+(cx-px)*ratio:cx;
+   var tqPrev=+prev[2],tqCur=+cur[2],tqCut=isFinite(tqPrev)&&isFinite(tqCur)?tqPrev+(tqCur-tqPrev)*ratio:(isFinite(tqCur)?tqCur:0);
+   var out=data.slice(0,k).map(function(a){return a.slice()});out.push([xCut,threshold,tqCut]);out._cut=true;out._threshold=threshold;return out
+ }var full=data.map(function(a){return a.slice()});full._cut=false;full._threshold=threshold;return full
+}
+function buildPowerDisplayData(raw){
+ var d=trimPowerAtHalfHp(normalizePowerData(raw||[])),cut=!!d._cut,threshold=d._threshold;
+ if(S.smoothingLevel>0){d=smoothCenteredPower(d,getSmoothingWindow(S.smoothingLevel));if(cut&&d.length)d[d.length-1][1]=threshold}
+ return d
+}
+function syncSmoothingButtons(){document.querySelectorAll('[data-smooth]').forEach(function(b){b.classList.toggle('on',parseInt(b.dataset.smooth,10)===S.smoothingLevel)})}
+function setSmoothingLevel(level,persist){level=parseInt(level,10);if(level!==0&&level!==1&&level!==2)level=1;S.smoothingLevel=level;syncSmoothingButtons();drawAll();if(persist!==false){save();pushConfigKey('smoothingLevel')}}
+function pairedPowerPeaks(data){
+ var raw=normalizePowerData(data||[]);
+ var out={hp:0,tq:0,hpRpm:0,tqRpm:0};
+ raw.forEach(function(a){
+   var rpm=+a[0]||0,hp=+a[1]||0,tq=+a[2]||0;
+   if(hp>out.hp){out.hp=hp;out.hpRpm=rpm}
+   if(tq>out.tq){out.tq=tq;out.tqRpm=rpm}
+ });
+ return out;
+}
+function deriveSavedPeakInfo(run){
+ var curve=pairedPowerPeaks(run&&run.power||[]);
+ var hp=+run.hpMax||0,tq=+run.tqMax||0,hpRpm=+run.hpMaxRpm||0,tqRpm=+run.tqMaxRpm||0;
+ return{
+   hp:(hp>0&&hpRpm>0)?hp:curve.hp,
+   tq:(tq>0&&tqRpm>0)?tq:curve.tq,
+   hpRpm:(hp>0&&hpRpm>0)?hpRpm:curve.hpRpm,
+   tqRpm:(tq>0&&tqRpm>0)?tqRpm:curve.tqRpm
+ };
+}
+function updatePowerPeakUI(maxHp,maxTq,hpRpm,tqRpm){
+ var hp=$('powerMaxHp'),tq=$('powerMaxTq'),hpR=$('powerMaxHpRpm'),tqR=$('powerMaxTqRpm'),vals=$('powerVals');
+ maxHp=isFinite(maxHp)?maxHp:0;maxTq=isFinite(maxTq)?maxTq:0;
+ hpRpm=Number(hpRpm);tqRpm=Number(tqRpm);
+ if(hp)hp.textContent=maxHp.toFixed(1);
+ if(tq)tq.textContent=maxTq.toFixed(1);
+ if(hpR)hpR.textContent='@ '+(isFinite(hpRpm)&&hpRpm>0?Math.round(hpRpm):'--')+' RPM';
+ if(tqR)tqR.textContent='@ '+(isFinite(tqRpm)&&tqRpm>0?Math.round(tqRpm):'--')+' RPM';
+ if(hpR)hpR.title='Peak HP RPM: '+(isFinite(hpRpm)&&hpRpm>0?Math.round(hpRpm):'no RPM data');
+ if(tqR)tqR.title='Peak torque RPM: '+(isFinite(tqRpm)&&tqRpm>0?Math.round(tqRpm):'no RPM data');
+ if(vals)vals.textContent=(maxHp>0||maxTq>0)?('MAX '+maxHp.toFixed(1)+'HP · '+maxTq.toFixed(1)+'Nm'):'NO RUN';
+}
+function powerRunHasEngineRpm(run,raw){
+ if(raw&&raw.some(function(a){return(+a[3]||0)>0}))return true;
+ var rr=run&&Array.isArray(run.rpm)?run.rpm:(S.recording?S.runRpm:null);
+ return !!(rr&&rr.some(function(a){return(+a[1]||0)>0}));
+}
+function nearestPowerIndex(data,xv){
+ if(!data||!data.length||!isFinite(xv))return-1;
+ var bi=0,bd=Infinity;
+ for(var i=0;i<data.length;i++){var dd=Math.abs((+data[i][0]||0)-xv);if(dd<bd){bd=dd;bi=i}}
+ return bi
+}
+function drawPowerTouch(g,P,d,xMin,xMax,hpY,tqY,axisIsEngine){
+ if(!d||!d.length||!isFinite(S.powerPickX))return;
+ var idx=nearestPowerIndex(d,S.powerPickX);if(idx<0)return;
+ var a=d[idx],rpm=+a[0]||0,hp=+a[1]||0,tq=+a[2]||0;
+ var px=P.l+(rpm-xMin)/(xMax-xMin||1)*P.w;
+ var pyHp=P.b-hp/(hpY||1)*P.h;
+ var pyTq=P.b-tq/(tqY||1)*P.h;
+ var x=g.x;
+ x.save();
+ x.setLineDash([3,3]);x.strokeStyle='#8c5a2c';x.lineWidth=1;x.beginPath();x.moveTo(px,P.t);x.lineTo(px,P.b);x.stroke();x.setLineDash([]);
+ x.fillStyle='#ff3b30';x.beginPath();x.arc(px,pyHp,3.5,0,Math.PI*2);x.fill();
+ x.fillStyle='#ffd400';x.beginPath();x.arc(px,pyTq,3.5,0,Math.PI*2);x.fill();
+ var bw=126,bh=51,bx=px+9,by=Math.max(P.t+4,Math.min(P.b-bh-4,Math.min(pyHp,pyTq)-bh/2));
+ if(bx+bw>P.r-4)bx=px-bw-9;if(bx<P.l+4)bx=P.l+4;
+ x.fillStyle='rgba(7,7,7,.94)';x.strokeStyle='#70411c';x.lineWidth=1;x.beginPath();
+ if(x.roundRect)x.roundRect(bx,by,bw,bh,6);else x.rect(bx,by,bw,bh);
+ x.fill();x.stroke();
+ x.font='800 9px Arial';x.textAlign='left';x.textBaseline='middle';
+ x.fillStyle='#d7dce1';x.fillText((axisIsEngine?'RPM ':'ROLLER RPM ')+Math.round(rpm),bx+8,by+11);
+ x.fillStyle='#ff3b30';x.fillText('HP '+hp.toFixed(1),bx+8,by+26);
+ x.fillStyle='#ffd400';x.fillText('TOR '+tq.toFixed(1)+' Nm',bx+8,by+41);
+ x.restore();
+}
+function powerPointerLocalX(c,ev){
+ var cw=Math.max(1,c.clientWidth||1);
+ var r=c.getBoundingClientRect(),bodyTransform='none',portrait=false;
+ try{bodyTransform=getComputedStyle(document.body).transform||'none'}catch(e){}
+ try{portrait=!!(window.matchMedia&&window.matchMedia('(orientation: portrait)').matches)}catch(e){}
+
+ // Desktop / normal landscape: never use transformed-quad math.
+ // Plain clientX maps 1:1 to the canvas horizontal axis.
+ if(!(portrait&&bodyTransform!=='none')){
+   var tx=(ev.clientX-r.left)/(r.width||1);
+   tx=Math.max(0,Math.min(1,tx));
+   return tx*cw;
+ }
+
+ // Portrait mobile is auto-rotated 90 degrees by CSS.
+ // Prefer quad projection only in this transformed case.
+ try{
+   if(c.getBoxQuads){
+     var qs=c.getBoxQuads({box:'border'}),q=qs&&qs[0];
+     if(q){
+       var vx=q.p2.x-q.p1.x,vy=q.p2.y-q.p1.y,len2=vx*vx+vy*vy;
+       if(len2>0){
+         var t=((ev.clientX-q.p1.x)*vx+(ev.clientY-q.p1.y)*vy)/len2;
+         t=Math.max(0,Math.min(1,t));
+         return t*cw;
+       }
+     }
+   }
+ }catch(e){}
+
+ // Fallback for iOS/WebView without getBoxQuads.
+ var ty=(ev.clientY-r.top)/(r.height||1);
+ ty=Math.max(0,Math.min(1,ty));
+ return ty*cw;
+}
+function bindPowerChartTouch(){
+ var c=$('powerCanvas');if(!c||c._btPowerBound)return;c._btPowerBound=true;
+ var dragging=false;
+ function pick(ev){
+   var h=S.powerHit;if(!h||!h.P||!(h.xMax>h.xMin))return;
+   var px=powerPointerLocalX(c,ev);
+   px=Math.max(h.P.l,Math.min(h.P.r,px));
+   S.powerPickX=h.xMin+(px-h.P.l)/h.P.w*(h.xMax-h.xMin);
+   drawPower();
+ }
+ c.addEventListener('pointerdown',function(ev){
+   dragging=true;
+   try{c.setPointerCapture(ev.pointerId)}catch(e){}
+   pick(ev);
+ });
+ c.addEventListener('pointermove',function(ev){
+   if(!dragging)return;
+   pick(ev);
+ });
+ c.addEventListener('pointerup',function(ev){
+   dragging=false;
+   try{c.releasePointerCapture(ev.pointerId)}catch(e){}
+ });
+ c.addEventListener('pointercancel',function(){dragging=false});
+}
+function drawPower(){
+ var c=$('powerCanvas'),g=setupCanvas(c),run=getSelectedRun(),raw0=S.recording?S.runPower:(run?run.power:[]),raw=normalizePowerData(raw0),d=buildPowerDisplayData(raw);
+ var axisIsEngine=powerRunHasEngineRpm(run,raw),pk;
+ if(S.recording){
+   pk={hp:+S.hpMax||0,tq:+S.tqMax||0,hpRpm:+S.hpMaxRpm||0,tqRpm:+S.tqMaxRpm||0};
+ }else if(run){
+   pk=deriveSavedPeakInfo(run);
+ }else{
+   pk={hp:0,tq:0,hpRpm:0,tqRpm:0};
+ }
+ var maxHp=pk.hp,maxTq=pk.tq,hpRpm=pk.hpRpm,tqRpm=pk.tqRpm;
+ updatePowerPeakUI(maxHp,maxTq,hpRpm,tqRpm);
+ var xMin=d&&d.length?Math.min.apply(null,d.map(function(a){return+a[0]})):0,xMax=d&&d.length?Math.max.apply(null,d.map(function(a){return+a[0]})):1;if(xMax<=xMin)xMax=xMin+1;
+ var hpY=niceMax(maxHp*1.1),tqY=niceMax(maxTq*1.1),P=chartFrame(g,{xMin:xMin,xMax:xMax,xLabel:axisIsEngine?'ENGINE RPM':'ROLLER RPM',yMax:hpY,yLabel:'HP',yColor:'#ff3b30',right:{max:tqY,label:'TORQUE (Nm)',shortLabel:'Nm',color:'#ffd400'}});
+ S.powerHit={P:P,d:d,xMin:xMin,xMax:xMax,hpY:hpY,tqY:tqY,axisIsEngine:axisIsEngine};
+ if(!d||d.length<2){chartEmpty(g,'NO SAVED RUN DATA');return}
+ plotSeries(g,P,d,function(a){return+a[0]},function(a){return+a[1]},xMin,xMax,0,hpY,'#ff3b30',1.8);
+ plotSeries(g,P,d,function(a){return+a[0]},function(a){return+a[2]},xMin,xMax,0,tqY,'#ffd400',1.8);
+ drawPowerTouch(g,P,d,xMin,xMax,hpY,tqY,axisIsEngine)
+}
+function drawRpm(){
+ var c=$('rpmCanvas'),g=setupCanvas(c),run=getSelectedRun(),d=S.recording?S.runRpm:(run?run.rpm:[]);
+ if(!d||!d.length){var P0=chartFrame(g,{xMin:0,xMax:1,xLabel:'TIME (s)',yMax:n('maxRpm',16000),yLabel:'RPM',yColor:'#ff7a00',right:{max:n('maxSpeed',160),label:'SPEED km/h',shortLabel:'km/h',color:'#d3d6da'},right2:{min:10,max:20,label:'AFR',shortLabel:'AFR',color:'#3488ff'}});chartEmpty(g,'NO SAVED RUN DATA');return}
+ var t0=+d[0][0],td=d.map(function(a){return[(+a[0]-t0),+a[1],+a[2],+a[3],+a[4]]}),xMax=Math.max(1,td[td.length-1][0]),rpmY=niceMax(Math.max(1000,Math.max.apply(null,td.map(function(a){return a[1]||0})))*1.05),speedY=niceMax(Math.max(20,Math.max.apply(null,td.map(function(a){return a[3]||0})))*1.08);
+ var P=chartFrame(g,{xMin:0,xMax:xMax,xLabel:'TIME (s)',xFmt:function(v){return v.toFixed(v<10?1:0)},yMax:rpmY,yLabel:'RPM',yColor:'#ff7a00',right:{max:speedY,label:'SPEED km/h',shortLabel:'km/h',color:'#d3d6da'},right2:{min:10,max:20,label:'AFR',shortLabel:'AFR',color:'#3488ff'}});
+
+ plotSeries(g,P,td,function(a){return a[0]},function(a){return a[1]},0,xMax,0,rpmY,'#ff7a00',1.7);
+ plotSeries(g,P,td,function(a){return a[0]},function(a){return a[3]},0,xMax,0,speedY,'#d3d6da',1.4);
+ plotSeries(g,P,td,function(a){return a[0]},function(a){return a[4]},0,xMax,10,20,'#3488ff',1.7)
+}
+function getCompareIndices(){var out=[];document.querySelectorAll('#compareRunList input:checked').forEach(function(e){out.push(+e.value)});return out.slice(0,5)}
+function compareSeriesFor(run,metric){
+ if(!run)return[];if(metric==='hp'){var a=(run.power||[]).map(function(v){return[+v[0],+v[1]]});return S.smoothingLevel>0?smoothTrailingPairs(a,getSmoothingWindow(S.smoothingLevel)):a}
+ if(metric==='tq'){var b=normalizePowerData(run.power||[]).map(function(v){return[+v[0],+v[2]]});return S.smoothingLevel>0?smoothTrailingPairs(b,getSmoothingWindow(S.smoothingLevel)):b}
+ if(metric==='speed')return(run.rpm||[]).map(function(a){return[+a[1]||+a[2],+a[3]]});
+ return(run.rpm||[]).map(function(a){return[+a[1]||+a[2],+a[4]]})
+}
+function drawCompare(){
+ var c=$('compareCanvas');if(!c)return;var g=setupCanvas(c),idxs=getCompareIndices(),metric=$('compareMetric')?$('compareMetric').value:'hp',sets=[],all=[];
+ idxs.forEach(function(idx){var r=runHistory[idx];if(!r)return;var d=compareSeriesFor(r,metric);sets.push({run:r,data:d});all=all.concat(d)});
+ var yLabel=metric==='hp'?'POWER (HP)':metric==='tq'?'TORQUE (Nm)':metric==='speed'?'SPEED (km/h)':'AFR',yColor=metric==='tq'?'#ffd400':metric==='afr'?'#3488ff':metric==='speed'?'#d3d6da':'#ff3b30';
+ var xMin=all.length?Math.min.apply(null,all.map(function(a){return a[0]})):0,xMax=all.length?Math.max.apply(null,all.map(function(a){return a[0]})):1;if(xMax<=xMin)xMax=xMin+1;
+ var yMin=metric==='afr'?10:0,yMax=metric==='afr'?20:niceMax(Math.max(1,all.length?Math.max.apply(null,all.map(function(a){return a[1]})):1)*1.1);
+ var P=chartFrame(g,{xMin:xMin,xMax:xMax,xLabel:'ENGINE RPM / ROLLER RPM',yMin:yMin,yMax:yMax,yLabel:yLabel,yColor:yColor});
+ var pal=['#ff7a00','#40c4ff','#ffd740','#69f0ae','#b388ff'];
+ if(sets.length<2){chartEmpty(g,'SELECT 2–5 SAVED RUNS');return}
+ sets.forEach(function(s,i){plotSeries(g,P,s.data,function(a){return a[0]},function(a){return a[1]},xMin,xMax,yMin,yMax,pal[i%pal.length],1.8)})
+}
+function drawAll(){drawPower();drawRpm();drawCompare()}
+
+function saveCurrentRun(){
+ if(!S.runPower||S.runPower.length<2||!S.runRpm||S.runRpm.length<2)return;
+ var seq=parseInt(localStorage.getItem(RUN_COUNTER_KEY)||'0',10)+1;localStorage.setItem(RUN_COUNTER_KEY,String(seq));
+ var rpmMax=0,speedMax=0;S.runRpm.forEach(function(a){rpmMax=Math.max(rpmMax,+a[1]||0);speedMax=Math.max(speedMax,+a[3]||0)});
+ var fixedPower=normalizePowerData(S.runPower),curvePk=pairedPowerPeaks(fixedPower);
+ var hpPeak=(+S.hpMax||0)>0?(+S.hpMax):curvePk.hp;
+ var tqPeak=(+S.tqMax||0)>0?(+S.tqMax):curvePk.tq;
+ var hpPeakRpm=(+S.hpMaxRpm||0)>0?(+S.hpMaxRpm):curvePk.hpRpm;
+ var tqPeakRpm=(+S.tqMaxRpm||0)>0?(+S.tqMaxRpm):curvePk.tqRpm;
+ var item={seq:seq,timestamp:new Date().toLocaleString('vi-VN',{hour12:false}),ignitionCycle:$('ignitionCycle')?$('ignitionCycle').value:'360',power:fixedPower.map(function(a){return a.slice()}),rpm:S.runRpm.map(function(a){return a.slice()}),hpMax:hpPeak,tqMax:tqPeak,hpMaxRpm:hpPeakRpm||0,tqMaxRpm:tqPeakRpm||0,rpmMax:rpmMax,speedMax:speedMax};
+ runHistory.push(item);if(runHistory.length>10)runHistory.shift();selectedRunIndex=runHistory.length-1;persistRunHistory();renderRunHistoryUI()
+}
+function persistRunHistory(){try{localStorage.setItem(RUN_HISTORY_KEY,JSON.stringify(runHistory))}catch(e){}}
+function restoreRunHistory(){try{var a=JSON.parse(localStorage.getItem(RUN_HISTORY_KEY)||'[]');if(Array.isArray(a))runHistory=a.slice(-10)}catch(e){runHistory=[]}selectedRunIndex=runHistory.length?runHistory.length-1:-1}
+function runLabel(r){var pk=deriveSavedPeakInfo(r);return'RUN #'+r.seq+' · '+(pk.hp||0).toFixed(1)+'HP · '+(pk.tq||0).toFixed(1)+'Nm'}
+function renderRunSelectors(){
+ ['powerRunSelect','rpmRunSelect'].forEach(function(id){var s=$(id);if(!s)return;var keep=selectedRunIndex;s.innerHTML='';if(!runHistory.length){var o=document.createElement('option');o.value='';o.textContent='-- NO SAVED RUN --';s.appendChild(o);return}for(var i=runHistory.length-1;i>=0;i--){var o=document.createElement('option');o.value=String(i);o.textContent=runLabel(runHistory[i]);s.appendChild(o)}s.value=String(keep>=0?keep:runHistory.length-1)})
+ var r=getSelectedRun();if(r){var pk=deriveSavedPeakInfo(r);updatePowerPeakUI(pk.hp,pk.tq,pk.hpRpm,pk.tqRpm)}else updatePowerPeakUI(0,0,NaN,NaN);$('rpmVals').textContent=r?(Math.round(+r.rpmMax||0)+'RPM · '+(+r.speedMax||0).toFixed(1)+'km/h'):'NO RUN'
+}
+function renderCompareRunList(){
+ var box=$('compareRunList');if(!box)return;box.innerHTML='';if(!runHistory.length){box.innerHTML='<span class="chart-empty">NO SAVED RUNS</span>';return}
+ var auto=[];if(runHistory.length>=2)auto=[runHistory.length-1,runHistory.length-2];else auto=[runHistory.length-1];
+ for(var i=runHistory.length-1;i>=0;i--){var lab=document.createElement('label');lab.className='compare-run-chip';var cb=document.createElement('input');cb.type='checkbox';cb.value=String(i);cb.checked=auto.indexOf(i)>=0;var sp=document.createElement('span'),pk=deriveSavedPeakInfo(runHistory[i]);sp.textContent='RUN #'+runHistory[i].seq+' · '+(pk.hp||0).toFixed(1)+'HP';lab.appendChild(cb);lab.appendChild(sp);if(cb.checked)lab.classList.add('checked');cb.addEventListener('change',function(){var checked=document.querySelectorAll('#compareRunList input:checked');if(checked.length>5){this.checked=false;return}this.parentElement.classList.toggle('checked',this.checked);$('compareHint').textContent=checked.length+' RUN(S) SELECTED';drawCompare()});box.appendChild(lab)}
+ $('compareHint').textContent=document.querySelectorAll('#compareRunList input:checked').length+' RUN(S) SELECTED'
+}
+function renderRunHistoryUI(){renderRunSelectors();renderCompareRunList();drawAll()}
+function bindRunHistoryUI(){
+ ['powerRunSelect','rpmRunSelect'].forEach(function(id){var s=$(id);if(!s)return;s.addEventListener('change',function(){var v=parseInt(this.value,10);if(!isFinite(v)||!runHistory[v])return;selectedRunIndex=v;S.powerPickX=null;renderRunSelectors();drawAll()})});
+ if($('compareMetric'))$('compareMetric').addEventListener('change',drawCompare)
+}
+function setSaveStatus(text,cls){var e=$('settingsSaveStatus');if(!e)return;e.textContent=text;e.className=cls||''}
+function save(showStatus){try{if(showStatus)setSaveStatus('SAVING...','saving');var o={};cfgIds.forEach(function(id){o[id]=$(id).value});o.auto=$('autoStart').checked;o.autoEndRun=$('autoEndRun').checked;o.smoothingLevel=S.smoothingLevel;localStorage.setItem('dynotl_mobile_v1',JSON.stringify(o));if(showStatus){setSaveStatus('SAVED','saved');setTimeout(function(){setSaveStatus('AUTO-SAVE ON','')},1400)}return true}catch(e){if(showStatus)setSaveStatus('SAVE ERROR','error');return false}}
+function load(){try{var o=JSON.parse(localStorage.getItem('dynotl_mobile_v1')||'{}');cfgIds.forEach(function(id){if(o[id]!=null)$(id).value=o[id]});S.auto=!!o.auto;S.autoEndRun=o.autoEndRun==null?true:!!o.autoEndRun;S.smoothingLevel=(o.smoothingLevel===0||o.smoothingLevel===1||o.smoothingLevel===2)?o.smoothingLevel:1;$('autoStart').checked=S.auto;$('autoEndRun').checked=S.autoEndRun;$('ctlAuto').classList.toggle('on',S.auto);syncSmoothingButtons()}catch(e){}}
+// Kiosk hardening: keep the UI appliance-like instead of browser-like.
+document.addEventListener('contextmenu',function(e){e.preventDefault()});
+document.addEventListener('dragstart',function(e){e.preventDefault()});
+document.addEventListener('selectstart',function(e){
+ var t=e.target,tag=t&&t.tagName;
+ if(tag!=='INPUT'&&tag!=='TEXTAREA'&&tag!=='SELECT')e.preventDefault();
+});
+document.addEventListener('keydown',function(e){
+ var k=(e.key||'').toUpperCase(),ctrl=e.ctrlKey||e.metaKey,shift=e.shiftKey;
+ if(
+   k==='F12' ||
+   (ctrl&&shift&&(k==='I'||k==='J'||k==='C')) ||
+   (ctrl&&(k==='U'||k==='S'||k==='P'||k==='O'||k==='L'||k==='T'||k==='N'||k==='W'))
+ ){
+   e.preventDefault();e.stopPropagation();return false;
+ }
+},true);
+
+document.querySelectorAll('nav button').forEach(function(b){b.onclick=function(){showPage(b.dataset.page)}})
+$('bleTop').onclick=connectBle;$('ctlBle').onclick=connectBle;$('usbTop').onclick=connectUsb;$('ctlUsb').onclick=connectUsb;$('ctlRun').onclick=startRun;$('ctlStop').onclick=stopRun;$('ctlAuto').onclick=toggleAuto;$('ctlSim').onclick=toggleSim;if($('btnSaveSettings'))$('btnSaveSettings').onclick=function(){save(true);if(S.connected&&S.cmd)pushAllConfigToS3(S.cfgState!=='ready')};document.querySelectorAll('[data-smooth]').forEach(function(b){b.onclick=function(){setSmoothingLevel(this.dataset.smooth,true)}});$('run201').onclick=function(){reset201();S.wait201=true;$('state201').textContent='Waiting ≥ 1 km/h'};$('reset201').onclick=reset201;$('autoStart').onchange=function(){S.auto=this.checked;$('ctlAuto').classList.toggle('on',S.auto);save();pushConfigKey('autoStart')};$('autoEndRun').onchange=function(){S.autoEndRun=this.checked;S.runDeclineSinceMs=0;save();pushConfigKey('autoEndRun')}
+cfgIds.forEach(function(id){$(id).addEventListener('change',function(){save(false);if(id==='rpmFilterUs')pushRpmFilter();pushConfigKey(id)});$(id).addEventListener('input',function(){save(false)})});window.addEventListener('resize',drawAll);document.addEventListener('visibilitychange',function(){if(!document.hidden)drawAll()});load();initAppNumPad();restoreRunHistory();renderRunHistoryUI();bindRunHistoryUI();bindPowerChartTouch();reset201();try{console.log('BT Speed Dyno build P19 - AFR BLE voltage frame guard')}catch(e){};setBle(false);try{if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(function(){})}catch(e){};setTimeout(drawAll,100);
+})();
+</script>
+<script id="bt-speed-afr-module">
+(function(){
+'use strict';
+var RPM_MIN=500,RPM_MAX=15000,STEP=500,STABLE_RPM_WINDOW=200,STABLE_HOLD_MS=500;
+var BKEY='bt_speed_afr_bins_v1',SKEY='bt_speed_afr_settings_v1',rules=[{"code":"TH01","status":"CONFIRMED","g1":"rich","g2":"lean","g3":"lean","g4":"lean","action":"Open the air screw up to 3 turns, if more than 3 turns are required, decrease the pilot jet by 2 sizes. raise the needle by 1 shim, increase the main jet by 2 sizes."},{"code":"TH02","status":"CONFIRMED","g1":"target","g2":"lean","g3":"lean","g4":"lean","action":"Raise the needle by 1 shim, increase the main jet by 2 sizes."},{"code":"TH03","status":"CONFIRMED","g1":"lean","g2":"lean","g3":"lean","g4":"lean","action":"Turn the air screw in until engine RPM 1000 runs steadily, if band 1 reaches AFR 12.5 to 13.5 with the air screw under 0.5 turn, increase the pilot jet by 2 sizes, then increase the main jet by 2 sizes."},{"code":"TH04","status":"CONFIRMED","g1":"rich","g2":"target","g3":"lean","g4":"lean","action":"Open the air screw to 3 turns if band 1 is still rich, decrease the pilot jet by 2 sizes. Then increase the main jet by 2 sizes."},{"code":"TH05","status":"CONFIRMED","g1":"target","g2":"target","g3":"lean","g4":"lean","action":"Increase the main jet by 2 sizes."},{"code":"TH06","status":"CONFIRMED","g1":"lean","g2":"target","g3":"lean","g4":"lean","action":"Turn the air screw in to 0.5 turn, if band 1 is still lean, increase the pilot jet by 2 sizes, then increase the main jet by 2 sizes."},{"code":"TH07","status":"CONFIRMED","g1":"lean","g2":"lean","g3":"target","g4":"lean","action":"Turn the air screw in to 0.5 turn, if the engine idles steadily at 1000 rpm, increase the main jet by 2 sizes."},{"code":"TH08","status":"CONFIRMED","g1":"rich","g2":"lean","g3":"target","g4":"lean","action":"Open the air screw gradually at the same time raise the needle by 1 shim, increase the main jet by 2 sizes."},{"code":"TH09","status":"CONFIRMED","g1":"target","g2":"lean","g3":"target","g4":"lean","action":"Raise the needle by 1 shim, then increase the main jet by 2 sizes."},{"code":"TH10","status":"CONFIRMED","g1":"lean","g2":"lean","g3":"lean","g4":"target","action":"Turn the air screw in to 0.5 turn, if band 1 is still lean, increase the pilot jet by 2 sizes."},{"code":"TH11","status":"CONFIRMED","g1":"rich","g2":"rich","g3":"lean","g4":"lean","action":"Open the air screw to 3 turns, if band 1 is still rich, decrease the pilot jet by 2 sizes. Increase the main jet by 2 sizes."},{"code":"TH12","status":"NOT POSSIBLE","g1":"target","g2":"rich","g3":"lean","g4":"lean","action":"This combination should not occur."},{"code":"TH13","status":"NOT POSSIBLE","g1":"lean","g2":"rich","g3":"lean","g4":"lean","action":"This combination should not occur."},{"code":"TH14","status":"CONFIRMED","g1":"lean","g2":"target","g3":"target","g4":"lean","action":"Turn the air screw in gradually, increase the main jet by 2 sizes."},{"code":"TH15","status":"CONFIRMED","g1":"rich","g2":"target","g3":"target","g4":"lean","action":"Open the air screw to 3 turns, if it is still rich, decrease the pilot jet by 2 sizes then increase the main jet by 2 sizes."},{"code":"TH16","status":"CONFIRMED","g1":"target","g2":"target","g3":"target","g4":"lean","action":"Increase the main jet by 2 sizes."},{"code":"TH17","status":"CONFIRMED","g1":"rich","g2":"lean","g3":"lean","g4":"target","action":"Open the air screw to 3 turns, if band 1 is still rich, decrease the pilot jet by 2 sizes, then raise the needle by 1 shim."},{"code":"TH18","status":"CONFIRMED","g1":"target","g2":"lean","g3":"lean","g4":"target","action":"Raise the needle by 1 shim."},{"code":"TH19","status":"CONFIRMED","g1":"lean","g2":"lean","g3":"lean","g4":"target","action":"Turn the air screw in until the target is reached, if it is still lean with the air screw at 0.5 turn, increase the main jet by 2 sizes."},{"code":"TH20","status":"CONFIRMED","g1":"rich","g2":"target","g3":"lean","g4":"target","action":"Open the air screw to 3 turns if band 1 is still rich, decrease the pilot jet, reduce the main air passage to 90 to richen band 3."},{"code":"TH21","status":"INFERRED","g1":"rich","g2":"rich","g3":"target","g4":"lean","action":"Open the air screw to 3 turns, if band 1 is still rich, decrease the pilot jet by 2 sizes, then increase the main jet by 2 sizes."},{"code":"TH22","status":"INFERRED","g1":"target","g2":"rich","g3":"target","g4":"lean","action":"This combination should not occur."},{"code":"TH23","status":"INFERRED","g1":"lean","g2":"rich","g3":"target","g4":"lean","action":"This combination should not occur."},{"code":"TH24","status":"CONFIRMED + EXTRA","g1":"rich","g2":"lean","g3":"rich","g4":"lean","action":"Open the air screw gradually, raise the needle by 1 shim, increase the main jet by 2 sizes, at the same time add 2 flag holes (lo co) to lean band 3."},{"code":"TH25","status":"CONFIRMED + EXTRA","g1":"target","g2":"lean","g3":"rich","g4":"lean","action":"Raise the needle by 1 shim, add 2 flag holes (lo co) to lean band 3, then increase the main jet by 2 sizes."},{"code":"TH26","status":"INFERRED","g1":"lean","g2":"lean","g3":"rich","g4":"lean","action":"Turn the air screw in gradually to 0.5 turn, if band 1 is still lean, increase the pilot jet by 2 sizes, raise the needle by 1 shim, add 2 flag holes (lo co) to lean band 3, then increase the main jet by 2 sizes."},{"code":"TH27","status":"INFERRED","g1":"rich","g2":"target","g3":"rich","g4":"lean","action":"Open the air screw to 3 turns, if it is still rich, decrease the pilot jet by 2 sizes, add 2 flag holes (lo co) to lean band 3, then increase the main jet by 2 sizes."},{"code":"TH28","status":"INFERRED","g1":"target","g2":"target","g3":"rich","g4":"lean","action":"Add 2 flag holes (lo co) to lean band 3, then increase the main jet by 2 sizes."},{"code":"TH29","status":"INFERRED","g1":"lean","g2":"target","g3":"rich","g4":"lean","action":"Turn the air screw in gradually, if band 1 is still lean, increase the pilot jet by 2 sizes, add 2 flag holes (lo co) to lean band 3, then increase the main jet by 2 sizes."},{"code":"TH30","status":"INFERRED","g1":"rich","g2":"rich","g3":"lean","g4":"target","action":"Open the air screw to 3 turns, if band 1 is still rich, decrease the pilot jet by 2 sizes, then raise the needle by 1 shim."},{"code":"TH31","status":"INFERRED","g1":"target","g2":"rich","g3":"lean","g4":"target","action":"This combination should not occur."},{"code":"TH32","status":"INFERRED","g1":"lean","g2":"rich","g3":"lean","g4":"target","action":"This combination should not occur."},{"code":"TH33","status":"INFERRED","g1":"rich","g2":"target","g3":"target","g4":"target","action":"Open the air screw to 3 turns, if it is still rich, decrease the pilot jet by 2 sizes."},{"code":"TH34","status":"INFERRED","g1":"target","g2":"target","g3":"target","g4":"target","action":"Target across the full range; no adjustment needed."},{"code":"TH35","status":"INFERRED","g1":"lean","g2":"target","g3":"target","g4":"target","action":"Turn the air screw in gradually until the target is reached, if it is still lean at 0.5 turn, increase the pilot jet by 2 sizes."},{"code":"TH36","status":"INFERRED","g1":"rich","g2":"lean","g3":"target","g4":"target","action":"Open the air screw gradually, raise the needle by 1 shim."},{"code":"TH37","status":"INFERRED","g1":"target","g2":"lean","g3":"target","g4":"target","action":"Raise the needle by 1 shim."},{"code":"TH38","status":"INFERRED","g1":"lean","g2":"lean","g3":"target","g4":"target","action":"Turn the air screw in until the target is reached; if it is still lean at 0.5 turn, increase the pilot jet by 2 sizes."},{"code":"TH39","status":"INFERRED","g1":"rich","g2":"rich","g3":"target","g4":"target","action":"Open the air screw to 3 turns, if it is still rich, decrease the pilot jet by 2 sizes."},{"code":"TH40","status":"INFERRED","g1":"target","g2":"rich","g3":"target","g4":"target","action":"This combination should not occur."},{"code":"TH41","status":"INFERRED","g1":"lean","g2":"rich","g3":"target","g4":"target","action":"This combination should not occur."},{"code":"TH42","status":"INFERRED","g1":"rich","g2":"lean","g3":"rich","g4":"target","action":"Open the air screw gradually, raise the needle by 1 shim, add 2 flag holes (lo co) to lean band 3."},{"code":"TH43","status":"INFERRED","g1":"target","g2":"lean","g3":"rich","g4":"target","action":"Raise the needle by 1 shim, add 2 flag holes (lo co) to lean band 3."},{"code":"TH44","status":"INFERRED","g1":"lean","g2":"lean","g3":"rich","g4":"target","action":"Turn the air screw in until the target is reached; if it is still lean at 0.5 turn, increase the pilot jet by 2 sizes, raise the needle by 1 shim, and add 2 flag holes (lo co) to lean band 3."},{"code":"TH45","status":"INFERRED","g1":"rich","g2":"target","g3":"rich","g4":"target","action":"Open the air screw to 3 turns, if it is still rich, decrease the pilot jet by 2 sizes, add 2 flag holes (lo co) to lean band 3."},{"code":"TH46","status":"INFERRED","g1":"target","g2":"target","g3":"rich","g4":"target","action":"Add 2 flag holes (lo co) to lean band 3."},{"code":"TH47","status":"INFERRED","g1":"lean","g2":"target","g3":"rich","g4":"target","action":"Turn the air screw in until band 1 reaches target; if it is still lean, increase the pilot jet by 2 sizes and add 2 flag holes (lo co) to lean band 3."},{"code":"TH48","status":"INFERRED","g1":"rich","g2":"lean","g3":"lean","g4":"rich","action":"Open the air screw to 3 turns, if band 1 is still rich, decrease the pilot jet by 2 sizes, raise the needle by 1 shim, decrease the main jet by 2 sizes."},{"code":"TH49","status":"INFERRED","g1":"target","g2":"lean","g3":"lean","g4":"rich","action":"Raise the needle by 1 shim, decrease the main jet by 2 sizes."},{"code":"TH50","status":"INFERRED","g1":"lean","g2":"lean","g3":"lean","g4":"rich","action":"Turn the air screw in until the target is reached; if it is still lean at 0.5 turn, increase the pilot jet by 2 sizes, then decrease the main jet by 2 sizes."},{"code":"TH51","status":"INFERRED","g1":"rich","g2":"target","g3":"lean","g4":"rich","action":"Open the air screw to 3 turns, if it is still rich, decrease the pilot jet by 2 sizes, decrease the main jet by 2 sizes."},{"code":"TH52","status":"INFERRED","g1":"target","g2":"target","g3":"lean","g4":"rich","action":"Decrease the main jet by 2 sizes."},{"code":"TH53","status":"INFERRED","g1":"lean","g2":"target","g3":"lean","g4":"rich","action":"Turn the air screw in gradually, if it is still lean, increase the pilot jet by 2 sizes, then decrease the main jet by 2 sizes."},{"code":"TH54","status":"INFERRED","g1":"rich","g2":"lean","g3":"target","g4":"rich","action":"Open the air screw gradually, raise the needle by 1 shim, decrease the main jet by 2 sizes."},{"code":"TH55","status":"INFERRED","g1":"target","g2":"lean","g3":"target","g4":"rich","action":"Raise the needle by 1 shim, decrease the main jet by 2 sizes."},{"code":"TH56","status":"INFERRED","g1":"lean","g2":"lean","g3":"target","g4":"rich","action":"Turn the air screw in until the target is reached, if it is still lean, increase the pilot jet by 2 sizes, then decrease the main jet by 2 sizes."},{"code":"TH57","status":"INFERRED","g1":"rich","g2":"target","g3":"target","g4":"rich","action":"Open the air screw to 3 turns, if it is still rich, decrease the pilot jet by 2 sizes, decrease the main jet by 2 sizes."},{"code":"TH58","status":"INFERRED","g1":"target","g2":"target","g3":"target","g4":"rich","action":"Decrease the main jet by 2 sizes."},{"code":"TH59","status":"INFERRED","g1":"lean","g2":"target","g3":"target","g4":"rich","action":"Turn the air screw in gradually, if it is still lean, increase the pilot jet by 2 sizes, then decrease the main jet by 2 sizes."},{"code":"TH60","status":"INFERRED","g1":"rich","g2":"rich","g3":"lean","g4":"rich","action":"Open the air screw to 3 turns, if it is still rich, decrease the pilot jet by 2 sizes, decrease the main jet by 2 sizes."},{"code":"TH61","status":"INFERRED","g1":"target","g2":"rich","g3":"lean","g4":"rich","action":"This combination should not occur."},{"code":"TH62","status":"INFERRED","g1":"lean","g2":"rich","g3":"lean","g4":"rich","action":"This combination should not occur."},{"code":"TH63","status":"INFERRED","g1":"rich","g2":"rich","g3":"target","g4":"rich","action":"Open the air screw to 3 turns, if it is still rich, decrease the pilot jet by 2 sizes, decrease the main jet by 2 sizes."},{"code":"TH64","status":"INFERRED","g1":"target","g2":"rich","g3":"target","g4":"rich","action":"This combination should not occur."},{"code":"TH65","status":"INFERRED","g1":"lean","g2":"rich","g3":"target","g4":"rich","action":"This combination should not occur."},{"code":"TH66","status":"INFERRED","g1":"rich","g2":"lean","g3":"rich","g4":"rich","action":"Open the air screw gradually, raise the needle by 1 shim, add 2 flag holes (lo co) to lean band 3, then decrease the main jet by 2 sizes."},{"code":"TH67","status":"INFERRED","g1":"target","g2":"lean","g3":"rich","g4":"rich","action":"Raise the needle by 1 shim, add 2 flag holes (lo co) to lean band 3, then decrease the main jet by 2 sizes."},{"code":"TH68","status":"INFERRED","g1":"lean","g2":"lean","g3":"rich","g4":"rich","action":"Turn the air screw in until the target is reached, if it is still lean, increase the pilot jet by 2 sizes, raise the needle by 1 shim, add 2 flag holes (lo co) to lean band 3, then decrease the main jet by 2 sizes."},{"code":"TH69","status":"INFERRED","g1":"rich","g2":"target","g3":"rich","g4":"rich","action":"Open the air screw to 3 turns, if it is still rich, decrease the pilot jet by 2 sizes, add 2 flag holes (lo co) to lean band 3, then decrease the main jet by 2 sizes."},{"code":"TH70","status":"INFERRED","g1":"target","g2":"target","g3":"rich","g4":"rich","action":"Add 2 flag holes (lo co) to lean band 3, then decrease the main jet by 2 sizes."},{"code":"TH71","status":"INFERRED","g1":"lean","g2":"target","g3":"rich","g4":"rich","action":"Turn the air screw in gradually, if it is still lean, increase the pilot jet by 2 sizes, add 2 flag holes (lo co) to lean band 3, then decrease the main jet by 2 sizes."},{"code":"TH72","status":"INFERRED","g1":"rich","g2":"rich","g3":"rich","g4":"lean","action":"Open the air screw to 3 turns, if it is still rich, decrease the pilot jet by 2 sizes, add 2 flag holes (lo co) to lean band 3, then increase the main jet by 2 sizes."},{"code":"TH73","status":"INFERRED","g1":"rich","g2":"rich","g3":"rich","g4":"target","action":"Open the air screw to 3 turns, if it is still rich, decrease the pilot jet by 2 sizes, add 2 flag holes (lo co) to lean band 3."},{"code":"TH74","status":"INFERRED","g1":"rich","g2":"rich","g3":"rich","g4":"rich","action":"Open the air screw to 3 turns, if it is still rich, decrease the pilot jet by 2 sizes, add 2 flag holes (lo co) to lean band 3, then decrease the main jet by 2 sizes."},{"code":"TH75","status":"INFERRED","g1":"target","g2":"target","g3":"rich","g4":"lean","action":"Add 2 flag holes (lo co) to lean band 3, then increase the main jet by 2 sizes."},{"code":"TH76","status":"INFERRED","g1":"target","g2":"lean","g3":"rich","g4":"target","action":"Raise the needle by 1 shim, add 2 flag holes (lo co) to lean band 3."},{"code":"TH77","status":"INFERRED","g1":"target","g2":"lean","g3":"rich","g4":"rich","action":"Raise the needle by 1 shim, add 2 flag holes (lo co) to lean band 3, then decrease the main jet by 2 sizes."},{"code":"TH78","status":"INFERRED","g1":"lean","g2":"target","g3":"rich","g4":"lean","action":"Turn the air screw in gradually, if band 1 is still lean, increase the pilot jet by 2 sizes, add 2 flag holes (lo co) to lean band 3, then increase the main jet by 2 sizes."},{"code":"TH79","status":"INFERRED","g1":"lean","g2":"target","g3":"rich","g4":"target","action":"Turn the air screw in gradually until the target is reached, if it is still lean, increase the pilot jet by 2 sizes, add 2 flag holes (lo co) to lean band 3."},{"code":"TH80","status":"INFERRED","g1":"lean","g2":"target","g3":"rich","g4":"rich","action":"Turn the air screw in, if it is still lean, increase the pilot jet by 2 sizes, add 2 flag holes (lo co) to lean band 3, then decrease the main jet by 2 sizes."},{"code":"TH81","status":"INFERRED","g1":"target","g2":"rich","g3":"rich","g4":"rich","action":"Logic mismatch; verify the data again."}];
+var rpmList=[];for(var r=RPM_MIN;r<=RPM_MAX;r+=STEP)rpmList.push(r);
+function emptyEntry(){return{afr:'--',t:'--',samples:[]}}function emptyBins(){var o={};rpmList.forEach(function(r){o[r]=emptyEntry()});return o}
+function norm(e){e=e&&typeof e==='object'?e:{};var a=Array.isArray(e.samples)?e.samples.map(Number).filter(Number.isFinite).slice(-5):[];return{afr:e.afr||'--',t:e.t||'--',samples:a}}
+function loadBins(){try{var x=JSON.parse(localStorage.getItem(BKEY)||'null'),o=emptyBins();if(x)rpmList.forEach(function(r){o[r]=norm(x[r])});return o}catch(e){return emptyBins()}}
+function saveBins(){try{localStorage.setItem(BKEY,JSON.stringify(bins))}catch(e){}}function loadSet(){try{return Object.assign({autoWrite:true,autoScroll:true},JSON.parse(localStorage.getItem(SKEY)||'{}'))}catch(e){return{autoWrite:true,autoScroll:true}}}function saveSet(){try{localStorage.setItem(SKEY,JSON.stringify(set))}catch(e){}}
+var bins=loadBins(),set=loadSet(),lastRpm=null,decelLock=false,stableCandidateSince=0,stableAnchorRpm=null,stableUnlock=false,lastScrollBin=null,lastScrollTs=0,latestAfr=NaN,latestRpm=NaN;
+function sortNums(a){return a.slice().sort(function(x,y){return x-y})}function median(a){if(!a.length)return NaN;var s=sortNums(a),m=Math.floor(s.length/2);return s.length%2?s[m]:(s[m-1]+s[m])/2}
+function baseValue(bin){var a=norm(bins[bin]).samples;if(!a.length)return NaN;return a.length>=3?median(a):a.reduce(function(x,y){return x+y},0)/a.length}
+function resolved(bin,visited){var seen=visited||new Set();if(seen.has(bin))return baseValue(bin);seen.add(bin);var a=norm(bins[bin]).samples;if(!a.length)return NaN;if(a.length>=3)return median(a);var p=bin-STEP,nx=bin+STEP,pv=rpmList.indexOf(p)>=0?resolved(p,new Set(seen)):NaN,nv=rpmList.indexOf(nx)>=0?resolved(nx,new Set(seen)):NaN;if(Number.isFinite(pv)&&Number.isFinite(nv)){if(a.length===1)return(pv+nv)/2;if(a.length===2&&Math.abs(a[0]-a[1])>2)return(pv+nv)/2}return a.reduce(function(x,y){return x+y},0)/a.length}
+function refresh(bin){bins[bin]=norm(bins[bin]);var v=resolved(bin);bins[bin].afr=Number.isFinite(v)?v.toFixed(2):'--'}rpmList.forEach(refresh);
+function push(bin,afr){bins[bin]=norm(bins[bin]);bins[bin].samples.push(afr);if(bins[bin].samples.length>5)bins[bin].samples=bins[bin].samples.slice(-5);bins[bin].t=new Date().toLocaleTimeString('en-GB',{hour12:false});refresh(bin);if(rpmList.indexOf(bin-STEP)>=0)refresh(bin-STEP);if(rpmList.indexOf(bin+STEP)>=0)refresh(bin+STEP)}
+function rpmToBin(rpm){if(!Number.isFinite(rpm)||rpm<RPM_MIN)return null;if(rpm>RPM_MAX)return RPM_MAX;return Math.max(RPM_MIN,Math.min(RPM_MAX,Math.round(rpm/STEP)*STEP))}
+function classify(afr,rpm){if(!Number.isFinite(afr))return null;if(Number.isFinite(rpm)&&rpm>=8000&&rpm<=9000){if(afr<12.5)return'rich';if(afr<=14.0)return'target';return'lean'}if(afr<12.2)return'rich';if(afr<14.5)return'target';return'lean'}
+function liveState(afr){if(!Number.isFinite(afr))return'waiting';if(afr<13.8)return'rich';if(afr<=15.2)return'target';return'lean'}function cellClass(st){return st==='rich'?'bt-afr-rich':st==='target'?'bt-afr-target':st==='lean'?'bt-afr-lean':''}
+function renderRow(bin){var tr=document.querySelector('#btAfrMapBody tr[data-rpm="'+bin+'"]');if(!tr)return;var e=norm(bins[bin]),v=Number(e.afr),afr=tr.querySelector('.afr-v'),samples=tr.querySelector('.sample-v');afr.textContent=Number.isFinite(v)?v.toFixed(2):'--';afr.className='afr-v '+cellClass(classify(v,bin));samples.textContent=e.samples.length}
+function buildTable(){var body=document.getElementById('btAfrMapBody');if(!body)return;body.innerHTML='';rpmList.forEach(function(bin){var tr=document.createElement('tr');tr.dataset.rpm=String(bin);tr.innerHTML='<td>'+bin+'</td><td class="afr-v">--</td><td class="sample-v">0</td>';body.appendChild(tr);renderRow(bin)})}
+function setActive(bin){document.querySelectorAll('#btAfrMapBody tr.active').forEach(function(x){x.classList.remove('active')});if(bin==null)return;var tr=document.querySelector('#btAfrMapBody tr[data-rpm="'+bin+'"]');if(!tr)return;tr.classList.add('active');if(set.autoScroll){var now=Date.now();if(lastScrollBin===null||Math.abs(bin-lastScrollBin)>=400||(now-lastScrollTs)>1800){tr.scrollIntoView({block:'nearest',behavior:'smooth'});lastScrollBin=bin;lastScrollTs=now}}}
+function updateButtons(){var a=document.getElementById('btAfrWriteToggle'),b=document.getElementById('btAfrScrollToggle');if(a){a.textContent='AUTO WRITE: '+(set.autoWrite?'ON':'OFF');a.classList.toggle('hot',set.autoWrite)}if(b){b.textContent='AUTO SCROLL: '+(set.autoScroll?'ON':'OFF');b.classList.toggle('hot',set.autoScroll)}}
+function setLiveUi(afr,rpm,v,trend,bin){latestAfr=afr;latestRpm=rpm;var st=liveState(afr),e=document.getElementById('btAfrLiveValue');if(e)e.textContent=Number.isFinite(afr)?afr.toFixed(2):'--';e=document.getElementById('btAfrRpmValue');if(e)e.textContent=Number.isFinite(rpm)?Math.round(rpm):'0';var liveVoltage=Number.isFinite(v)?v.toFixed(3)+' V':'-- V';e=document.getElementById('btAfrVoltage');if(e)e.textContent=liveVoltage;e=document.getElementById('afrSettingsLiveVoltage');if(e)e.textContent=liveVoltage;e=document.getElementById('btAfrTrend');if(e)e.textContent=trend;e=document.getElementById('btAfrActiveBin');if(e)e.textContent='BIN '+(bin==null?'--':bin);e=document.getElementById('btAfrState');if(e){e.textContent=st.toUpperCase();e.className='bt-tag '+(st==='waiting'?'':st)};e=document.getElementById('btAfrWriteState');if(e)e.textContent=set.autoWrite?(decelLock?'WRITE LOCKED':'WRITE AUTO'):'WRITE OFF';e=document.getElementById('btMapAfr');if(e)e.textContent=Number.isFinite(afr)?afr.toFixed(2):'--';e=document.getElementById('btMapRpm');if(e)e.textContent=Number.isFinite(rpm)?Math.round(rpm):'0';e=document.getElementById('btMapWrite');if(e)e.textContent=set.autoWrite?(decelLock?'DECEL LOCK':'AUTO WRITE'):'WRITE OFF'}
+function collectBand(min,max){var a=[];rpmList.forEach(function(r){if(r<min||r>max)return;var v=Number(bins[r]&&bins[r].afr);if(Number.isFinite(v))a.push({rpm:r,afr:v,state:classify(v,r)})});return a}
+function resolveBand(samples){if(!samples.length)return{state:null,reason:'No data in this band.'};var c={rich:0,target:0,lean:0},sum=0;samples.forEach(function(x){c[x.state]++;sum+=x.afr});var sorted=Object.entries(c).sort(function(a,b){return b[1]-a[1]});if(sorted[0][1]>sorted[1][1])return{state:sorted[0][0],counts:c,avg:sum/samples.length,reason:'Most samples are '+sorted[0][0]+'.'};var tied=sorted.filter(function(x){return x[1]===sorted[0][1]&&x[1]>0}).map(function(x){return x[0]});if(tied.length===2&&tied.indexOf('rich')>=0&&tied.indexOf('target')>=0)return{state:'target',counts:c,avg:sum/samples.length,reason:'Tie rich/target -> target.'};if(tied.length===2&&tied.indexOf('target')>=0&&tied.indexOf('lean')>=0)return{state:'lean',counts:c,avg:sum/samples.length,reason:'Tie target/lean -> lean.'};var avg=sum/samples.length;return{state:classify(avg),counts:c,avg:avg,reason:'Tie resolved by average AFR '+avg.toFixed(2)+'.'}}
+function bandAnalysis(){return[{key:'g1',name:'Band 1',min:1500,max:3499,label:'1500-3500 rpm'},{key:'g2',name:'Band 2',min:3500,max:4999,label:'3500-5000 rpm'},{key:'g3',name:'Band 3',min:5000,max:7499,label:'5000-7500 rpm'},{key:'g4',name:'Final band',min:7500,max:10000,label:'7500-10000 rpm'}].map(function(d){var samples=collectBand(d.min,d.max),r=resolveBand(samples);return Object.assign({},d,r,{samples:samples})})}
+function findRule(states){var leanHigh=collectBand(6000,8000).filter(function(x){return x.afr>14.5});if(leanHigh.length>=2)return{code:'RACE90',status:'RECOMMENDATION',action:'Reduce the main air passage to 90.',note:'Detected '+leanHigh.length+' cells from 6000-8000 rpm above AFR 14.5.'};return rules.find(function(r){return r.g1===states.g1&&r.g2===states.g2&&r.g3===states.g3&&r.g4===states.g4})||null}
+function analyze(){var items=bandAnalysis(),states={g1:items[0].state,g2:items[1].state,g3:items[2].state,g4:items[3].state},ready=Object.values(states).filter(Boolean).length,box=document.getElementById('btAfrAnalysis'),sum=document.getElementById('btAfrAnalysisSummary'),grid=document.getElementById('btAfrBands'),out=document.getElementById('btAfrRule');if(!box)return;box.classList.add('show');grid.innerHTML='';items.forEach(function(it){var d=document.createElement('div');d.className='bt-band';d.innerHTML='<b>'+it.name+' · '+(it.state?it.state.toUpperCase():'--')+'</b><span>'+it.label+' · '+it.samples.length+' samples</span>';grid.appendChild(d)});sum.textContent='Band 1: '+(states.g1||'--')+' · Band 2: '+(states.g2||'--')+' · Band 3: '+(states.g3||'--')+' · Final: '+(states.g4||'--');if(!ready){out.textContent='No AFR data yet. Run the engine and record AFR by RPM first.';return}var rule=ready===4?findRule(states):null;if(Number.isFinite(latestRpm)&&latestRpm>=1000&&latestRpm<=1200&&Number.isFinite(latestAfr)&&latestAfr>14.5){out.innerHTML='<b>Idle warning:</b> 1000-1200 rpm is lean. Check for a loose throttle slide or intake leak.<br>'+(rule?'<b>'+rule.code+' · '+rule.status+'</b><br>'+rule.action:'Collect the missing bands before final adjustment.');return}out.innerHTML=rule?'<b>'+rule.code+' · '+rule.status+'</b><br>'+rule.action+(rule.note?'<br>'+rule.note:''):'No exact rule match yet. Collect the missing RPM bands or verify AFR data.'}
+function clearAll(){bins=emptyBins();rpmList.forEach(refresh);saveBins();buildTable();var box=document.getElementById('btAfrAnalysis');if(box)box.classList.remove('show')}
+window.BT_AFR_UPDATE=function(t,rpm,afr,v){var trend='HOLD',eps=Math.max(0,Number(document.getElementById('afrDecelEps')&&document.getElementById('afrDecelEps').value)||40),now=Date.now(),exited=false;if(Number.isFinite(rpm)&&rpm>0){if(lastRpm!==null){var d=rpm-lastRpm;if(d>0)trend='UP';else if(d<0)trend='DOWN';if(stableUnlock&&stableAnchorRpm!==null){if(Math.abs(rpm-stableAnchorRpm)>STABLE_RPM_WINDOW){stableUnlock=false;stableCandidateSince=0;stableAnchorRpm=null;decelLock=true;exited=true}else decelLock=false}if(!stableUnlock){if(!exited){if(d<0)decelLock=true;if(d>eps)decelLock=false}if(Math.abs(d)<=STABLE_RPM_WINDOW){if(stableCandidateSince===0){stableCandidateSince=now;stableAnchorRpm=rpm}if(now-stableCandidateSince>=STABLE_HOLD_MS){stableUnlock=true;decelLock=false}}else{stableCandidateSince=0;stableAnchorRpm=null}}}lastRpm=rpm}else{lastRpm=null;decelLock=false;stableCandidateSince=0;stableAnchorRpm=null;stableUnlock=false}var bin=rpmToBin(rpm);setLiveUi(afr,rpm,v,trend,bin);setActive(bin);if(!set.autoWrite||decelLock||bin==null||!Number.isFinite(afr))return;push(bin,afr);saveBins();renderRow(bin);if(rpmList.indexOf(bin-STEP)>=0)renderRow(bin-STEP);if(rpmList.indexOf(bin+STEP)>=0)renderRow(bin+STEP)};
+function boot(){buildTable();updateButtons();var c=document.getElementById('btAfrClear'),a=document.getElementById('btAfrAnalyze'),w=document.getElementById('btAfrWriteToggle'),sc=document.getElementById('btAfrScrollToggle');if(c)c.onclick=clearAll;if(a)a.onclick=analyze;if(w)w.onclick=function(){set.autoWrite=!set.autoWrite;saveSet();updateButtons()};if(sc)sc.onclick=function(){set.autoScroll=!set.autoScroll;saveSet();updateButtons()}}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+})();
+</script>
+<script id="original-pc-live-adapter">
+(function(){
+ 'use strict';
+ var mount=document.getElementById('livePcMount');
+ if(!mount)return;
+ function getText(path){return fetch(path+'?v=pc2').then(function(r){if(!r.ok)throw new Error(path+' '+r.status);return r.text()})}
+ Promise.all([
+   getText('live/head.html'),getText('live/rpm.html'),getText('live/kpis.html'),getText('live/speed.html'),getText('live/info.html')
+ ]).then(function(p){
+   mount.innerHTML=p[0]+'<div class="live-gauge-grid">'+p[1]+p[2]+p[3]+'</div>'+p[4];
+   startPcLive();
+ }).catch(function(e){mount.innerHTML='<div class="pc-live-loading">LIVE LOAD ERROR</div>';console.error(e)});
+
+ function startPcLive(){
+   var rpmGauge=document.getElementById('liveRpmArc'),speedGauge=document.getElementById('liveSpeedArc');
+   function rebuildActive(el){
+     if(!el)return;
+     var track=Array.from(el.querySelectorAll('.led-track > path'));
+     var active=el.querySelector('[id$="Active"]');
+     if(!active)return;
+     while(active.firstChild)active.removeChild(active.firstChild);
+     track.forEach(function(src,i){
+       var n=src.cloneNode(false);
+       n.removeAttribute('fill');n.removeAttribute('stroke');n.removeAttribute('stroke-width');
+       n.setAttribute('class','led-segment');n.setAttribute('opacity','0');
+       var a0=164.55+i*7.571429,a1=a0+6.471429;
+       n.dataset.a0=a0.toFixed(6);n.dataset.a1=a1.toFixed(6);
+       active.appendChild(n);
+     });
+   }
+   rebuildActive(rpmGauge);rebuildActive(speedGauge);
+
+   function buildGauge(el){
+     if(!el)return;
+     el._led={
+       paths:Array.from(el.querySelectorAll('.led-segment')).map(function(node){return{node:node,a0:+node.dataset.a0,a1:+node.dataset.a1,lastEnd:null}}),
+       svg:el.querySelector('svg'),digits:el.querySelector('.led-digital'),over:el.querySelector('.led-overrange'),lastText:null
+     };
+     renderDigits(el,'0');
+   }
+   function ledPoint(r,a){var q=a*Math.PI/180;return[260+r*Math.cos(q),267+r*Math.sin(q)]}
+   function ledSector(a,b){
+     function p(r,t){var x=ledPoint(r,t);return x[0].toFixed(3)+' '+x[1].toFixed(3)}
+     return'M'+p(204,a)+' A204 204 0 0 1 '+p(204,b)+' L'+p(161,b)+' A161 161 0 0 0 '+p(161,a)+' Z'
+   }
+   function renderDigits(el,str){
+     var s=el&&el._led;if(!s||!s.digits||str===s.lastText)return;s.lastText=str;
+     var outlines={
+      '0':'M7 0H32L39 7V59L32 66H7L0 59V7Z M10 10V56H29V10Z','1':'M16 0H27V66H16V14L7 22V10Z',
+      '2':'M3 0H32L39 7V28L32 36H10V56H39V66H0V35L7 27H29V10H0V3Z','3':'M3 0H32L39 7V28L34 33L39 38V59L32 66H0V56H29V38H10V28H29V10H0V3Z',
+      '4':'M23 0H33V41H39V50H33V66H24V50H0V40Z M24 14L8 41H24Z','5':'M0 0H39V10H10V27H32L39 34V59L32 66H0V56H29V38H0Z',
+      '6':'M7 0H35V10H10V27H32L39 34V59L32 66H7L0 59V7Z M10 38V56H29V38Z','7':'M0 0H39V10L20 66H9L28 10H0Z',
+      '8':'M7 0H32L39 7V28L34 33L39 38V59L32 66H7L0 59V38L5 33L0 28V7Z M10 10V27H29V10Z M10 39V56H29V39Z',
+      '9':'M7 0H32L39 7V59L32 66H4V56H29V39H7L0 32V7Z M10 10V28H29V10Z','-':'M3 28H36V38H3Z'
+     };
+     var ns='http://www.w3.org/2000/svg';while(s.digits.firstChild)s.digits.removeChild(s.digits.firstChild);
+     var glyphWidth=45,space=7,width=str.length*glyphWidth+(str.length-1)*space,scale=Math.min(1,242/width);
+     s.digits.setAttribute('transform','translate('+(260-width*scale/2).toFixed(3)+' '+(246+(1-scale)*33).toFixed(3)+') scale('+scale.toFixed(4)+')');
+     Array.from(str).forEach(function(ch,i){var g=document.createElementNS(ns,'g');g.setAttribute('transform','translate('+(i*(glyphWidth+space))+',0) scale(1.15,1)');var path=document.createElementNS(ns,'path');path.setAttribute('d',outlines[ch]||outlines['-']);path.setAttribute('fill-rule','evenodd');g.appendChild(path);s.digits.appendChild(g)})
+   }
+   function setArc(el,value,maxValue){
+     if(!el||!el._led)return;var n=Number(value);if(!Number.isFinite(n)||n<0)n=0;var max=Number(maxValue)||1;
+     var fraction=Math.max(0,Math.min(1,n/max)),end=164+212*fraction;
+     el._led.paths.forEach(function(seg){var on=end>seg.a0&&fraction>0;if(!on){seg.node.setAttribute('opacity','0');seg.lastEnd=null;return}var b=Math.min(end,seg.a1);if(seg.lastEnd!==b){seg.node.setAttribute('d',ledSector(seg.a0,b));seg.lastEnd=b}seg.node.setAttribute('opacity','1')});
+     renderDigits(el,String(Math.round(n)));if(el._led.svg)el._led.svg.setAttribute('aria-label',el.dataset.title+': '+Math.round(n));if(el._led.over)el._led.over.setAttribute('visibility',n>max?'visible':'hidden')
+   }
+   buildGauge(rpmGauge);buildGauge(speedGauge);
+
+   var distKm=0,last=performance.now(),runStart=0,prevRun=false,runNo=0;
+   function num(id){var e=document.getElementById(id),v=e?parseFloat(e.textContent):0;return Number.isFinite(v)?v:0}
+   function tick(){
+     var rpm=num('liveRpm'),speed=num('liveSpeed'),afr=num('liveAfr'),hp=num('liveHp'),tq=num('liveTq');
+     var e;
+     if((e=document.getElementById('liveAfrValue')))e.textContent=Number.isFinite(afr)&&afr>0?afr.toFixed(1):'--';
+     if((e=document.getElementById('liveHpValue')))e.textContent=hp.toFixed(1);
+     if((e=document.getElementById('liveTorqueValue')))e.textContent=tq.toFixed(1);
+     setArc(rpmGauge,rpm,16000);setArc(speedGauge,speed,160);
+
+     var ble=document.getElementById('bleStatus'),sim=document.getElementById('ctlSim'),run=document.getElementById('ctlRun');
+     var isSim=sim&&/OFF/.test(sim.textContent),isBle=ble&&ble.classList.contains('ok'),recording=run&&/RUNNING/.test(run.textContent);
+     var live=document.getElementById('live');live.dataset.source=isSim?'sim':(isBle?'ble':'idle');
+     if((e=document.getElementById('liveDataState')))e.textContent=isSim?'SIMULATOR':(isBle?'CONNECTED':'STANDBY');
+     if((e=document.getElementById('liveRunState')))e.textContent=recording?'Recording':'Standby';
+     if((e=document.getElementById('liveRecordDot')))e.classList.toggle('on',!!recording);
+
+     var now=performance.now(),dt=Math.max(0,Math.min(.2,(now-last)/1000));last=now;
+     if(recording&&!prevRun){runStart=now;distKm=0;runNo++}
+     if(recording)distKm+=Math.max(0,speed)*dt/3600;
+     prevRun=recording;
+     if((e=document.getElementById('liveDistanceValue')))e.textContent=distKm.toFixed(2)+' km';
+     if((e=document.getElementById('liveRunNumberValue')))e.textContent=String(runNo);
+     if((e=document.getElementById('liveElapsedValue'))){var sec=recording?Math.max(0,(now-runStart)/1000):0,m=Math.floor(sec/60),s=sec-m*60;e.textContent=String(m).padStart(2,'0')+':'+s.toFixed(1).padStart(4,'0')}
+   }
+   setInterval(tick,50);tick();
+ }
+})();
+</script>
+</body></html>
