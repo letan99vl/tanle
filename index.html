@@ -24,7 +24,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.webmanifest">
-<title>BT Speed Dyno P19</title>
+<title>BT Speed Dyno P20</title>
 <style>
 :root{--bg:#040506;--panel:#0b0d10;--line:#252a30;--red:#ff6a00;--orange:#ff9f1c;--green:#37d45a;--blue:#3488ff;--text:#f3f5f7;--muted:#89939d;--nav:40px;--ctl:44px}
 *{box-sizing:border-box;-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
@@ -405,7 +405,7 @@ body.app-numpad-open #settings{
 <body>
 <div id="app">
 <header>
- <div class="brand">BT <b>SPEED</b> DYNO <small id="buildTag" style="font:900 9px Arial;color:#2dff8a;margin-left:4px">P19</small></div>
+ <div class="brand">BT <b>SPEED</b> DYNO <small id="buildTag" style="font:900 9px Arial;color:#2dff8a;margin-left:4px">P20</small></div>
  <nav>
   <button data-page="live" class="on">LIVE</button>
   <button data-page="power">HP/TOR</button>
@@ -416,7 +416,7 @@ body.app-numpad-open #settings{
   <button data-page="test201">201m</button>
   <button data-page="settings">SET</button>
  </nav>
- <div class="headright"><span id="bleStatus" class="pill">BLE OFF</span><button id="bleTop" class="mini">BLE</button></div>
+ <div class="headright"><span id="bleStatus" class="pill">OFF</span><button id="bleTop" class="mini">BLE</button><button id="usbTop" class="mini">USB</button></div>
 </header>
 
 <main id="live" class="page on live-red-main">
@@ -428,7 +428,7 @@ body.app-numpad-open #settings{
   <span id="rpmBar"></span><span id="speedBar"></span>
  </div>
  <div class="controls pc-controls">
-  <button id="ctlBle" class="go">BLE</button><button id="ctlAuto" class="auto">AUTO</button><button id="ctlRun" class="go">RUN</button><button id="ctlStop" class="stop">STOP</button><button id="ctlSim">SIM</button>
+  <button id="ctlBle" class="go">BLE</button><button id="ctlUsb" class="go">USB</button><button id="ctlAuto" class="auto">AUTO</button><button id="ctlRun" class="go">RUN</button><button id="ctlStop" class="stop">STOP</button><button id="ctlSim">SIM</button>
  </div>
 </main>
 
@@ -783,10 +783,103 @@ function normalizePowerData(data){
  })
 }
 function setBle(on,msg){if(!on){S.lineBuf='';S.statusBuf=''}S.connected=on;$('bleStatus').textContent=msg||(on?'BLE OK':'BLE OFF');$('bleStatus').classList.toggle('ok',on);$('ctlBle').textContent=on?'OFF':'BLE';$('bleTop').textContent=on?'OFF':'BLE';if(!on&&!S.sim){var v=$('afrSettingsLiveVoltage');if(v)v.textContent='-- V';v=$('btAfrVoltage');if(v)v.textContent='-- V'}}
-async function connectBle(){if(S.connected){disconnectBle();return}if(!navigator.bluetooth){alert('Web Bluetooth unavailable. On iPhone open this HTTPS page in Bluefy or another Web Bluetooth compatible browser.');return}try{$('bleStatus').textContent='SCAN BLE';S.device=await navigator.bluetooth.requestDevice({
+
+// USB LEGACY TRANSPORT: the original ESP32 sketch needs no firmware update.
+// 115200 8N1, CSV: D,timeMs,rollerRPM,engineRPM,afrVoltage
+// BLE and USB deliberately share handleLine()/sample() and never run together.
+var DYNO_USB={port:null,reader:null,task:null,closing:false,rx:'',seen:false};
+function setUsbLink(on,msg){
+ S.connected=!!on;
+ $('bleStatus').textContent=msg||(on?'USB 115200':'USB OFF');
+ $('bleStatus').classList.toggle('ok',!!on);
+ $('usbTop').textContent=on?'OFF':'USB';
+ $('ctlUsb').textContent=on?'OFF':'USB';
+ $('bleTop').textContent='BLE';
+ $('ctlBle').textContent='BLE';
+ if(!on){
+  S.cfgState='unknown';DYNO_USB.seen=false;DYNO_USB.rx='';
+  if(!S.sim){var v=$('afrSettingsLiveVoltage');if(v)v.textContent='-- V';v=$('btAfrVoltage');if(v)v.textContent='-- V'}
+ }
+}
+async function readUsbLegacy(port){
+ var reader=null,decoder=new TextDecoder();
+ try{
+  if(!port.readable)throw new Error('USB port is not readable');
+  reader=port.readable.getReader();DYNO_USB.reader=reader;
+  while(DYNO_USB.port===port&&!DYNO_USB.closing){
+   var packet=await reader.read();
+   if(packet.done)break;
+   if(!packet.value)continue;
+   DYNO_USB.rx+=decoder.decode(packet.value,{stream:true});
+   var i;
+   while((i=DYNO_USB.rx.indexOf('\n'))>=0){
+    var line=DYNO_USB.rx.slice(0,i).replace(/\r/g,'').trim();
+    DYNO_USB.rx=DYNO_USB.rx.slice(i+1);
+    // The legacy sketch prints a startup banner and HEADER, not just D frames.
+    if(!line.startsWith('D,'))continue;
+    var badBefore=S.badLiveFrames;
+    handleLine(line);
+    if(!DYNO_USB.seen&&S.badLiveFrames===badBefore){
+     DYNO_USB.seen=true;setUsbLink(true,'USB DATA OK');
+    }
+   }
+   if(DYNO_USB.rx.length>DYNO_LIVE_MAX_PENDING){
+    var at=DYNO_USB.rx.lastIndexOf('D,');
+    DYNO_USB.rx=at>=0?DYNO_USB.rx.slice(at):'';
+    if(DYNO_USB.rx.length>DYNO_LIVE_MAX_LINE)DYNO_USB.rx='';
+   }
+  }
+ }catch(e){if(!DYNO_USB.closing)console.warn('DynoTL USB read:',e)}
+ finally{
+  try{if(reader)reader.releaseLock()}catch(e){}
+  if(DYNO_USB.reader===reader)DYNO_USB.reader=null;
+  if(DYNO_USB.port===port&&!DYNO_USB.closing){
+   DYNO_USB.closing=true;
+   try{await port.close()}catch(e){}
+   DYNO_USB.port=null;DYNO_USB.task=null;DYNO_USB.closing=false;
+   setUsbLink(false,'USB LOST');
+  }
+ }
+}
+async function disconnectUsb(){
+ var port=DYNO_USB.port;if(!port)return;
+ DYNO_USB.closing=true;
+ try{if(DYNO_USB.reader)await DYNO_USB.reader.cancel()}catch(e){}
+ try{if(DYNO_USB.task)await DYNO_USB.task}catch(e){}
+ try{await port.close()}catch(e){console.warn('USB close:',e)}
+ if(DYNO_USB.port===port){
+  DYNO_USB.port=null;DYNO_USB.reader=null;DYNO_USB.task=null;
+  DYNO_USB.closing=false;setUsbLink(false,S.sim?'SIM 1-MAG':'USB OFF');
+ }
+}
+async function connectUsb(){
+ if(DYNO_USB.port){await disconnectUsb();return}
+ if(S.connected)return alert('Đang kết nối BLE. Bấm OFF tại BLE trước khi chuyển sang USB.');
+ if(S.sim)return alert('Hãy tắt SIM trước khi kết nối USB.');
+ if(!navigator.serial||typeof navigator.serial.requestPort!=='function'){
+  return alert('Trình duyệt/app này không hỗ trợ Web Serial. Dùng Chrome/Edge có quyền USB trên Windows hoặc thiết bị Android được hỗ trợ. iOS dùng Bluetooth BLE.');
+ }
+ var port=null;
+ try{
+  $('bleStatus').textContent='USB SELECT';
+  port=await navigator.serial.requestPort();
+  await port.open({baudRate:115200,dataBits:8,stopBits:1,parity:'none',flowControl:'none'});
+  DYNO_USB.port=port;DYNO_USB.closing=false;DYNO_USB.seen=false;DYNO_USB.rx='';
+  // Old .ino has no CONFIG?/RPMFILTER command channel; settings remain local.
+  S.cmd=null;S.cfgState='legacy';S.cfgMigrating=false;
+  setUsbLink(true,'USB WAIT DATA');
+  DYNO_USB.task=readUsbLegacy(port);
+ }catch(e){
+  if(port&&!DYNO_USB.port){try{await port.close()}catch(_){}}
+  if(e&&e.name!=='NotFoundError')alert('Không mở được cáp USB 115200: '+(e.message||e));
+  if(!DYNO_USB.port)setUsbLink(false,'USB OFF');
+ }
+}
+
+async function connectBle(){if(DYNO_USB.port)return alert("Đang kết nối USB. Bấm OFF tại USB trước khi chuyển sang BLE.");if(S.sim)return alert("Hãy tắt SIM trước khi kết nối BLE.");if(S.connected){disconnectBle();return}if(!navigator.bluetooth){alert('Web Bluetooth unavailable. On iPhone open this HTTPS page in Bluefy or another Web Bluetooth compatible browser.');return}try{$('bleStatus').textContent='SCAN BLE';S.device=await navigator.bluetooth.requestDevice({
   acceptAllDevices:true,
   optionalServices:[BLE.service]
-});S.device.addEventListener('gattserverdisconnected',function(){setBle(false,'BLE LOST')});S.server=await S.device.gatt.connect();var sv=await S.server.getPrimaryService(BLE.service);S.live=await sv.getCharacteristic(BLE.live);S.cmd=await sv.getCharacteristic(BLE.cmd);S.status=await sv.getCharacteristic(BLE.status);await S.live.startNotifications();S.live.addEventListener('characteristicvaluechanged',onLive);await S.status.startNotifications();S.status.addEventListener('characteristicvaluechanged',onStatus);S.cfgState='unknown';setBle(true,'BT Speed Dyno Hardware');writeCmd('STATUS');setTimeout(function(){writeCmd('RPMFILTER?')},80);setTimeout(function(){writeCmd('CONFIG?')},150)}catch(e){if(!e||e.name!=='NotFoundError')alert('BLE error: '+(e&&e.message||e));setBle(false)}}
+});S.device.addEventListener('gattserverdisconnected',function(){if(!DYNO_USB.port)setBle(false,'BLE LOST')});S.server=await S.device.gatt.connect();var sv=await S.server.getPrimaryService(BLE.service);S.live=await sv.getCharacteristic(BLE.live);S.cmd=await sv.getCharacteristic(BLE.cmd);S.status=await sv.getCharacteristic(BLE.status);await S.live.startNotifications();S.live.addEventListener('characteristicvaluechanged',onLive);await S.status.startNotifications();S.status.addEventListener('characteristicvaluechanged',onStatus);S.cfgState='unknown';setBle(true,'BT Speed Dyno Hardware');writeCmd('STATUS');setTimeout(function(){writeCmd('RPMFILTER?')},80);setTimeout(function(){writeCmd('CONFIG?')},150)}catch(e){if(!e||e.name!=='NotFoundError')alert('BLE error: '+(e&&e.message||e));setBle(false)}}
 function disconnectBle(){try{if(S.device&&S.device.gatt.connected)S.device.gatt.disconnect()}catch(e){}S.cfgState='unknown';S.cfgMigrating=false;setBle(false)}
 async function writeCmd(t){if(!S.cmd)return;var b=enc.encode(t);if(S.cmd.writeValueWithoutResponse)await S.cmd.writeValueWithoutResponse(b);else await S.cmd.writeValue(b)}
 function onStatus(e){try{
@@ -1083,9 +1176,10 @@ function resetSimulator(){
  S.rollerGuardLastDistinctRpm=0;S.rollerGuardLastDistinctMs=0
 }
 function toggleSim(){
+ if(!S.sim&&S.connected)return alert('Ngắt USB hoặc BLE trước khi bật SIM.');
  S.sim=!S.sim;$('ctlSim').textContent=S.sim?'SIM OFF':'SIM';
  if(S.sim){resetSimulator();setBle(false,'SIM 1-MAG');simStep()}
- else{setBle(S.connected,S.connected?'BLE OK':'BLE OFF')}
+ else{setBle(false,'BLE OFF')}
 }
 function update201(t,speed,rpm,afr){if(S.wait201&&speed>=1){S.wait201=false;S.run201=true;S.t2010=S.t201last=t;S.d201=0;$('state201').textContent='RUNNING'}if(!S.run201)return;var dt=(t-S.t201last)/1000;if(dt>0&&dt<1)S.d201+=speed/3.6*dt;S.t201last=t;S.maxS201=Math.max(S.maxS201,speed);S.maxR201=Math.max(S.maxR201,rpm);$('dist201').textContent=S.d201.toFixed(1)+' m';$('time201').textContent=((t-S.t2010)/1000).toFixed(3)+' s';$('speed201').textContent=speed.toFixed(1);$('rpm201').textContent=Math.round(rpm);if(S.d201>=201){S.run201=false;S.done201=true;var tt=(t-S.t2010)/1000;$('state201').textContent='DONE';$('result201').textContent=tt.toFixed(3)+' s';$('maxSpeed201').textContent=S.maxS201.toFixed(1);$('maxRpm201').textContent=Math.round(S.maxR201);$('afrEnd201').textContent=afr.toFixed(1)}}
 function reset201(){S.run201=S.wait201=S.done201=false;S.d201=0;S.maxS201=S.maxR201=0;$('state201').textContent='Waiting';$('dist201').textContent='0.0 m';$('time201').textContent='--';$('speed201').textContent='0.0';$('rpm201').textContent='0';$('result201').textContent='--';$('maxSpeed201').textContent='0.0';$('maxRpm201').textContent='0';$('afrEnd201').textContent='--'}
@@ -1405,7 +1499,7 @@ document.addEventListener('keydown',function(e){
 },true);
 
 document.querySelectorAll('nav button').forEach(function(b){b.onclick=function(){showPage(b.dataset.page)}})
-$('bleTop').onclick=connectBle;$('ctlBle').onclick=connectBle;$('ctlRun').onclick=startRun;$('ctlStop').onclick=stopRun;$('ctlAuto').onclick=toggleAuto;$('ctlSim').onclick=toggleSim;if($('btnSaveSettings'))$('btnSaveSettings').onclick=function(){save(true);if(S.connected&&S.cmd)pushAllConfigToS3(S.cfgState!=='ready')};document.querySelectorAll('[data-smooth]').forEach(function(b){b.onclick=function(){setSmoothingLevel(this.dataset.smooth,true)}});$('run201').onclick=function(){reset201();S.wait201=true;$('state201').textContent='Waiting ≥ 1 km/h'};$('reset201').onclick=reset201;$('autoStart').onchange=function(){S.auto=this.checked;$('ctlAuto').classList.toggle('on',S.auto);save();pushConfigKey('autoStart')};$('autoEndRun').onchange=function(){S.autoEndRun=this.checked;S.runDeclineSinceMs=0;save();pushConfigKey('autoEndRun')}
+$('bleTop').onclick=connectBle;$('ctlBle').onclick=connectBle;$('usbTop').onclick=connectUsb;$('ctlUsb').onclick=connectUsb;$('ctlRun').onclick=startRun;$('ctlStop').onclick=stopRun;$('ctlAuto').onclick=toggleAuto;$('ctlSim').onclick=toggleSim;if($('btnSaveSettings'))$('btnSaveSettings').onclick=function(){save(true);if(S.connected&&S.cmd)pushAllConfigToS3(S.cfgState!=='ready')};document.querySelectorAll('[data-smooth]').forEach(function(b){b.onclick=function(){setSmoothingLevel(this.dataset.smooth,true)}});$('run201').onclick=function(){reset201();S.wait201=true;$('state201').textContent='Waiting ≥ 1 km/h'};$('reset201').onclick=reset201;$('autoStart').onchange=function(){S.auto=this.checked;$('ctlAuto').classList.toggle('on',S.auto);save();pushConfigKey('autoStart')};$('autoEndRun').onchange=function(){S.autoEndRun=this.checked;S.runDeclineSinceMs=0;save();pushConfigKey('autoEndRun')}
 cfgIds.forEach(function(id){$(id).addEventListener('change',function(){save(false);if(id==='rpmFilterUs')pushRpmFilter();pushConfigKey(id)});$(id).addEventListener('input',function(){save(false)})});window.addEventListener('resize',drawAll);document.addEventListener('visibilitychange',function(){if(!document.hidden)drawAll()});load();initAppNumPad();restoreRunHistory();renderRunHistoryUI();bindRunHistoryUI();bindPowerChartTouch();reset201();try{console.log('BT Speed Dyno build P19 - AFR BLE voltage frame guard')}catch(e){};setBle(false);try{if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(function(){})}catch(e){};setTimeout(drawAll,100);
 })();
 </script>
